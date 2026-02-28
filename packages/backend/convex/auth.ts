@@ -16,7 +16,7 @@ function createAuth(ctx: GenericCtx<DataModel>) {
 	return betterAuth({
 		secret: process.env.BETTER_AUTH_SECRET,
 		baseURL: siteUrl,
-		trustedOrigins: [siteUrl],
+		trustedOrigins: [siteUrl, process.env.DEPLOY_URL].filter(Boolean) as string[],
 		database: authComponent.adapter(ctx),
 		emailAndPassword: {
 			enabled: true,
