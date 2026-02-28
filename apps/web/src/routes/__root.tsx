@@ -74,6 +74,12 @@ function RootDocument() {
       <html lang="en" className="dark">
         <head>
           <HeadContent />
+          {import.meta.env.DEV && (
+            <script
+              src="//unpkg.com/react-grab/dist/index.global.js"
+              crossOrigin="anonymous"
+            />
+          )}
         </head>
         <body>
           <div className="grid h-svh grid-rows-[auto_1fr]">
