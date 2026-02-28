@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, internalMutation } from "../_generated/server";
 import { agentStatusValidator } from "../schema";
 
-// Initialize desks for the pixel-art office
+// Initialize desks for the pixel-art office (8 worker + 1 manager)
 export const initDesks = mutation({
 	args: {},
 	handler: async (ctx) => {
@@ -10,8 +10,8 @@ export const initDesks = mutation({
 		const existing = await ctx.db.query("desks").collect();
 		if (existing.length > 0) return existing.map((d) => d._id);
 
-		// Create 8 desks in a grid layout (2 rows of 4)
-		const positions = [
+		// 8 worker desks in a 2×4 grid
+		const workerPositions = [
 			{ x: 1, y: 1 },
 			{ x: 2, y: 1 },
 			{ x: 3, y: 1 },
@@ -23,11 +23,54 @@ export const initDesks = mutation({
 		];
 
 		const ids = [];
-		for (const position of positions) {
+		for (const position of workerPositions) {
 			const id = await ctx.db.insert("desks", { position });
 			ids.push(id);
 		}
+
+		// 1 manager desk — separate office
+		const mgrId = await ctx.db.insert("desks", {
+			position: { x: 0, y: 0 },
+			label: "manager",
+		});
+		ids.push(mgrId);
+
 		return ids;
+	},
+});
+
+// Ensure the manager agent exists and is seated at the manager desk
+export const ensureManager = mutation({
+	args: {},
+	handler: async (ctx) => {
+		// Check if a manager agent already exists
+		const existing = await ctx.db
+			.query("agents")
+			.withIndex("by_type", (q) => q.eq("type", "manager"))
+			.first();
+		if (existing) return existing._id;
+
+		// Find the manager desk
+		const desks = await ctx.db.query("desks").collect();
+		const mgrDesk = desks.find((d) => d.label === "manager");
+		if (!mgrDesk) throw new Error("Manager desk not found — run initDesks first");
+
+		// Create the manager agent
+		const agentId = await ctx.db.insert("agents", {
+			name: "Manager",
+			type: "manager",
+			role: "orchestrator",
+			status: "idle",
+			model: "mistral-large-latest",
+			deskId: mgrDesk._id,
+			color: "#FF7000",
+			position: mgrDesk.position,
+			spawnedAt: Date.now(),
+		});
+
+		// Assign desk
+		await ctx.db.patch(mgrDesk._id, { occupiedBy: agentId });
+		return agentId;
 	},
 });
 
@@ -42,11 +85,11 @@ export const spawnAgent = mutation({
 		threadId: v.optional(v.string()),
 	},
 	handler: async (ctx, args) => {
-		// Find an available desk
+		// Find an available worker desk (skip manager desk)
 		const desks = await ctx.db.query("desks").collect();
-		const availableDesk = desks.find((d) => !d.occupiedBy);
+		const availableDesk = desks.find((d) => !d.occupiedBy && d.label !== "manager");
 		if (!availableDesk) {
-			throw new Error("No available desks — all 8 are occupied");
+			throw new Error("No available desks — all worker desks are occupied");
 		}
 
 		// Create the agent
@@ -118,11 +161,11 @@ export const spawnAgentInternal = internalMutation({
 		threadId: v.optional(v.string()),
 	},
 	handler: async (ctx, args) => {
-		// Find an available desk
+		// Find an available worker desk (skip manager desk)
 		const desks = await ctx.db.query("desks").collect();
-		const availableDesk = desks.find((d) => !d.occupiedBy);
+		const availableDesk = desks.find((d) => !d.occupiedBy && d.label !== "manager");
 		if (!availableDesk) {
-			throw new Error("No available desks — all 8 are occupied");
+			throw new Error("No available desks — all worker desks are occupied");
 		}
 
 		const agentId = await ctx.db.insert("agents", {

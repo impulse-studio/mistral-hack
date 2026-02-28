@@ -106,7 +106,8 @@
 							"index.ts",
 							"types.ts",
 							"constants.ts",
-							"utils.ts"
+							"utils.ts",
+							"lib/auth"
 						]
 					}
 				]
@@ -263,7 +264,8 @@
 					"utils.ts",
 					"convex/",
 					".storybook/",
-					".config."
+					".config.",
+					"components/ui"
 				]
 			}
 		],

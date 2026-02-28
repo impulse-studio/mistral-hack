@@ -10,6 +10,7 @@
 
 import type * as agent from "../agent.js";
 import type * as agents_onComplete from "../agents/onComplete.js";
+import type * as agents_queries from "../agents/queries.js";
 import type * as agents_runner from "../agents/runner.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
@@ -48,6 +49,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   agent: typeof agent;
   "agents/onComplete": typeof agents_onComplete;
+  "agents/queries": typeof agents_queries;
   "agents/runner": typeof agents_runner;
   auth: typeof auth;
   chat: typeof chat;

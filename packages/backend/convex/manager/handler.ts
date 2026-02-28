@@ -75,6 +75,13 @@ Be concise, proactive, and strategic. Think step by step before delegating.`,
 			}),
 			handler: internal.manager.tools.updateTaskStatusAction,
 		}),
+		checkAgentProgress: createActionTool({
+			description: "Check the current status and recent logs of a sub-agent.",
+			args: z.object({
+				agentId: z.string().describe("Agent ID to check"),
+			}),
+			handler: internal.manager.tools.checkProgressAction,
+		}),
 	},
 	saveStreamDeltas: true,
 });

@@ -1,4 +1,6 @@
+import { api } from "@mistral-hack/backend/convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQuery } from "convex/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { OfficeAgentPanel } from "@/components/office/OfficeAgentPanel.component";
@@ -11,6 +13,14 @@ const EMPTY_TASKS: never[] = [];
 const EMPTY_TERMINAL: never[] = [];
 const EMPTY_REASONING: never[] = [];
 
+/** Map desk position to canvas chair UID */
+function deskPositionToChairUid(position: { x: number; y: number }, label?: string): string {
+	if (label === "manager") return "chair-mgr";
+	// Workers: position x=1..4, y=1..2 → chair-1..chair-8
+	const index = (position.y - 1) * 4 + position.x;
+	return `chair-${index}`;
+}
+
 export const Route = createFileRoute("/office")({
 	component: OfficePage,
 });
@@ -19,7 +29,23 @@ function OfficePage() {
 	const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 	const [isThinking, setIsThinking] = useState(false);
 	const [tilesetReady, setTilesetReady] = useState(false);
+	const [threadId, setThreadId] = useState<string | null>(() => {
+		if (typeof window === "undefined") return null;
+		return sessionStorage.getItem("office-thread-id");
+	});
 	const officeRef = useRef<OfficeState | null>(null);
+	const agentMapRef = useRef(new Map<string, number>()); // convex agent _id → canvas id
+	const nextCanvasIdRef = useRef(1);
+	const initCalledRef = useRef(false);
+
+	// ── Convex mutations ──
+	const initDesks = useMutation(api.office.mutations.initDesks);
+	const ensureManager = useMutation(api.office.mutations.ensureManager);
+	const createThread = useMutation(api.chat.createNewThread);
+	const sendMessage = useMutation(api.chat.sendMessage);
+
+	// ── Convex subscriptions ──
+	const convexOffice = useQuery(api.office.queries.getOfficeState);
 
 	// Initialize tileset (floor patterns + wall sprites) before creating OfficeState
 	useEffect(() => {
@@ -32,39 +58,68 @@ function OfficePage() {
 	}
 	const officeState = officeRef.current;
 
-	// Spawn demo agents at the 4 workstations
+	// ── Init sequence: create desks + ensure manager in Convex ──
 	useEffect(() => {
-		if (!officeState) return;
-		const os = officeState;
+		if (!officeState || initCalledRef.current) return;
+		initCalledRef.current = true;
 
-		// Manager — first desk, no spawn animation
-		os.addAgent(1, 0, 0, "chair-1", true);
-		os.setAgentActive(1, true);
-		os.setAgentTool(1, "Task");
+		(async () => {
+			try {
+				await initDesks();
+				await ensureManager();
+			} catch (e) {
+				// Idempotent — ignore "already exists" errors
+				console.debug("[Office] Init:", e);
+			}
+		})();
+	}, [officeState, initDesks, ensureManager]);
 
-		// Other agents spawn with staggered matrix effects
-		const timers = [
-			setTimeout(() => {
-				os.addAgent(2, 1, 0, "chair-2");
-				os.setAgentActive(2, true);
-				os.setAgentTool(2, "Write");
-			}, 400),
-			setTimeout(() => {
-				os.addAgent(3, 2, 60, "chair-3");
-				os.setAgentActive(3, true);
-				os.setAgentTool(3, "Read");
-			}, 900),
-			setTimeout(() => {
-				os.addAgent(4, 3, 120, "chair-4");
-				os.setAgentActive(4, true);
-				os.setAgentTool(4, "Bash");
-			}, 1500),
-		];
+	// ── Real-time agent sync: Convex → Canvas ──
+	useEffect(() => {
+		if (!convexOffice || !officeRef.current) return;
+		const os = officeRef.current;
+		const { agents, desks } = convexOffice;
 
-		return () => {
-			for (const t of timers) clearTimeout(t);
-		};
-	}, [officeState]);
+		// Build desk lookup by ID
+		const deskById = new Map(desks.map((d) => [d._id, d]));
+
+		const activeConvexIds = new Set<string>();
+
+		for (const agent of agents) {
+			// Skip fully completed/despawning agents
+			if (agent.status === "completed" || agent.status === "despawning") continue;
+			activeConvexIds.add(agent._id);
+
+			// Resolve chair UID from desk
+			const desk = agent.deskId ? deskById.get(agent.deskId) : null;
+			const chairUid = desk ? deskPositionToChairUid(desk.position, desk.label) : undefined;
+
+			if (!agentMapRef.current.has(agent._id)) {
+				// New agent → spawn on canvas
+				const canvasId = nextCanvasIdRef.current++;
+				agentMapRef.current.set(agent._id, canvasId);
+
+				const isManager = agent.type === "manager";
+				const palette = canvasId % 6;
+				const hue = canvasId * 60;
+
+				os.addAgent(canvasId, palette, hue, chairUid, isManager);
+			}
+
+			// Sync active state
+			const canvasId = agentMapRef.current.get(agent._id)!;
+			const isActive = agent.status === "working" || agent.status === "thinking";
+			os.setAgentActive(canvasId, isActive);
+		}
+
+		// Remove agents no longer in Convex
+		for (const [convexId, canvasId] of agentMapRef.current) {
+			if (!activeConvexIds.has(convexId)) {
+				os.removeAgent(canvasId);
+				agentMapRef.current.delete(convexId);
+			}
+		}
+	}, [convexOffice]);
 
 	// Agent click handler
 	const handleClickAgent = useCallback((agentId: number) => {
@@ -75,38 +130,54 @@ function OfficePage() {
 		setSelectedAgentId(null);
 	}, []);
 
-	// Send task to manager (placeholder — wire Convex later)
-	const handleSubmitTask = useCallback(async (prompt: string) => {
-		setIsThinking(true);
-		// TODO: wire to api.messages.mutations.send
-		console.log("[Manager]", prompt);
-		await new Promise<void>((resolve) => {
-			setTimeout(resolve, 500);
-		});
-		setIsThinking(false);
-	}, []);
+	// ── Send task to manager via Convex chat ──
+	const handleSubmitTask = useCallback(
+		async (prompt: string) => {
+			setIsThinking(true);
+			try {
+				let tid = threadId;
+				if (!tid) {
+					tid = await createThread();
+					setThreadId(tid);
+					sessionStorage.setItem("office-thread-id", tid);
+				}
+				await sendMessage({ threadId: tid, prompt, channel: "web" });
+			} catch (e) {
+				console.error("[Office] Send failed:", e);
+			} finally {
+				setIsThinking(false);
+			}
+		},
+		[threadId, createThread, sendMessage],
+	);
 
-	// Resolve selected agent info for panel
+	// ── Resolve selected agent info for panel ──
 	const selectedChar =
 		selectedAgentId !== null ? (officeState?.characters.get(selectedAgentId) ?? null) : null;
 
+	// Build reverse map: canvas ID → convex agent data
+	const selectedConvexAgent = useMemo(() => {
+		if (selectedAgentId === null || !convexOffice) return null;
+		for (const [convexId, canvasId] of agentMapRef.current) {
+			if (canvasId === selectedAgentId) {
+				return convexOffice.agents.find((a) => a._id === convexId) ?? null;
+			}
+		}
+		return null;
+	}, [selectedAgentId, convexOffice]);
+
 	const agentInfo = useMemo(() => {
 		if (!selectedChar) return null;
-		const names: Record<number, { name: string; role: string }> = {
-			1: { name: "Manager", role: "orchestrator" },
-			2: { name: "CodeBot", role: "coder" },
-			3: { name: "ResearchBot", role: "researcher" },
-			4: { name: "DevOps", role: "infrastructure" },
-		};
+		const convex = selectedConvexAgent;
 		return {
-			id: String(selectedChar.id),
-			name: names[selectedChar.id]?.name ?? `Agent ${selectedChar.id}`,
-			role: names[selectedChar.id]?.role ?? "worker",
-			color: `hsl(${selectedChar.hueShift}, 70%, 60%)`,
+			id: convex?._id ?? String(selectedChar.id),
+			name: convex?.name ?? `Agent ${selectedChar.id}`,
+			role: convex?.role ?? "worker",
+			color: convex?.color ?? `hsl(${selectedChar.hueShift}, 70%, 60%)`,
 			status: selectedChar.isActive ? "working" : "idle",
-			type: (selectedChar.id === 1 ? "manager" : "worker") as "manager" | "worker",
+			type: (convex?.type ?? "worker") as "manager" | "worker",
 		};
-	}, [selectedChar]);
+	}, [selectedChar, selectedConvexAgent]);
 
 	// Loading state while tileset initializes
 	if (!officeState) {

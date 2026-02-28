@@ -456,30 +456,38 @@ function draw(ctx: CanvasRenderingContext2D, time: number) {
 		for (let tx = 0; tx < COLS; tx++) {
 			const tile = getTile(tx, ty);
 			switch (tile) {
-				case "wood":
+				case "wood": {
 					drawWoodFloor(ctx, tx, ty);
 					break;
-				case "cream":
+				}
+				case "cream": {
 					drawCreamFloor(ctx, tx, ty);
 					break;
-				case "teal":
+				}
+				case "teal": {
 					drawTealCarpet(ctx, tx, ty);
 					break;
-				case "wallTop":
+				}
+				case "wallTop": {
 					drawWallTop(ctx, tx, ty);
 					break;
-				case "wallV":
+				}
+				case "wallV": {
 					drawVertWall(ctx, tx, ty);
 					break;
-				case "wallH":
+				}
+				case "wallH": {
 					drawHorizWall(ctx, tx, ty);
 					break;
-				case "doorH":
+				}
+				case "doorH": {
 					drawDoorH(ctx, tx, ty, tx >= 18 ? drawTealCarpet : drawWoodFloor);
 					break;
-				case "doorV":
+				}
+				case "doorV": {
 					drawDoorV(ctx, tx, ty, drawWoodFloor);
 					break;
+				}
 			}
 		}
 	}

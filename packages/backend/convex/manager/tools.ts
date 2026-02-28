@@ -106,6 +106,66 @@ export const createTaskAction = internalAction({
 	},
 });
 
+// Tool action: check agent progress
+export const checkProgressAction = internalAction({
+	args: {
+		agentId: v.string(),
+	},
+	handler: async (
+		ctx,
+		{ agentId },
+	): Promise<{
+		agentId: string;
+		status: string;
+		name: string;
+		role: string;
+		currentTask: { title: string; status: string } | null;
+		recentLogs: Array<{ type: string; content: string; timestamp: number }>;
+		message: string;
+	}> => {
+		const typedAgentId = agentId as Id<"agents">;
+		const agent = await ctx.runQuery(internal.office.queries.getAgentInternal, {
+			agentId: typedAgentId,
+		});
+		if (!agent) {
+			return {
+				agentId,
+				status: "not_found",
+				name: "",
+				role: "",
+				currentTask: null,
+				recentLogs: [],
+				message: `Agent ${agentId} not found.`,
+			};
+		}
+
+		let currentTask: { title: string; status: string } | null = null;
+		if (agent.currentTaskId) {
+			const task = await ctx.runQuery(internal.tasks.queries.getInternal, {
+				taskId: agent.currentTaskId,
+			});
+			if (task) {
+				currentTask = { title: task.title, status: task.status };
+			}
+		}
+
+		const logs = await ctx.runQuery(internal.agents.queries.getRecentLogs, {
+			agentId: typedAgentId,
+			limit: 10,
+		});
+
+		return {
+			agentId,
+			status: agent.status,
+			name: agent.name,
+			role: agent.role,
+			currentTask,
+			recentLogs: logs,
+			message: `Agent "${agent.name}" is ${agent.status}.${currentTask ? ` Working on: ${currentTask.title} (${currentTask.status})` : ""}`,
+		};
+	},
+});
+
 // Tool action: update task status
 export const updateTaskStatusAction = internalAction({
 	args: {

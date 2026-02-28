@@ -228,32 +228,33 @@ export function getSeatTiles(seats: Map<string, Seat>): Set<string> {
 
 // ── Room floor colors ────────────────────────────────────────────
 const WORK_AREA_COLOR: FloorColor = { h: 200, s: 25, b: 10, c: 10 }; // teal-blue (Level 4 main floor)
-const MEETING_ROOM_COLOR: FloorColor = { h: 195, s: 30, b: 15, c: 10 }; // slightly brighter teal
+const MANAGER_OFFICE_COLOR: FloorColor = { h: 25, s: 30, b: 12, c: 10 }; // warm amber (private office)
 const LOUNGE_COLOR: FloorColor = { h: 210, s: 20, b: 5, c: 0 }; // cool blue-gray
 const KITCHEN_COLOR: FloorColor = { h: 180, s: 20, b: 10, c: 0 }; // muted teal
 const DOORWAY_COLOR: FloorColor = { h: 35, s: 25, b: 10, c: 0 }; // warm tan transition
 const WALL_FACE_COLOR: FloorColor = { h: 30, s: 12, b: 35, c: 15 }; // cream/beige (Level 4 walls)
 
 /**
- * Create the default office layout — 24×15 grid with 4 rooms:
+ * Create the default office layout — 30×17 grid with 4 rooms:
  *
- *  ┌────────────────────┬──────────┐
- *  │   WORK AREA        │ MEETING  │
- *  │   4 desks (2 PC,   │  table   │
- *  │    2 laptop)       │  chairs  │
- *  │                    │  WB      │
- *  ├──────── ───────────┤── ───────┤
- *  │   LOUNGE           │ KITCHEN  │
- *  │   bookshelves       │ cooler   │
- *  │   plant, lamp      │ coffee   │
- *  └────────────────────┴──────────┘
+ *  ┌─────────────────────────────┬─────────────┐
+ *  │  WORKSPACE (8 worker desks) │  MANAGER    │
+ *  │  cols 1-19, rows 1-8       │  OFFICE     │
+ *  │  Row 1: desks 1-4           │  cols 21-28 │
+ *  │  Row 2: desks 5-8           │  rows 1-8   │
+ *  ├───── ───────────────────────┤── ──────────┤
+ *  │  LOUNGE                     │  KITCHEN    │
+ *  │  cols 1-19, rows 10-15     │  cols 21-28 │
+ *  │  bookshelves, plants        │  rows 10-15 │
+ *  └─────────────────────────────┴─────────────┘
+ *  vWall=20, hWall=9
  */
 export function createDefaultLayout(): OfficeLayout {
-	const COLS = DEFAULT_COLS; // 24
-	const ROWS = DEFAULT_ROWS; // 15
+	const COLS = DEFAULT_COLS; // 30
+	const ROWS = DEFAULT_ROWS; // 17
 	const W = TileType.WALL;
-	const F1 = TileType.FLOOR_1; // work area
-	const F2 = TileType.FLOOR_2; // meeting room
+	const F1 = TileType.FLOOR_1; // workspace
+	const F2 = TileType.FLOOR_2; // manager office
 	const F3 = TileType.FLOOR_3; // lounge
 	const F4 = TileType.FLOOR_4; // doorway
 	const F5 = TileType.FLOOR_5; // kitchen
@@ -261,9 +262,8 @@ export function createDefaultLayout(): OfficeLayout {
 	const tiles: TileTypeVal[] = [];
 	const tileColors: Array<FloorColor | null> = [];
 
-	// Vertical wall at col 13, horizontal wall at row 9
-	const vWall = 13;
-	const hWall = 9;
+	const vWall = 20; // vertical divider between workspace/manager & lounge/kitchen
+	const hWall = 9; // horizontal divider between top & bottom rooms
 
 	for (let r = 0; r < ROWS; r++) {
 		for (let c = 0; c < COLS; c++) {
@@ -274,16 +274,16 @@ export function createDefaultLayout(): OfficeLayout {
 				continue;
 			}
 
-			// Vertical divider wall at col 13
+			// Vertical divider wall at col 20
 			if (c === vWall) {
-				// Doorway between work area ↔ meeting: rows 5-6
-				if (r >= 5 && r <= 6) {
+				// Doorway workspace ↔ manager office: rows 4-5
+				if (r >= 4 && r <= 5) {
 					tiles.push(F4);
 					tileColors.push(DOORWAY_COLOR);
 					continue;
 				}
-				// Doorway between lounge ↔ kitchen: rows 11-12
-				if (r >= 11 && r <= 12) {
+				// Doorway lounge ↔ kitchen: rows 12-13
+				if (r >= 12 && r <= 13) {
 					tiles.push(F4);
 					tileColors.push(DOORWAY_COLOR);
 					continue;
@@ -295,14 +295,14 @@ export function createDefaultLayout(): OfficeLayout {
 
 			// Horizontal divider wall at row 9
 			if (r === hWall) {
-				// Doorway work area ↔ lounge: cols 5-6
-				if (c >= 5 && c <= 6) {
+				// Doorway workspace ↔ lounge: cols 9-10
+				if (c >= 9 && c <= 10) {
 					tiles.push(F4);
 					tileColors.push(DOORWAY_COLOR);
 					continue;
 				}
-				// Doorway meeting ↔ kitchen: cols 18-19
-				if (c >= 18 && c <= 19) {
+				// Doorway manager ↔ kitchen: cols 24-25
+				if (c >= 24 && c <= 25) {
 					tiles.push(F4);
 					tileColors.push(DOORWAY_COLOR);
 					continue;
@@ -320,7 +320,7 @@ export function createDefaultLayout(): OfficeLayout {
 			}
 			if (r < hWall && c > vWall) {
 				tiles.push(F2);
-				tileColors.push(MEETING_ROOM_COLOR);
+				tileColors.push(MANAGER_OFFICE_COLOR);
 				continue;
 			}
 			if (r > hWall && c < vWall) {
@@ -334,79 +334,94 @@ export function createDefaultLayout(): OfficeLayout {
 				continue;
 			}
 
-			// Fallback (shouldn't reach here)
+			// Fallback
 			tiles.push(F1);
 			tileColors.push(WORK_AREA_COLOR);
 		}
 	}
 
 	const furniture: PlacedFurniture[] = [
-		// ═══ WORK AREA (top-left: cols 1-12, rows 1-8) ═══
-		// Desks are 3×2 tiles (48×22px), chairs centered on desk width
+		// ═══ WORKSPACE (top-left: cols 1-19, rows 1-8) ═══
+		// 8 worker desks: 2 rows × 4 cols, desks are 3×2 tiles
 
-		// Desk 1 (top-left): PC workstation — cols 2-4, rows 2-3
+		// Top row — desks 1-4 at rows 2-3
 		{ uid: "desk-1", type: FurnitureType.DESK, col: 2, row: 2 },
 		{ uid: "chair-1", type: "chair-back", col: 3, row: 3 },
 		{ uid: "pc-1", type: FurnitureType.PC, col: 3, row: 2 },
 
-		// Desk 2 (top-right): Laptop workstation — cols 7-9, rows 2-3
-		{ uid: "desk-2", type: FurnitureType.DESK, col: 7, row: 2 },
-		{ uid: "chair-2", type: "chair-back", col: 8, row: 3 },
-		{ uid: "laptop-1", type: FurnitureType.LAPTOP, col: 8, row: 2 },
+		{ uid: "desk-2", type: FurnitureType.DESK, col: 6, row: 2 },
+		{ uid: "chair-2", type: "chair-back", col: 7, row: 3 },
+		{ uid: "laptop-1", type: FurnitureType.LAPTOP, col: 7, row: 2 },
 
-		// Desk 3 (bottom-left): Laptop workstation — cols 2-4, rows 5-6
-		{ uid: "desk-3", type: FurnitureType.DESK, col: 2, row: 5 },
-		{ uid: "chair-3", type: "chair-back", col: 3, row: 6 },
-		{ uid: "laptop-2", type: FurnitureType.LAPTOP, col: 3, row: 5 },
+		{ uid: "desk-3", type: FurnitureType.DESK, col: 10, row: 2 },
+		{ uid: "chair-3", type: "chair-back", col: 11, row: 3 },
+		{ uid: "pc-2", type: FurnitureType.PC, col: 11, row: 2 },
 
-		// Desk 4 (bottom-right): PC workstation — cols 7-9, rows 5-6
-		{ uid: "desk-4", type: FurnitureType.DESK, col: 7, row: 5 },
-		{ uid: "chair-4", type: "chair-back", col: 8, row: 6 },
-		{ uid: "pc-2", type: FurnitureType.PC, col: 8, row: 5 },
+		{ uid: "desk-4", type: FurnitureType.DESK, col: 14, row: 2 },
+		{ uid: "chair-4", type: "chair-back", col: 15, row: 3 },
+		{ uid: "laptop-2", type: FurnitureType.LAPTOP, col: 15, row: 2 },
 
-		// Work area decor
-		{ uid: "plant-wa-1", type: FurnitureType.PLANT, col: 1, row: 1 },
-		{ uid: "plant-wa-2", type: FurnitureType.PLANT, col: 11, row: 1 },
-		{ uid: "bookshelf-wa", type: FurnitureType.BOOKSHELF, col: 11, row: 3 },
-		{ uid: "lamp-wa", type: FurnitureType.LAMP, col: 5, row: 2 },
+		// Bottom row — desks 5-8 at rows 5-6
+		{ uid: "desk-5", type: FurnitureType.DESK, col: 2, row: 5 },
+		{ uid: "chair-5", type: "chair-back", col: 3, row: 6 },
+		{ uid: "laptop-3", type: FurnitureType.LAPTOP, col: 3, row: 5 },
 
-		// ═══ MEETING ROOM (top-right: cols 14-22, rows 1-8) ═══
+		{ uid: "desk-6", type: FurnitureType.DESK, col: 6, row: 5 },
+		{ uid: "chair-6", type: "chair-back", col: 7, row: 6 },
+		{ uid: "pc-3", type: FurnitureType.PC, col: 7, row: 5 },
 
-		// Meeting table — cols 17-19, rows 3-4
-		{ uid: "table-1", type: FurnitureType.DESK, col: 17, row: 3 },
+		{ uid: "desk-7", type: FurnitureType.DESK, col: 10, row: 5 },
+		{ uid: "chair-7", type: "chair-back", col: 11, row: 6 },
+		{ uid: "laptop-4", type: FurnitureType.LAPTOP, col: 11, row: 5 },
 
-		// Chairs around the table (front above, back at desk solid row)
-		{ uid: "chair-m-1", type: FurnitureType.CHAIR, col: 17, row: 2 },
-		{ uid: "chair-m-2", type: FurnitureType.CHAIR, col: 19, row: 2 },
-		{ uid: "chair-m-3", type: "chair-back", col: 17, row: 4 },
-		{ uid: "chair-m-4", type: "chair-back", col: 19, row: 4 },
+		{ uid: "desk-8", type: FurnitureType.DESK, col: 14, row: 5 },
+		{ uid: "chair-8", type: "chair-back", col: 15, row: 6 },
+		{ uid: "pc-4", type: FurnitureType.PC, col: 15, row: 5 },
 
-		// Whiteboard on north wall
-		{ uid: "wb-1", type: FurnitureType.WHITEBOARD, col: 14, row: 0 },
+		// Workspace decor
+		{ uid: "plant-ws-1", type: FurnitureType.PLANT, col: 1, row: 1 },
+		{ uid: "plant-ws-2", type: FurnitureType.PLANT, col: 18, row: 1 },
+		{ uid: "lamp-ws-1", type: FurnitureType.LAMP, col: 5, row: 2 },
+		{ uid: "lamp-ws-2", type: FurnitureType.LAMP, col: 13, row: 2 },
+		{ uid: "bookshelf-ws", type: FurnitureType.BOOKSHELF, col: 18, row: 4 },
 
-		// Meeting room decor
-		{ uid: "plant-mr-1", type: FurnitureType.PLANT, col: 22, row: 1 },
-		{ uid: "plant-mr-2", type: FurnitureType.PLANT, col: 14, row: 7 },
+		// ═══ MANAGER OFFICE (top-right: cols 21-28, rows 1-8) ═══
 
-		// ═══ LOUNGE (bottom-left: cols 1-12, rows 10-13) ═══
+		// Manager desk with PC — cols 24-26, rows 3-4
+		{ uid: "desk-mgr", type: FurnitureType.DESK, col: 24, row: 3 },
+		{ uid: "chair-mgr", type: "chair-back", col: 25, row: 4 },
+		{ uid: "pc-mgr", type: FurnitureType.PC, col: 25, row: 3 },
+
+		// Manager office decor
+		{ uid: "wb-mgr", type: FurnitureType.WHITEBOARD, col: 22, row: 0 },
+		{ uid: "bookshelf-mgr-1", type: FurnitureType.BOOKSHELF, col: 21, row: 2 },
+		{ uid: "bookshelf-mgr-2", type: FurnitureType.BOOKSHELF, col: 22, row: 2 },
+		{ uid: "plant-mgr-1", type: FurnitureType.PLANT, col: 28, row: 1 },
+		{ uid: "plant-mgr-2", type: FurnitureType.PLANT, col: 21, row: 7 },
+		{ uid: "lamp-mgr", type: FurnitureType.LAMP, col: 27, row: 5 },
+
+		// ═══ LOUNGE (bottom-left: cols 1-19, rows 10-15) ═══
 
 		// Bookshelves along left wall
 		{ uid: "bookshelf-lg-1", type: FurnitureType.BOOKSHELF, col: 1, row: 10 },
 		{ uid: "bookshelf-lg-2", type: FurnitureType.BOOKSHELF, col: 2, row: 10 },
+		{ uid: "bookshelf-lg-3", type: FurnitureType.BOOKSHELF, col: 3, row: 10 },
 
 		// Lounge decor
-		{ uid: "plant-lg", type: FurnitureType.PLANT, col: 11, row: 10 },
-		{ uid: "lamp-lg", type: FurnitureType.LAMP, col: 5, row: 13 },
+		{ uid: "plant-lg-1", type: FurnitureType.PLANT, col: 18, row: 10 },
+		{ uid: "plant-lg-2", type: FurnitureType.PLANT, col: 1, row: 14 },
+		{ uid: "lamp-lg-1", type: FurnitureType.LAMP, col: 8, row: 14 },
+		{ uid: "lamp-lg-2", type: FurnitureType.LAMP, col: 15, row: 10 },
 
-		// ═══ KITCHEN (bottom-right: cols 14-22, rows 10-13) ═══
+		// ═══ KITCHEN (bottom-right: cols 21-28, rows 10-15) ═══
 
-		// Kitchen appliances — 2×2 footprints
-		{ uid: "cooler-k", type: FurnitureType.COOLER, col: 15, row: 10 },
-		{ uid: "coffee-k", type: FurnitureType.COFFEE_MACHINE, col: 18, row: 10 },
+		// Kitchen appliances
+		{ uid: "cooler-k", type: FurnitureType.COOLER, col: 22, row: 10 },
+		{ uid: "coffee-k", type: FurnitureType.COFFEE_MACHINE, col: 25, row: 10 },
 
 		// Kitchen decor
-		{ uid: "plant-k", type: FurnitureType.PLANT, col: 22, row: 10 },
-		{ uid: "lamp-k", type: FurnitureType.LAMP, col: 21, row: 13 },
+		{ uid: "plant-k", type: FurnitureType.PLANT, col: 28, row: 10 },
+		{ uid: "lamp-k", type: FurnitureType.LAMP, col: 27, row: 14 },
 	];
 
 	return { version: 1, cols: COLS, rows: ROWS, tiles, tileColors, furniture };
@@ -458,8 +473,8 @@ function migrateLayout(layout: OfficeLayout): OfficeLayout {
 			case 1: // was TILE_FLOOR → FLOOR_1 beige
 				tileColors.push(WORK_AREA_COLOR);
 				break;
-			case 2: // was WOOD_FLOOR → FLOOR_2 brown
-				tileColors.push(MEETING_ROOM_COLOR);
+			case 2: // was WOOD_FLOOR → FLOOR_2
+				tileColors.push(MANAGER_OFFICE_COLOR);
 				break;
 			case 3: // was CARPET → FLOOR_3 purple
 				tileColors.push(LOUNGE_COLOR);
