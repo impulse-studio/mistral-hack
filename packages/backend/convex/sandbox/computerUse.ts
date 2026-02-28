@@ -133,12 +133,14 @@ export const takeCompressedScreenshot = internalAction({
 		);
 
 		const screenshot = result.screenshot ?? "";
+		const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
 		const sizeBytes = await recordAndLogScreenshot(
 			ctx,
 			sandboxRecord._id,
 			agentId,
 			screenshot,
 			`Compressed screenshot (${format ?? "default"}, q=${quality ?? "default"})`,
+			mimeType,
 		);
 
 		return {

@@ -92,10 +92,11 @@ export async function recordAndLogScreenshot(
 	agentId: string | undefined,
 	base64Data: string,
 	label: string,
+	mimeType: "image/png" | "image/jpeg" = "image/png",
 ) {
 	const buffer = Buffer.from(base64Data, "base64");
 	const sizeBytes = buffer.byteLength;
-	const blob = new Blob([buffer], { type: "image/png" });
+	const blob = new Blob([buffer], { type: mimeType });
 
 	await ctx.runMutation(internal.sandbox.mutations.recordActivity, {
 		sandboxId,

@@ -3,6 +3,7 @@
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
+import { escapeShellArg } from "../sandbox/helpers";
 
 type TaskRecord = {
 	title: string;
@@ -90,8 +91,11 @@ async function verifyGeneratedCode(
 	});
 
 	const ext = found.name.split(".").pop();
+	const escapedName = escapeShellArg(found.name);
 	const cmd =
-		ext === "ts" ? `cd /home/user && npx tsx ${found.name}` : `cd /home/user && node ${found.name}`;
+		ext === "ts"
+			? `cd /home/user && npx tsx ${escapedName}`
+			: `cd /home/user && node ${escapedName}`;
 
 	const execResult = await ctx.runAction(internal.sandbox.execute.runCommand, {
 		command: cmd,
@@ -180,7 +184,7 @@ export const runSubAgent = internalAction({
 			} else {
 				// Shell commands for researcher/copywriter/general
 				const cmdResult = await ctx.runAction(internal.sandbox.execute.runCommand, {
-					command: `echo "Task: ${task.title}" && echo "Agent role: ${agent.role}"`,
+					command: `echo ${escapeShellArg(`Task: ${task.title}`)} && echo ${escapeShellArg(`Agent role: ${agent.role}`)}`,
 					agentId,
 				});
 				result = cmdResult.result ?? "Non-code agent execution not yet fully implemented";

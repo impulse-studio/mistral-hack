@@ -43,9 +43,12 @@ export const runCommand = internalAction({
 			return { result: output, exitCode };
 		}
 
-		// Non-streaming path — quick internal commands (with timeout + retry)
-		const result = await withRetry(() =>
-			sandbox.process.executeCommand(command, undefined, undefined, COMMAND_TIMEOUT_SECONDS),
+		// Non-streaming path — quick internal commands
+		const result = await sandbox.process.executeCommand(
+			command,
+			undefined,
+			undefined,
+			COMMAND_TIMEOUT_SECONDS,
 		);
 
 		// Record activity to extend auto-stop timer

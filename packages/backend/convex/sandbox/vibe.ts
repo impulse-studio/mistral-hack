@@ -34,7 +34,8 @@ export const runVibeHeadless = internalAction({
 		const dir = workingDir ?? "/home/user";
 		// BUG 6 FIX: Use proper POSIX single-quote shell escaping
 		const escapedPrompt = escapeShellArg(prompt);
-		const cmd = `cd ${dir} && mistral-vibe --headless --prompt ${escapedPrompt}`;
+		const escapedDir = escapeShellArg(dir);
+		const cmd = `cd ${escapedDir} && mistral-vibe --headless --prompt ${escapedPrompt}`;
 
 		// Log the command before streaming output
 		await ctx.runMutation(internal.logs.mutations.append, {

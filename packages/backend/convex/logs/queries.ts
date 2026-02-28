@@ -27,7 +27,7 @@ export const streamForAgent = query({
 			.withIndex("by_agent_time", (q) => q.eq("agentId", agentId))
 			.order("desc");
 
-		const logs = limit ? await q.take(limit) : await q.collect();
+		const logs = limit !== undefined ? await q.take(limit) : await q.collect();
 		const resolved = await resolveScreenshotUrls(ctx, logs);
 		return resolved.reverse(); // return in chronological order
 	},

@@ -19,9 +19,7 @@ export function UserMenu() {
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger>
-				<Button variant="outline">{user?.name}</Button>
-			</DropdownMenuTrigger>
+			<DropdownMenuTrigger render={<Button variant="outline" />}>{user?.name}</DropdownMenuTrigger>
 			<DropdownMenuContent className="bg-card">
 				<DropdownMenuGroup>
 					<DropdownMenuLabel>My Account</DropdownMenuLabel>

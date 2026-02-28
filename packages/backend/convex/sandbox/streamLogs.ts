@@ -63,23 +63,26 @@ export async function runCommandStreaming(
 
 			if (!agentId || (!stdoutChunk && !stderrChunk)) return;
 
-			flushQueue = flushQueue.then(async () => {
-				if (stdoutChunk) {
-					await ctx.runMutation(internal.logs.mutations.append, {
-						agentId,
-						type: "stdout" as const,
-						content: stdoutChunk,
-					});
-				}
-				if (stderrChunk) {
-					await ctx.runMutation(internal.logs.mutations.append, {
-						agentId,
-						type: "stderr" as const,
-						content: stderrChunk,
-					});
-				}
-				return undefined;
-			});
+			flushQueue = flushQueue
+				.then(async () => {
+					if (stdoutChunk) {
+						await ctx.runMutation(internal.logs.mutations.append, {
+							agentId,
+							type: "stdout" as const,
+							content: stdoutChunk,
+						});
+					}
+					if (stderrChunk) {
+						await ctx.runMutation(internal.logs.mutations.append, {
+							agentId,
+							type: "stderr" as const,
+							content: stderrChunk,
+						});
+					}
+				})
+				.catch((err) => {
+					console.warn("[streamLogs] flush failed:", err);
+				});
 		};
 
 		const scheduleFlush = () => {

@@ -22,7 +22,7 @@ export const runCode = internalAction({
 			`[codeRun]\n${code.length > 500 ? code.slice(0, 500) + "..." : code}`,
 		);
 
-		const result = await withRetry(() => sandbox.process.codeRun(code, undefined, timeout));
+		const result = await sandbox.process.codeRun(code, undefined, timeout);
 
 		await recordAndLog(ctx, sandboxRecord._id, agentId, "stdout", result.result ?? "(no output)");
 
