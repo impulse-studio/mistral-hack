@@ -21,6 +21,13 @@ export const stopSandbox = action({
 	},
 });
 
+export const cleanupAllSandboxes = action({
+	args: {},
+	handler: async (ctx): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.lifecycle.cleanupAllSandboxes, {});
+	},
+});
+
 // === Computer Use ===
 
 export const startComputerUse = action({

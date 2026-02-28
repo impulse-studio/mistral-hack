@@ -132,7 +132,7 @@ export const startSandbox = internalAction({
 	},
 });
 
-// Stop a specific agent's sandbox (preserves disk via volume)
+// Delete a specific agent's sandbox (data persists on shared volume, frees disk)
 export const stopAgentSandbox = internalAction({
 	args: {
 		agentId: v.id("agents"),
@@ -142,31 +142,29 @@ export const stopAgentSandbox = internalAction({
 			agentId,
 		});
 		if (!sandboxRecord) return;
-		if (sandboxRecord.status !== "running" && sandboxRecord.status !== "creating") return;
 
 		try {
 			const daytona = getDaytona();
 			const sandbox = await withRetry(() => daytona.findOne({ idOrName: sandboxRecord.daytonaId }));
-			await withRetry(() => sandbox.stop());
-
-			await ctx.runMutation(internal.sandbox.mutations.updateStatus, {
-				sandboxId: sandboxRecord._id,
-				status: "stopped",
-			});
+			await withRetry(() => daytona.delete(sandbox));
+			console.log(
+				`[stopAgentSandbox] Deleted sandbox ${sandboxRecord.daytonaId} for agent ${agentId}`,
+			);
 		} catch (error) {
-			const errorMsg = error instanceof Error ? error.message : String(error);
-			console.error("Failed to stop agent sandbox:", errorMsg);
-
-			await ctx.runMutation(internal.sandbox.mutations.updateStatus, {
-				sandboxId: sandboxRecord._id,
-				status: "error",
-				error: errorMsg,
-			});
+			// Sandbox may already be gone — that's fine
+			console.warn(
+				`[stopAgentSandbox] Could not delete sandbox: ${error instanceof Error ? error.message : String(error)}`,
+			);
 		}
+
+		await ctx.runMutation(internal.sandbox.mutations.updateStatus, {
+			sandboxId: sandboxRecord._id,
+			status: "archived",
+		});
 	},
 });
 
-// Legacy: stop the first sandbox found (backwards compat)
+// Legacy: delete the first sandbox found (backwards compat)
 export const stopSandbox = internalAction({
 	args: {},
 	handler: async (ctx): Promise<void> => {
@@ -176,24 +174,17 @@ export const stopSandbox = internalAction({
 		try {
 			const daytona = getDaytona();
 			const sandbox = await withRetry(() => daytona.findOne({ idOrName: sandboxRecord.daytonaId }));
-			await withRetry(() => sandbox.stop());
-
-			await ctx.runMutation(internal.sandbox.mutations.updateStatus, {
-				sandboxId: sandboxRecord._id,
-				status: "stopped",
-			});
+			await withRetry(() => daytona.delete(sandbox));
 		} catch (error) {
-			const errorMsg = error instanceof Error ? error.message : String(error);
-			console.error("Failed to stop sandbox:", errorMsg);
-
-			await ctx.runMutation(internal.sandbox.mutations.updateStatus, {
-				sandboxId: sandboxRecord._id,
-				status: "error",
-				error: errorMsg,
-			});
-
-			throw error;
+			console.warn(
+				`[stopSandbox] Could not delete sandbox: ${error instanceof Error ? error.message : String(error)}`,
+			);
 		}
+
+		await ctx.runMutation(internal.sandbox.mutations.updateStatus, {
+			sandboxId: sandboxRecord._id,
+			status: "archived",
+		});
 	},
 });
 
@@ -237,11 +228,8 @@ export const ensureRunning = internalAction({
 		}
 
 		if (sandboxRecord.status === "stopped" || sandboxRecord.status === "archived") {
-			await ctx.runAction(internal.sandbox.lifecycle.startSandbox, { agentId });
-			return {
-				sandboxId: sandboxRecord._id,
-				daytonaId: sandboxRecord.daytonaId,
-			};
+			// Sandbox was deleted from Daytona on completion — create a fresh one
+			return await ctx.runAction(internal.sandbox.lifecycle.createSandbox, { agentId, name });
 		}
 
 		if (sandboxRecord.status === "error") {
@@ -281,5 +269,44 @@ export const ensureComputerUseStarted = internalAction({
 		}
 
 		await withRetry(() => sandbox.computerUse.start());
+	},
+});
+
+// Cleanup: delete ALL sandboxes from Daytona and mark DB records as archived.
+// Use this to free disk when hitting Daytona tier limits.
+export const cleanupAllSandboxes = internalAction({
+	args: {},
+	handler: async (ctx): Promise<{ deleted: number; errors: number }> => {
+		const daytona = getDaytona();
+		const result = await daytona.list();
+		let deleted = 0;
+		let errors = 0;
+
+		for (const sandbox of result.items) {
+			try {
+				await daytona.delete(sandbox);
+				deleted++;
+				console.log(`[cleanup] Deleted Daytona sandbox ${sandbox.id}`);
+			} catch (error) {
+				errors++;
+				console.warn(
+					`[cleanup] Failed to delete ${sandbox.id}: ${error instanceof Error ? error.message : String(error)}`,
+				);
+			}
+		}
+
+		// Mark all DB sandbox records as archived
+		const allRecords = await ctx.runQuery(internal.sandbox.queries.getAllSandboxesInternal);
+		for (const record of allRecords) {
+			if (record.status !== "archived") {
+				await ctx.runMutation(internal.sandbox.mutations.updateStatus, {
+					sandboxId: record._id,
+					status: "archived",
+				});
+			}
+		}
+
+		console.log(`[cleanup] Done: ${deleted} deleted, ${errors} errors`);
+		return { deleted, errors };
 	},
 });

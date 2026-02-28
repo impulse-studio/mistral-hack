@@ -41,6 +41,14 @@ export const getInternal = internalQuery({
 	},
 });
 
+// List all sandboxes (internal — for lifecycle cleanup)
+export const getAllSandboxesInternal = internalQuery({
+	args: {},
+	handler: async (ctx) => {
+		return await ctx.db.query("sandbox").collect();
+	},
+});
+
 // List all sandboxes (for UI)
 export const getAllSandboxes = query({
 	args: {},
