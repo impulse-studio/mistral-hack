@@ -1,981 +1,1069 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mistral AI Office</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #0e0e1a;
-    overflow: hidden;
-    width: 100vw;
-    height: 100vh;
-    cursor: default;
-    font-family: 'Press Start 2P', monospace;
-  }
-  canvas {
-    display: block;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-  }
-  @font-face {
-    font-family: 'Press Start 2P';
-    src: url('https://fonts.gstatic.com/s/pressstart2p/v15/e3t4euO8T-267oIAQAu6jDQyK3nVivM.woff2') format('woff2');
-  }
-</style>
-</head>
-<body>
-<canvas id="c"></canvas>
-<script>
-// ============================================================
-// MISTRAL AI OFFICE — Pixel Art Canvas 2D Engine
-// Variant: Mistral Branded Minimal
-// ============================================================
-
-const TILE = 16;
-const ZOOM = 5;
-const COLS = 22;
-const ROWS = 14;
-
-// --- Mistral Palette ---
-const PAL = {
-  bg:       '#1a1a2e',
-  floor1:   '#22223a',
-  floor2:   '#1e1e34',
-  wall:     '#2a2a44',
-  wallTop:  '#33335a',
-  border:   '#3a3a5a',
-  orange:   '#FF7000',
-  red:      '#FD3F29',
-  yellow:   '#FFCB00',
-  green:    '#5ac88c',
-  greenDk:  '#3a8a5c',
-  deskTop:  '#3a3530',
-  deskFront:'#2c2824',
-  deskLeg:  '#24201c',
-  monitor:  '#2a2a3a',
-  monScr:   '#1a2a1a',
-  monOn:    '#203820',
-  chairSeat:'#33304a',
-  chairBack:'#2a2740',
-  skin1:    '#e8c8a0',
-  skin2:    '#c8a080',
-  skin3:    '#a07850',
-  hair1:    '#2a2020',
-  hair2:    '#4a3020',
-  hair3:    '#6a5040',
-  hair4:    '#d4a040',
-  shirt1:   '#FF7000',
-  shirt2:   '#FD3F29',
-  shirt3:   '#3a5a8a',
-  shirt4:   '#5a3a7a',
-  white:    '#e0e0e8',
-  black:    '#0a0a14',
-};
-
-// --- Canvas Setup ---
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-let W, H, offsetX, offsetY;
-
-function resize() {
-  const dpr = window.devicePixelRatio || 1;
-  W = window.innerWidth;
-  H = window.innerHeight;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.imageSmoothingEnabled = false;
-  const mapW = COLS * TILE * ZOOM;
-  const mapH = ROWS * TILE * ZOOM;
-  offsetX = Math.floor((W - mapW) / 2);
-  offsetY = Math.floor((H - mapH) / 2);
-}
-window.addEventListener('resize', resize);
-resize();
-
-// --- Sprite Cache ---
-const spriteCache = new Map();
-function drawSprite(spriteData, x, y, z) {
-  const key = spriteData;
-  let cached = spriteCache.get(key);
-  if (!cached) {
-    const h = spriteData.length;
-    const w = spriteData[0].length;
-    const oc = document.createElement('canvas');
-    oc.width = w * ZOOM;
-    oc.height = h * ZOOM;
-    const octx = oc.getContext('2d');
-    for (let r = 0; r < h; r++) {
-      for (let c = 0; c < w; c++) {
-        const col = spriteData[r][c];
-        if (col) {
-          octx.fillStyle = col;
-          octx.fillRect(c * ZOOM, r * ZOOM, ZOOM, ZOOM);
-        }
-      }
-    }
-    cached = oc;
-    spriteCache.set(key, cached);
-  }
-  ctx.drawImage(cached, Math.floor(x), Math.floor(y));
-}
-
-// ============================================================
-// SPRITE DATA — All inline 2D hex arrays
-// ============================================================
-
-// --- Floor tile (16x16) subtle dark pattern ---
-const FLOOR_A = (() => {
-  const s = [];
-  for (let r = 0; r < 16; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      if (r === 0 || c === 0) row.push('#1c1c32');
-      else if ((r + c) % 7 === 0) row.push('#20203a');
-      else row.push(r % 2 === 0 ? '#1e1e36' : '#1d1d34');
-    }
-    s.push(row);
-  }
-  return s;
-})();
-
-const FLOOR_B = (() => {
-  const s = [];
-  for (let r = 0; r < 16; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      if (r === 0 || c === 0) row.push('#1a1a30');
-      else if ((r * c) % 11 === 0) row.push('#222240');
-      else row.push(r % 2 === 0 ? '#1c1c34' : '#1b1b32');
-    }
-    s.push(row);
-  }
-  return s;
-})();
-
-// --- Wall tile (16x16) ---
-const WALL_TILE = (() => {
-  const s = [];
-  for (let r = 0; r < 16; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      if (r < 2) row.push('#3a3a5e');
-      else if (r < 4) row.push('#33335a');
-      else row.push(r < 8 ? '#2a2a48' : '#252542');
-    }
-    s.push(row);
-  }
-  return s;
-})();
-
-// --- Desk (32x20) top-down with monitor area ---
-function makeDesk() {
-  const s = [];
-  for (let r = 0; r < 20; r++) {
-    const row = [];
-    for (let c = 0; c < 32; c++) {
-      if (r < 2) {
-        // top edge
-        row.push(c === 0 || c === 31 ? '#24201c' : '#4a4540');
-      } else if (r < 12) {
-        // desk surface
-        if (c === 0 || c === 31) row.push('#2c2824');
-        else row.push((r + c) % 8 === 0 ? '#3e3a34' : '#3a3530');
-      } else if (r < 14) {
-        // front edge
-        row.push(c === 0 || c === 31 ? '#201c18' : '#2c2824');
-      } else {
-        // legs
-        if (c >= 2 && c <= 4) row.push('#24201c');
-        else if (c >= 27 && c <= 29) row.push('#24201c');
-        else row.push('');
-      }
-    }
-    s.push(row);
-  }
-  return s;
-}
-const DESK = makeDesk();
-
-// --- Monitor (12x10) ---
-function makeMonitor(on) {
-  const s = [];
-  const scrCol = on ? '#1a3a1a' : '#181828';
-  const scrHi = on ? '#2a5a2a' : '#1a1a2a';
-  for (let r = 0; r < 10; r++) {
-    const row = [];
-    for (let c = 0; c < 12; c++) {
-      if (r === 0) {
-        row.push(c >= 1 && c <= 10 ? '#3a3a4a' : '');
-      } else if (r < 7) {
-        if (c === 0 || c === 11) row.push('#3a3a4a');
-        else if (c === 1 || c === 10) row.push('#2a2a3a');
-        else {
-          if (on && r >= 2 && r <= 5 && c >= 3 && c <= 8) {
-            // text lines on screen
-            if (r % 2 === 0 && c % 2 === 0) row.push('#4aca6a');
-            else row.push(scrHi);
-          } else {
-            row.push(scrCol);
-          }
-        }
-      } else if (r === 7) {
-        row.push(c >= 1 && c <= 10 ? '#3a3a4a' : '');
-      } else if (r === 8) {
-        row.push(c >= 4 && c <= 7 ? '#3a3a4a' : '');
-      } else {
-        row.push(c >= 3 && c <= 8 ? '#2a2a3a' : '');
-      }
-    }
-    s.push(row);
-  }
-  return s;
-}
-const MONITOR_ON = makeMonitor(true);
-const MONITOR_OFF = makeMonitor(false);
-
-// --- Chair (12x14) ---
-function makeChair() {
-  const s = [];
-  for (let r = 0; r < 14; r++) {
-    const row = [];
-    for (let c = 0; c < 12; c++) {
-      if (r < 5) {
-        // backrest
-        if (c >= 2 && c <= 9) row.push(r === 0 ? '#2a2740' : '#33304a');
-        else row.push('');
-      } else if (r < 8) {
-        // seat
-        if (c >= 1 && c <= 10) row.push('#33304a');
-        else row.push('');
-      } else if (r < 10) {
-        // post
-        if (c >= 5 && c <= 6) row.push('#222030');
-        else row.push('');
-      } else {
-        // wheels
-        if (r === 10 && (c === 3 || c === 8)) row.push('#222030');
-        else if (r === 11 && c >= 3 && c <= 8) row.push('#222030');
-        else if (r === 12 && (c === 2 || c === 4 || c === 7 || c === 9)) row.push('#1a1828');
-        else if (r === 13 && (c === 1 || c === 5 || c === 6 || c === 10)) row.push('#1a1828');
-        else row.push('');
-      }
-    }
-    s.push(row);
-  }
-  return s;
-}
-const CHAIR = makeChair();
-
-// --- Plant (10x16) ---
-function makePlant() {
-  const s = [];
-  const leaves = [
-    '    gg    ',
-    '   gGgg   ',
-    '  ggGGgg  ',
-    ' gGgggGg  ',
-    '  gGggGg  ',
-    '   gGgg   ',
-    '    gg    ',
-    '    ||    ',
-    '    ||    ',
-    '   PPPP   ',
-    '   PPPP   ',
-    '   pppp   ',
-  ];
-  const cmap = { g: '#3a7a4a', G: '#4a9a5a', '|': '#5a4a3a', P: '#6a5a48', p: '#5a4a3a', ' ': '' };
-  for (const line of leaves) {
-    const row = [];
-    for (const ch of line) row.push(cmap[ch] || '');
-    s.push(row);
-  }
-  return s;
-}
-const PLANT = makePlant();
-
-// --- Mistral M Logo (16x16 pixel art) ---
-const MISTRAL_LOGO = (() => {
-  // Stylized "M" in Mistral gradient colors
-  const _ = '';
-  const o = '#FF7000';
-  const r = '#FD3F29';
-  const y = '#FFCB00';
-  const w = '#FF8800';
-  return [
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    [_,o,o,_,_,_,_,_,_,_,_,_,o,o,_,_],
-    [_,o,o,o,_,_,_,_,_,_,_,o,o,o,_,_],
-    [_,o,o,o,o,_,_,_,_,_,o,o,o,o,_,_],
-    [_,o,o,w,o,o,_,_,_,o,o,w,o,o,_,_],
-    [_,o,o,_,w,o,o,_,o,o,w,_,o,o,_,_],
-    [_,o,o,_,_,r,o,o,o,r,_,_,o,o,_,_],
-    [_,o,o,_,_,_,r,o,r,_,_,_,o,o,_,_],
-    [_,o,o,_,_,_,_,y,_,_,_,_,o,o,_,_],
-    [_,o,o,_,_,_,_,_,_,_,_,_,o,o,_,_],
-    [_,o,o,_,_,_,_,_,_,_,_,_,o,o,_,_],
-    [_,o,o,_,_,_,_,_,_,_,_,_,o,o,_,_],
-    [_,o,o,_,_,_,_,_,_,_,_,_,o,o,_,_],
-    [_,o,o,_,_,_,_,_,_,_,_,_,o,o,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  ];
-})();
-
-// --- Character Sprites (16x24 per frame, 2-color simple style) ---
-function makeCharacter(skinCol, hairCol, shirtCol) {
-  // Simple 2-color pixel character facing down (idle)
-  const _ = '';
-  const S = skinCol;
-  const H = hairCol;
-  const T = shirtCol;
-  const P = '#1a1a2e'; // pants (dark)
-  const Sh = '#1c1c20'; // shoes
-
-  const idle = [
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,H,H,H,H,_,_,_,_,_,_],
-    [_,_,_,_,_,H,H,H,H,H,H,_,_,_,_,_],
-    [_,_,_,_,_,H,S,S,S,S,H,_,_,_,_,_],
-    [_,_,_,_,_,S,S,S,S,S,S,_,_,_,_,_],
-    [_,_,_,_,_,S,'#1a1a2e',S,S,'#1a1a2e',S,_,_,_,_,_],
-    [_,_,_,_,_,S,S,S,S,S,S,_,_,_,_,_],
-    [_,_,_,_,_,_,S,S,S,S,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,S,S,_,_,_,_,_,_,_],
-    [_,_,_,_,_,T,T,T,T,T,T,_,_,_,_,_],
-    [_,_,_,_,T,T,T,T,T,T,T,T,_,_,_,_],
-    [_,_,_,_,T,T,T,T,T,T,T,T,_,_,_,_],
-    [_,_,_,S,T,T,T,T,T,T,T,T,S,_,_,_],
-    [_,_,_,S,_,T,T,T,T,T,T,_,S,_,_,_],
-    [_,_,_,S,_,T,T,T,T,T,T,_,S,_,_,_],
-    [_,_,_,_,_,P,P,P,P,P,P,_,_,_,_,_],
-    [_,_,_,_,_,P,P,_,_,P,P,_,_,_,_,_],
-    [_,_,_,_,_,P,P,_,_,P,P,_,_,_,_,_],
-    [_,_,_,_,_,P,P,_,_,P,P,_,_,_,_,_],
-    [_,_,_,_,_,Sh,Sh,_,_,Sh,Sh,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  ];
-
-  // typing frame (arms forward)
-  const typing = [
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,H,H,H,H,_,_,_,_,_,_],
-    [_,_,_,_,_,H,H,H,H,H,H,_,_,_,_,_],
-    [_,_,_,_,_,H,S,S,S,S,H,_,_,_,_,_],
-    [_,_,_,_,_,S,S,S,S,S,S,_,_,_,_,_],
-    [_,_,_,_,_,S,'#1a1a2e',S,S,'#1a1a2e',S,_,_,_,_,_],
-    [_,_,_,_,_,S,S,S,S,S,S,_,_,_,_,_],
-    [_,_,_,_,_,_,S,S,S,S,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,S,S,_,_,_,_,_,_,_],
-    [_,_,_,_,_,T,T,T,T,T,T,_,_,_,_,_],
-    [_,_,_,_,T,T,T,T,T,T,T,T,_,_,_,_],
-    [_,_,_,S,T,T,T,T,T,T,T,T,S,_,_,_],
-    [_,_,S,S,T,T,T,T,T,T,T,T,S,S,_,_],
-    [_,S,S,_,_,T,T,T,T,T,T,_,_,S,S,_],
-    [_,S,_,_,_,T,T,T,T,T,T,_,_,_,S,_],
-    [_,_,_,_,_,P,P,P,P,P,P,_,_,_,_,_],
-    [_,_,_,_,_,P,P,_,_,P,P,_,_,_,_,_],
-    [_,_,_,_,_,P,P,_,_,P,P,_,_,_,_,_],
-    [_,_,_,_,_,P,P,_,_,P,P,_,_,_,_,_],
-    [_,_,_,_,_,Sh,Sh,_,_,Sh,Sh,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  ];
-
-  // Walk frames
-  const walk1 = JSON.parse(JSON.stringify(idle));
-  // left leg forward
-  if (walk1[19]) { walk1[19] = [_,_,_,_,P,P,P,_,_,P,P,_,_,_,_,_]; }
-  if (walk1[20]) { walk1[20] = [_,_,_,_,P,P,_,_,_,_,P,P,_,_,_,_]; }
-  if (walk1[21]) { walk1[21] = [_,_,_,_,Sh,Sh,_,_,_,_,Sh,Sh,_,_,_,_]; }
-
-  const walk2 = JSON.parse(JSON.stringify(idle));
-  // right leg forward
-  if (walk2[19]) { walk2[19] = [_,_,_,_,_,P,P,_,_,P,P,P,_,_,_,_]; }
-  if (walk2[20]) { walk2[20] = [_,_,_,_,P,P,_,_,_,_,P,P,_,_,_,_]; }
-  if (walk2[21]) { walk2[21] = [_,_,_,_,Sh,Sh,_,_,_,_,Sh,Sh,_,_,_,_]; }
-
-  return { idle, typing, walk1, walk2 };
-}
-
-// 4 characters with distinct 2-color palettes
-const CHARACTERS = [
-  makeCharacter(PAL.skin1, PAL.hair1, PAL.shirt1), // Orange shirt
-  makeCharacter(PAL.skin2, PAL.hair4, PAL.shirt3), // Blue shirt
-  makeCharacter(PAL.skin3, PAL.hair1, PAL.shirt2), // Red shirt
-  makeCharacter(PAL.skin1, PAL.hair3, PAL.shirt4), // Purple shirt
-];
-
-// ============================================================
-// OFFICE LAYOUT — Tile map
-// ============================================================
-// 0 = void, 1 = floor A, 2 = floor B, 3 = wall
-const TILEMAP = (() => {
-  const m = [];
-  for (let r = 0; r < ROWS; r++) {
-    const row = [];
-    for (let c = 0; c < COLS; c++) {
-      if (r < 2) row.push(3); // wall
-      else if (r === 2 && (c < 1 || c >= COLS - 1)) row.push(3);
-      else if (c < 1 || c >= COLS - 1) row.push(0); // void edges
-      else if (r >= ROWS - 1) row.push(0);
-      else row.push((r + c) % 2 === 0 ? 1 : 2);
-    }
-    m.push(row);
-  }
-  return m;
-})();
-
-// --- Furniture Placements ---
-// 4 desks with lots of negative space
-const DESKS = [
-  { x: 3, y: 4 },   // top-left area
-  { x: 13, y: 4 },  // top-right area
-  { x: 5, y: 9 },   // bottom-left area
-  { x: 15, y: 9 },  // bottom-right area
-];
-
-const CHAIRS = [
-  { x: 4, y: 6.2 },
-  { x: 14, y: 6.2 },
-  { x: 6, y: 11.2 },
-  { x: 16, y: 11.2 },
-];
-
-const MONITORS = [
-  { x: 4.2, y: 3.6 },
-  { x: 14.2, y: 3.6 },
-  { x: 6.2, y: 8.6 },
-  { x: 16.2, y: 8.6 },
-];
-
-const PLANTS = [
-  { x: 8, y: 3 },
-  { x: 19, y: 3 },
-  { x: 2, y: 10 },
-  { x: 11, y: 11 },
-];
-
-// ============================================================
-// CHARACTERS STATE
-// ============================================================
-const agents = [
-  { name: 'Codex',    charIdx: 0, deskIdx: 0, state: 'TYPE', stateTimer: 0, x: 0, y: 0, frame: 0, frameTimer: 0, statusColor: PAL.green,  walkPath: [], walkTarget: null, wanderTimer: 0 },
-  { name: 'Atlas',    charIdx: 1, deskIdx: 1, state: 'TYPE', stateTimer: 0, x: 0, y: 0, frame: 0, frameTimer: 0, statusColor: PAL.yellow, walkPath: [], walkTarget: null, wanderTimer: 0 },
-  { name: 'Nova',     charIdx: 2, deskIdx: 2, state: 'TYPE', stateTimer: 0, x: 0, y: 0, frame: 0, frameTimer: 0, statusColor: PAL.green,  walkPath: [], walkTarget: null, wanderTimer: 0 },
-  { name: 'Spark',    charIdx: 3, deskIdx: 3, state: 'IDLE', stateTimer: 0, x: 0, y: 0, frame: 0, frameTimer: 0, statusColor: PAL.yellow, walkPath: [], walkTarget: null, wanderTimer: 0 },
-];
-
-// Place agents at their desks
-agents.forEach(a => {
-  const chair = CHAIRS[a.deskIdx];
-  a.x = chair.x * TILE;
-  a.y = chair.y * TILE - 12;
-});
-
-// ============================================================
-// PARTICLES — Floating ember particles
-// ============================================================
-const embers = [];
-const MAX_EMBERS = 35;
-
-function spawnEmber() {
-  embers.push({
-    x: Math.random() * COLS * TILE,
-    y: ROWS * TILE + Math.random() * 20,
-    vx: (Math.random() - 0.5) * 6,
-    vy: -(8 + Math.random() * 15),
-    life: 3 + Math.random() * 4,
-    maxLife: 0,
-    size: 1 + Math.random() * 1.5,
-    hue: Math.random(), // 0=orange, 0.5=red, 1=yellow
-  });
-  embers[embers.length - 1].maxLife = embers[embers.length - 1].life;
-}
-
-// Initialize some embers
-for (let i = 0; i < 15; i++) {
-  spawnEmber();
-  embers[embers.length - 1].y = Math.random() * ROWS * TILE;
-  embers[embers.length - 1].life = Math.random() * embers[embers.length - 1].maxLife;
-}
-
-// ============================================================
-// BFS PATHFINDING
-// ============================================================
-function isWalkable(tx, ty) {
-  if (tx < 1 || tx >= COLS - 1 || ty < 2 || ty >= ROWS - 1) return false;
-  const tile = TILEMAP[ty]?.[tx];
-  return tile === 1 || tile === 2;
-}
-
-function bfs(sx, sy, ex, ey) {
-  const stx = Math.floor(sx / TILE);
-  const sty = Math.floor(sy / TILE);
-  const etx = Math.floor(ex / TILE);
-  const ety = Math.floor(ey / TILE);
-  if (stx === etx && sty === ety) return [];
-  if (!isWalkable(etx, ety)) return [];
-
-  const visited = new Set();
-  const queue = [{ x: stx, y: sty, path: [] }];
-  visited.add(`${stx},${sty}`);
-
-  while (queue.length > 0) {
-    const cur = queue.shift();
-    const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
-    for (const [dx, dy] of dirs) {
-      const nx = cur.x + dx;
-      const ny = cur.y + dy;
-      const key = `${nx},${ny}`;
-      if (visited.has(key)) continue;
-      if (!isWalkable(nx, ny)) continue;
-      visited.add(key);
-      const newPath = [...cur.path, { x: nx * TILE + TILE / 2, y: ny * TILE + TILE / 2 }];
-      if (nx === etx && ny === ety) return newPath;
-      queue.push({ x: nx, y: ny, path: newPath });
-    }
-  }
-  return [];
-}
-
-// ============================================================
-// MATRIX SPAWN EFFECT
-// ============================================================
-const matrixEffects = [];
-
-function triggerMatrixEffect(agent) {
-  matrixEffects.push({
-    agent,
-    timer: 0,
-    duration: 0.6,
-    columns: Array.from({ length: 16 }, () => ({
-      offset: Math.random() * 0.3,
-      chars: Array.from({ length: 6 }, () => Math.random()),
-    })),
-  });
-}
-
-// Trigger initial spawn effects
-agents.forEach((a, i) => {
-  setTimeout(() => triggerMatrixEffect(a), i * 400);
-});
-
-// ============================================================
-// UPDATE
-// ============================================================
-const WALK_SPEED = 48; // px/sec
-
-function update(dt) {
-  // Update agents
-  for (const a of agents) {
-    a.stateTimer += dt;
-    a.frameTimer += dt;
-
-    if (a.state === 'TYPE') {
-      // Typing animation
-      if (a.frameTimer > 0.3) {
-        a.frameTimer = 0;
-        a.frame = a.frame === 0 ? 1 : 0;
-      }
-      // Occasionally switch status
-      if (a.stateTimer > 3 + Math.random() * 5) {
-        a.statusColor = Math.random() > 0.4 ? PAL.green : PAL.yellow;
-      }
-      // Wander timer
-      a.wanderTimer += dt;
-      if (a.wanderTimer > 8 + Math.random() * 15) {
-        a.wanderTimer = 0;
-        // Pick a random walkable tile
-        const tx = 2 + Math.floor(Math.random() * (COLS - 4));
-        const ty = 3 + Math.floor(Math.random() * (ROWS - 4));
-        if (isWalkable(tx, ty)) {
-          const path = bfs(a.x, a.y, tx * TILE, ty * TILE);
-          if (path.length > 0 && path.length < 12) {
-            a.walkPath = path;
-            a.walkTarget = 0;
-            a.state = 'WALK';
-            a.stateTimer = 0;
-          }
-        }
-      }
-    } else if (a.state === 'WALK') {
-      // Walk animation
-      if (a.frameTimer > 0.15) {
-        a.frameTimer = 0;
-        a.frame = (a.frame + 1) % 4;
-      }
-      // Move towards target
-      if (a.walkPath.length > 0 && a.walkTarget < a.walkPath.length) {
-        const target = a.walkPath[a.walkTarget];
-        const dx = target.x - a.x;
-        const dy = target.y - a.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 2) {
-          a.walkTarget++;
-          if (a.walkTarget >= a.walkPath.length) {
-            // Done walking, idle then return
-            a.state = 'IDLE';
-            a.stateTimer = 0;
-            a.frame = 0;
-          }
-        } else {
-          const speed = WALK_SPEED * dt;
-          a.x += (dx / dist) * speed;
-          a.y += (dy / dist) * speed;
-        }
-      }
-    } else if (a.state === 'IDLE') {
-      // Idle for a bit then return to desk
-      if (a.stateTimer > 2 + Math.random() * 3) {
-        const chair = CHAIRS[a.deskIdx];
-        const targetX = chair.x * TILE;
-        const targetY = chair.y * TILE - 12;
-        const path = bfs(a.x, a.y, targetX, targetY);
-        if (path.length > 0) {
-          a.walkPath = path;
-          a.walkTarget = 0;
-          a.state = 'RETURN';
-          a.stateTimer = 0;
-        } else {
-          // Can't path, just teleport
-          a.x = targetX;
-          a.y = targetY;
-          a.state = 'TYPE';
-          a.stateTimer = 0;
-        }
-      }
-    } else if (a.state === 'RETURN') {
-      // Walking back to desk
-      if (a.frameTimer > 0.15) {
-        a.frameTimer = 0;
-        a.frame = (a.frame + 1) % 4;
-      }
-      if (a.walkPath.length > 0 && a.walkTarget < a.walkPath.length) {
-        const target = a.walkPath[a.walkTarget];
-        const dx = target.x - a.x;
-        const dy = target.y - a.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 2) {
-          a.walkTarget++;
-          if (a.walkTarget >= a.walkPath.length) {
-            a.state = 'TYPE';
-            a.stateTimer = 0;
-            a.frame = 0;
-            a.wanderTimer = 0;
-            // Snap to chair position
-            const chair = CHAIRS[a.deskIdx];
-            a.x = chair.x * TILE;
-            a.y = chair.y * TILE - 12;
-          }
-        } else {
-          const speed = WALK_SPEED * dt;
-          a.x += (dx / dist) * speed;
-          a.y += (dy / dist) * speed;
-        }
-      }
-    }
-  }
-
-  // Update embers
-  for (let i = embers.length - 1; i >= 0; i--) {
-    const e = embers[i];
-    e.x += e.vx * dt;
-    e.y += e.vy * dt;
-    e.vx += (Math.random() - 0.5) * 10 * dt;
-    e.vy -= 2 * dt;
-    e.life -= dt;
-    if (e.life <= 0) {
-      embers.splice(i, 1);
-    }
-  }
-  while (embers.length < MAX_EMBERS) spawnEmber();
-
-  // Update matrix effects
-  for (let i = matrixEffects.length - 1; i >= 0; i--) {
-    matrixEffects[i].timer += dt;
-    if (matrixEffects[i].timer >= matrixEffects[i].duration) {
-      matrixEffects.splice(i, 1);
-    }
-  }
-}
-
-// ============================================================
-// RENDER
-// ============================================================
-function render() {
-  ctx.clearRect(0, 0, W, H);
-
-  // Background fill
-  ctx.fillStyle = PAL.bg;
-  ctx.fillRect(0, 0, W, H);
-
-  const ox = offsetX;
-  const oy = offsetY;
-
-  // --- Draw tile grid ---
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      const tile = TILEMAP[r][c];
-      const px = ox + c * TILE * ZOOM;
-      const py = oy + r * TILE * ZOOM;
-      if (tile === 1) drawSprite(FLOOR_A, px, py);
-      else if (tile === 2) drawSprite(FLOOR_B, px, py);
-      else if (tile === 3) drawSprite(WALL_TILE, px, py);
-    }
-  }
-
-  // --- Wall accent stripe (Mistral gradient) ---
-  const wallY = oy + 1.8 * TILE * ZOOM;
-  const grd = ctx.createLinearGradient(ox, 0, ox + COLS * TILE * ZOOM, 0);
-  grd.addColorStop(0, '#FF700044');
-  grd.addColorStop(0.4, '#FD3F2944');
-  grd.addColorStop(0.7, '#FF700033');
-  grd.addColorStop(1, '#FFCB0044');
-  ctx.fillStyle = grd;
-  ctx.fillRect(ox, wallY, COLS * TILE * ZOOM, 2 * ZOOM);
-
-  // --- Collect all drawables for z-sort ---
-  const drawables = [];
-
-  // Desks
-  DESKS.forEach((d, i) => {
-    drawables.push({
-      type: 'desk',
-      idx: i,
-      x: d.x,
-      y: d.y,
-      zY: (d.y + 1.2) * TILE,
-    });
-  });
-
-  // Monitors
-  MONITORS.forEach((m, i) => {
-    const isOn = agents[i].state === 'TYPE';
-    drawables.push({
-      type: 'monitor',
-      idx: i,
-      x: m.x,
-      y: m.y,
-      on: isOn,
-      zY: m.y * TILE,
-    });
-  });
-
-  // Chairs
-  CHAIRS.forEach((ch, i) => {
-    drawables.push({
-      type: 'chair',
-      idx: i,
-      x: ch.x,
-      y: ch.y,
-      zY: (ch.y + 0.8) * TILE,
-    });
-  });
-
-  // Plants
-  PLANTS.forEach((p, i) => {
-    drawables.push({
-      type: 'plant',
-      idx: i,
-      x: p.x,
-      y: p.y,
-      zY: (p.y + 1) * TILE,
-    });
-  });
-
-  // Characters
-  agents.forEach((a, i) => {
-    drawables.push({
-      type: 'character',
-      idx: i,
-      x: a.x / TILE,
-      y: a.y / TILE,
-      zY: a.y + TILE * 0.5 + 0.5,
-    });
-  });
-
-  // Sort by zY
-  drawables.sort((a, b) => a.zY - b.zY);
-
-  // --- Draw all sorted ---
-  for (const d of drawables) {
-    const px = ox + d.x * TILE * ZOOM;
-    const py = oy + d.y * TILE * ZOOM;
-
-    if (d.type === 'desk') {
-      drawSprite(DESK, px, py);
-    } else if (d.type === 'monitor') {
-      drawSprite(d.on ? MONITOR_ON : MONITOR_OFF, px, py);
-      // Screen glow when on
-      if (d.on) {
-        ctx.fillStyle = 'rgba(90, 200, 140, 0.06)';
-        ctx.fillRect(px - 2 * ZOOM, py - 1 * ZOOM, 16 * ZOOM, 10 * ZOOM);
-      }
-    } else if (d.type === 'chair') {
-      drawSprite(CHAIR, ox + (d.x - 0.1) * TILE * ZOOM, py);
-    } else if (d.type === 'plant') {
-      drawSprite(PLANT, px + 3 * ZOOM, py);
-    } else if (d.type === 'character') {
-      const a = agents[d.idx];
-      const ch = CHARACTERS[a.charIdx];
-      let sprite;
-      if (a.state === 'TYPE') {
-        sprite = a.frame === 0 ? ch.typing : ch.idle;
-      } else if (a.state === 'WALK' || a.state === 'RETURN') {
-        sprite = a.frame < 2 ? ch.walk1 : ch.walk2;
-      } else {
-        sprite = ch.idle;
-      }
-      drawSprite(sprite, px, py);
-
-      // --- Agent label ---
-      const labelX = px + 8 * ZOOM;
-      const labelY = py - 3 * ZOOM;
-
-      // Status dot
-      ctx.fillStyle = a.statusColor;
-      ctx.beginPath();
-      const dotR = 2.5 * ZOOM;
-      const dotX = labelX - 6;
-      const dotY = labelY;
-      // pixel circle approximation
-      ctx.fillRect(dotX - dotR, dotY - dotR, dotR * 2, dotR * 2);
-
-      // Dot glow
-      ctx.fillStyle = a.statusColor + '40';
-      ctx.fillRect(dotX - dotR - 2, dotY - dotR - 2, dotR * 2 + 4, dotR * 2 + 4);
-
-      // Name background
-      const nameWidth = a.name.length * 5 * ZOOM * 0.16 + 12;
-      ctx.fillStyle = 'rgba(26,26,46,0.8)';
-      ctx.fillRect(dotX + dotR + 2, dotY - 6, nameWidth, 13);
-
-      // Name text
-      ctx.fillStyle = '#c0c0d0';
-      ctx.font = `${Math.max(7, ZOOM * 2)}px monospace`;
-      ctx.fillText(a.name, dotX + dotR + 5, dotY + 4);
-    }
-  }
-
-  // --- Matrix spawn effects ---
-  for (const fx of matrixEffects) {
-    const a = fx.agent;
-    const progress = fx.timer / fx.duration;
-    const charSprite = CHARACTERS[a.charIdx].idle;
-    const cx = ox + (a.x / TILE) * TILE * ZOOM;
-    const cy = oy + (a.y / TILE) * TILE * ZOOM;
-
-    for (let col = 0; col < 16; col++) {
-      const colProgress = Math.max(0, Math.min(1,
-        (progress - fx.columns[col].offset) / (1 - fx.columns[col].offset)
-      ));
-      const headRow = Math.floor(colProgress * 24);
-
-      for (let row = 0; row < 24; row++) {
-        const px = cx + col * ZOOM;
-        const py = cy + row * ZOOM;
-
-        if (row <= headRow) {
-          // Matrix rain trail
-          const trailDist = headRow - row;
-          if (trailDist === 0) {
-            ctx.fillStyle = '#ccffcc';
-            ctx.fillRect(px, py, ZOOM, ZOOM);
-          } else if (trailDist < 3) {
-            const alpha = 0.7 - trailDist * 0.2;
-            ctx.fillStyle = `rgba(90, 255, 120, ${alpha})`;
-            if (Math.random() > 0.3) ctx.fillRect(px, py, ZOOM, ZOOM);
-          } else if (trailDist < 6) {
-            ctx.fillStyle = `rgba(40, 180, 80, 0.3)`;
-            if (Math.random() > 0.5) ctx.fillRect(px, py, ZOOM, ZOOM);
-          }
-        }
-      }
-    }
-  }
-
-  // --- Ember particles ---
-  for (const e of embers) {
-    const alpha = Math.min(1, e.life / e.maxLife);
-    let color;
-    if (e.hue < 0.33) color = `rgba(255,112,0,${alpha * 0.7})`;
-    else if (e.hue < 0.66) color = `rgba(253,63,41,${alpha * 0.6})`;
-    else color = `rgba(255,203,0,${alpha * 0.8})`;
-
-    const px = ox + e.x * ZOOM;
-    const py = oy + e.y * ZOOM;
-    const sz = e.size * ZOOM;
-
-    ctx.fillStyle = color;
-    ctx.fillRect(px, py, sz, sz);
-
-    // Glow
-    ctx.fillStyle = color.replace(/[\d.]+\)$/, (alpha * 0.15).toFixed(2) + ')');
-    ctx.fillRect(px - sz, py - sz, sz * 3, sz * 3);
-  }
-
-  // --- Mistral M Logo (top-right) ---
-  const logoX = ox + (COLS - 2.5) * TILE * ZOOM;
-  const logoY = oy - TILE * ZOOM * 1.3;
-  drawSprite(MISTRAL_LOGO, logoX, logoY);
-
-  // Logo glow
-  ctx.fillStyle = 'rgba(255,112,0,0.05)';
-  ctx.fillRect(logoX - 4 * ZOOM, logoY - 2 * ZOOM, 24 * ZOOM, 22 * ZOOM);
-
-  // --- Title text ---
-  ctx.fillStyle = '#FF7000';
-  ctx.font = `${Math.max(10, ZOOM * 2.5)}px monospace`;
-  ctx.fillText('MISTRAL AI OFFICE', ox + 10, oy - TILE * ZOOM * 0.4);
-
-  // Subtitle
-  ctx.fillStyle = '#4a4a6a';
-  ctx.font = `${Math.max(7, ZOOM * 1.5)}px monospace`;
-  ctx.fillText('pixel workspace', ox + 10, oy - TILE * ZOOM * 0.4 + ZOOM * 3);
-
-  // --- Bottom status bar ---
-  const barY = oy + ROWS * TILE * ZOOM + 8;
-  const barX = ox + 4;
-
-  ctx.fillStyle = 'rgba(26,26,46,0.9)';
-  ctx.fillRect(barX, barY, 280, 22);
-  ctx.strokeStyle = '#3a3a5a';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(barX, barY, 280, 22);
-
-  ctx.fillStyle = '#6a6a8a';
-  ctx.font = `${Math.max(7, ZOOM * 1.5)}px monospace`;
-  ctx.fillText('agents: 4  |  tasks: active  |  office: online', barX + 6, barY + 15);
-}
-
-// ============================================================
-// GAME LOOP
-// ============================================================
-let lastTime = 0;
-
-function gameLoop(timestamp) {
-  const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
-  lastTime = timestamp;
-
-  update(dt);
-  render();
-  requestAnimationFrame(gameLoop);
-}
-
-requestAnimationFrame((ts) => {
-  lastTime = ts;
-  gameLoop(ts);
-});
-</script>
-</body>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Mistral AI Office</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+			body {
+				background: #0e0e1a;
+				overflow: hidden;
+				width: 100vw;
+				height: 100vh;
+				cursor: default;
+				font-family: "Press Start 2P", monospace;
+			}
+			canvas {
+				display: block;
+				image-rendering: pixelated;
+				image-rendering: crisp-edges;
+			}
+			@font-face {
+				font-family: "Press Start 2P";
+				src: url("https://fonts.gstatic.com/s/pressstart2p/v15/e3t4euO8T-267oIAQAu6jDQyK3nVivM.woff2")
+					format("woff2");
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="c"></canvas>
+		<script>
+			// ============================================================
+			// MISTRAL AI OFFICE — Pixel Art Canvas 2D Engine
+			// Variant: Mistral Branded Minimal
+			// ============================================================
+
+			const TILE = 16;
+			const ZOOM = 5;
+			const COLS = 22;
+			const ROWS = 14;
+
+			// --- Mistral Palette ---
+			const PAL = {
+				bg: "#1a1a2e",
+				floor1: "#22223a",
+				floor2: "#1e1e34",
+				wall: "#2a2a44",
+				wallTop: "#33335a",
+				border: "#3a3a5a",
+				orange: "#FF7000",
+				red: "#FD3F29",
+				yellow: "#FFCB00",
+				green: "#5ac88c",
+				greenDk: "#3a8a5c",
+				deskTop: "#3a3530",
+				deskFront: "#2c2824",
+				deskLeg: "#24201c",
+				monitor: "#2a2a3a",
+				monScr: "#1a2a1a",
+				monOn: "#203820",
+				chairSeat: "#33304a",
+				chairBack: "#2a2740",
+				skin1: "#e8c8a0",
+				skin2: "#c8a080",
+				skin3: "#a07850",
+				hair1: "#2a2020",
+				hair2: "#4a3020",
+				hair3: "#6a5040",
+				hair4: "#d4a040",
+				shirt1: "#FF7000",
+				shirt2: "#FD3F29",
+				shirt3: "#3a5a8a",
+				shirt4: "#5a3a7a",
+				white: "#e0e0e8",
+				black: "#0a0a14",
+			};
+
+			// --- Canvas Setup ---
+			const canvas = document.getElementById("c");
+			const ctx = canvas.getContext("2d");
+			let W, H, offsetX, offsetY;
+
+			function resize() {
+				const dpr = window.devicePixelRatio || 1;
+				W = window.innerWidth;
+				H = window.innerHeight;
+				canvas.width = W * dpr;
+				canvas.height = H * dpr;
+				canvas.style.width = W + "px";
+				canvas.style.height = H + "px";
+				ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+				ctx.imageSmoothingEnabled = false;
+				const mapW = COLS * TILE * ZOOM;
+				const mapH = ROWS * TILE * ZOOM;
+				offsetX = Math.floor((W - mapW) / 2);
+				offsetY = Math.floor((H - mapH) / 2);
+			}
+			window.addEventListener("resize", resize);
+			resize();
+
+			// --- Sprite Cache ---
+			const spriteCache = new Map();
+			function drawSprite(spriteData, x, y, z) {
+				const key = spriteData;
+				let cached = spriteCache.get(key);
+				if (!cached) {
+					const h = spriteData.length;
+					const w = spriteData[0].length;
+					const oc = document.createElement("canvas");
+					oc.width = w * ZOOM;
+					oc.height = h * ZOOM;
+					const octx = oc.getContext("2d");
+					for (let r = 0; r < h; r++) {
+						for (let c = 0; c < w; c++) {
+							const col = spriteData[r][c];
+							if (col) {
+								octx.fillStyle = col;
+								octx.fillRect(c * ZOOM, r * ZOOM, ZOOM, ZOOM);
+							}
+						}
+					}
+					cached = oc;
+					spriteCache.set(key, cached);
+				}
+				ctx.drawImage(cached, Math.floor(x), Math.floor(y));
+			}
+
+			// ============================================================
+			// SPRITE DATA — All inline 2D hex arrays
+			// ============================================================
+
+			// --- Floor tile (16x16) subtle dark pattern ---
+			const FLOOR_A = (() => {
+				const s = [];
+				for (let r = 0; r < 16; r++) {
+					const row = [];
+					for (let c = 0; c < 16; c++) {
+						if (r === 0 || c === 0) row.push("#1c1c32");
+						else if ((r + c) % 7 === 0) row.push("#20203a");
+						else row.push(r % 2 === 0 ? "#1e1e36" : "#1d1d34");
+					}
+					s.push(row);
+				}
+				return s;
+			})();
+
+			const FLOOR_B = (() => {
+				const s = [];
+				for (let r = 0; r < 16; r++) {
+					const row = [];
+					for (let c = 0; c < 16; c++) {
+						if (r === 0 || c === 0) row.push("#1a1a30");
+						else if ((r * c) % 11 === 0) row.push("#222240");
+						else row.push(r % 2 === 0 ? "#1c1c34" : "#1b1b32");
+					}
+					s.push(row);
+				}
+				return s;
+			})();
+
+			// --- Wall tile (16x16) ---
+			const WALL_TILE = (() => {
+				const s = [];
+				for (let r = 0; r < 16; r++) {
+					const row = [];
+					for (let c = 0; c < 16; c++) {
+						if (r < 2) row.push("#3a3a5e");
+						else if (r < 4) row.push("#33335a");
+						else row.push(r < 8 ? "#2a2a48" : "#252542");
+					}
+					s.push(row);
+				}
+				return s;
+			})();
+
+			// --- Desk (32x20) top-down with monitor area ---
+			function makeDesk() {
+				const s = [];
+				for (let r = 0; r < 20; r++) {
+					const row = [];
+					for (let c = 0; c < 32; c++) {
+						if (r < 2) {
+							// top edge
+							row.push(c === 0 || c === 31 ? "#24201c" : "#4a4540");
+						} else if (r < 12) {
+							// desk surface
+							if (c === 0 || c === 31) row.push("#2c2824");
+							else row.push((r + c) % 8 === 0 ? "#3e3a34" : "#3a3530");
+						} else if (r < 14) {
+							// front edge
+							row.push(c === 0 || c === 31 ? "#201c18" : "#2c2824");
+						} else {
+							// legs
+							if (c >= 2 && c <= 4) row.push("#24201c");
+							else if (c >= 27 && c <= 29) row.push("#24201c");
+							else row.push("");
+						}
+					}
+					s.push(row);
+				}
+				return s;
+			}
+			const DESK = makeDesk();
+
+			// --- Monitor (12x10) ---
+			function makeMonitor(on) {
+				const s = [];
+				const scrCol = on ? "#1a3a1a" : "#181828";
+				const scrHi = on ? "#2a5a2a" : "#1a1a2a";
+				for (let r = 0; r < 10; r++) {
+					const row = [];
+					for (let c = 0; c < 12; c++) {
+						if (r === 0) {
+							row.push(c >= 1 && c <= 10 ? "#3a3a4a" : "");
+						} else if (r < 7) {
+							if (c === 0 || c === 11) row.push("#3a3a4a");
+							else if (c === 1 || c === 10) row.push("#2a2a3a");
+							else {
+								if (on && r >= 2 && r <= 5 && c >= 3 && c <= 8) {
+									// text lines on screen
+									if (r % 2 === 0 && c % 2 === 0) row.push("#4aca6a");
+									else row.push(scrHi);
+								} else {
+									row.push(scrCol);
+								}
+							}
+						} else if (r === 7) {
+							row.push(c >= 1 && c <= 10 ? "#3a3a4a" : "");
+						} else if (r === 8) {
+							row.push(c >= 4 && c <= 7 ? "#3a3a4a" : "");
+						} else {
+							row.push(c >= 3 && c <= 8 ? "#2a2a3a" : "");
+						}
+					}
+					s.push(row);
+				}
+				return s;
+			}
+			const MONITOR_ON = makeMonitor(true);
+			const MONITOR_OFF = makeMonitor(false);
+
+			// --- Chair (12x14) ---
+			function makeChair() {
+				const s = [];
+				for (let r = 0; r < 14; r++) {
+					const row = [];
+					for (let c = 0; c < 12; c++) {
+						if (r < 5) {
+							// backrest
+							if (c >= 2 && c <= 9) row.push(r === 0 ? "#2a2740" : "#33304a");
+							else row.push("");
+						} else if (r < 8) {
+							// seat
+							if (c >= 1 && c <= 10) row.push("#33304a");
+							else row.push("");
+						} else if (r < 10) {
+							// post
+							if (c >= 5 && c <= 6) row.push("#222030");
+							else row.push("");
+						} else {
+							// wheels
+							if (r === 10 && (c === 3 || c === 8)) row.push("#222030");
+							else if (r === 11 && c >= 3 && c <= 8) row.push("#222030");
+							else if (r === 12 && (c === 2 || c === 4 || c === 7 || c === 9)) row.push("#1a1828");
+							else if (r === 13 && (c === 1 || c === 5 || c === 6 || c === 10)) row.push("#1a1828");
+							else row.push("");
+						}
+					}
+					s.push(row);
+				}
+				return s;
+			}
+			const CHAIR = makeChair();
+
+			// --- Plant (10x16) ---
+			function makePlant() {
+				const s = [];
+				const leaves = [
+					"    gg    ",
+					"   gGgg   ",
+					"  ggGGgg  ",
+					" gGgggGg  ",
+					"  gGggGg  ",
+					"   gGgg   ",
+					"    gg    ",
+					"    ||    ",
+					"    ||    ",
+					"   PPPP   ",
+					"   PPPP   ",
+					"   pppp   ",
+				];
+				const cmap = {
+					g: "#3a7a4a",
+					G: "#4a9a5a",
+					"|": "#5a4a3a",
+					P: "#6a5a48",
+					p: "#5a4a3a",
+					" ": "",
+				};
+				for (const line of leaves) {
+					const row = [];
+					for (const ch of line) row.push(cmap[ch] || "");
+					s.push(row);
+				}
+				return s;
+			}
+			const PLANT = makePlant();
+
+			// --- Mistral M Logo (16x16 pixel art) ---
+			const MISTRAL_LOGO = (() => {
+				// Stylized "M" in Mistral gradient colors
+				const _ = "";
+				const o = "#FF7000";
+				const r = "#FD3F29";
+				const y = "#FFCB00";
+				const w = "#FF8800";
+				return [
+					[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+					[_, o, o, _, _, _, _, _, _, _, _, _, o, o, _, _],
+					[_, o, o, o, _, _, _, _, _, _, _, o, o, o, _, _],
+					[_, o, o, o, o, _, _, _, _, _, o, o, o, o, _, _],
+					[_, o, o, w, o, o, _, _, _, o, o, w, o, o, _, _],
+					[_, o, o, _, w, o, o, _, o, o, w, _, o, o, _, _],
+					[_, o, o, _, _, r, o, o, o, r, _, _, o, o, _, _],
+					[_, o, o, _, _, _, r, o, r, _, _, _, o, o, _, _],
+					[_, o, o, _, _, _, _, y, _, _, _, _, o, o, _, _],
+					[_, o, o, _, _, _, _, _, _, _, _, _, o, o, _, _],
+					[_, o, o, _, _, _, _, _, _, _, _, _, o, o, _, _],
+					[_, o, o, _, _, _, _, _, _, _, _, _, o, o, _, _],
+					[_, o, o, _, _, _, _, _, _, _, _, _, o, o, _, _],
+					[_, o, o, _, _, _, _, _, _, _, _, _, o, o, _, _],
+					[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+					[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+				];
+			})();
+
+			// --- Character Sprites (16x24 per frame, 2-color simple style) ---
+			function makeCharacter(skinCol, hairCol, shirtCol) {
+				// Simple 2-color pixel character facing down (idle)
+				const _ = "";
+				const S = skinCol;
+				const H = hairCol;
+				const T = shirtCol;
+				const P = "#1a1a2e"; // pants (dark)
+				const Sh = "#1c1c20"; // shoes
+
+				const idle = [
+					[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+					[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+					[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+					[_, _, _, _, _, _, H, H, H, H, _, _, _, _, _, _],
+					[_, _, _, _, _, H, H, H, H, H, H, _, _, _, _, _],
+					[_, _, _, _, _, H, S, S, S, S, H, _, _, _, _, _],
+					[_, _, _, _, _, S, S, S, S, S, S, _, _, _, _, _],
+					[_, _, _, _, _, S, "#1a1a2e", S, S, "#1a1a2e", S, _, _, _, _, _],
+					[_, _, _, _, _, S, S, S, S, S, S, _, _, _, _, _],
+					[_, _, _, _, _, _, S, S, S, S, _, _, _, _, _, _],
+					[_, _, _, _, _, _, _, S, S, _, _, _, _, _, _, _],
+					[_, _, _, _, _, T, T, T, T, T, T, _, _, _, _, _],
+					[_, _, _, _, T, T, T, T, T, T, T, T, _, _, _, _],
+					[_, _, _, _, T, T, T, T, T, T, T, T, _, _, _, _],
+					[_, _, _, S, T, T, T, T, T, T, T, T, S, _, _, _],
+					[_, _, _, S, _, T, T, T, T, T, T, _, S, _, _, _],
+					[_, _, _, S, _, T, T, T, T, T, T, _, S, _, _, _],
+					[_, _, _, _, _, P, P, P, P, P, P, _, _, _, _, _],
+					[_, _, _, _, _, P, P, _, _, P, P, _, _, _, _, _],
+					[_, _, _, _, _, P, P, _, _, P, P, _, _, _, _, _],
+					[_, _, _, _, _, P, P, _, _, P, P, _, _, _, _, _],
+					[_, _, _, _, _, Sh, Sh, _, _, Sh, Sh, _, _, _, _, _],
+					[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+					[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+				];
+
+				// typing frame (arms forward)
+				const typing = [
+					[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+					[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+					[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+					[_, _, _, _, _, _, H, H, H, H, _, _, _, _, _, _],
+					[_, _, _, _, _, H, H, H, H, H, H, _, _, _, _, _],
+					[_, _, _, _, _, H, S, S, S, S, H, _, _, _, _, _],
+					[_, _, _, _, _, S, S, S, S, S, S, _, _, _, _, _],
+					[_, _, _, _, _, S, "#1a1a2e", S, S, "#1a1a2e", S, _, _, _, _, _],
+					[_, _, _, _, _, S, S, S, S, S, S, _, _, _, _, _],
+					[_, _, _, _, _, _, S, S, S, S, _, _, _, _, _, _],
+					[_, _, _, _, _, _, _, S, S, _, _, _, _, _, _, _],
+					[_, _, _, _, _, T, T, T, T, T, T, _, _, _, _, _],
+					[_, _, _, _, T, T, T, T, T, T, T, T, _, _, _, _],
+					[_, _, _, S, T, T, T, T, T, T, T, T, S, _, _, _],
+					[_, _, S, S, T, T, T, T, T, T, T, T, S, S, _, _],
+					[_, S, S, _, _, T, T, T, T, T, T, _, _, S, S, _],
+					[_, S, _, _, _, T, T, T, T, T, T, _, _, _, S, _],
+					[_, _, _, _, _, P, P, P, P, P, P, _, _, _, _, _],
+					[_, _, _, _, _, P, P, _, _, P, P, _, _, _, _, _],
+					[_, _, _, _, _, P, P, _, _, P, P, _, _, _, _, _],
+					[_, _, _, _, _, P, P, _, _, P, P, _, _, _, _, _],
+					[_, _, _, _, _, Sh, Sh, _, _, Sh, Sh, _, _, _, _, _],
+					[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+					[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+				];
+
+				// Walk frames
+				const walk1 = JSON.parse(JSON.stringify(idle));
+				// left leg forward
+				if (walk1[19]) {
+					walk1[19] = [_, _, _, _, P, P, P, _, _, P, P, _, _, _, _, _];
+				}
+				if (walk1[20]) {
+					walk1[20] = [_, _, _, _, P, P, _, _, _, _, P, P, _, _, _, _];
+				}
+				if (walk1[21]) {
+					walk1[21] = [_, _, _, _, Sh, Sh, _, _, _, _, Sh, Sh, _, _, _, _];
+				}
+
+				const walk2 = JSON.parse(JSON.stringify(idle));
+				// right leg forward
+				if (walk2[19]) {
+					walk2[19] = [_, _, _, _, _, P, P, _, _, P, P, P, _, _, _, _];
+				}
+				if (walk2[20]) {
+					walk2[20] = [_, _, _, _, P, P, _, _, _, _, P, P, _, _, _, _];
+				}
+				if (walk2[21]) {
+					walk2[21] = [_, _, _, _, Sh, Sh, _, _, _, _, Sh, Sh, _, _, _, _];
+				}
+
+				return { idle, typing, walk1, walk2 };
+			}
+
+			// 4 characters with distinct 2-color palettes
+			const CHARACTERS = [
+				makeCharacter(PAL.skin1, PAL.hair1, PAL.shirt1), // Orange shirt
+				makeCharacter(PAL.skin2, PAL.hair4, PAL.shirt3), // Blue shirt
+				makeCharacter(PAL.skin3, PAL.hair1, PAL.shirt2), // Red shirt
+				makeCharacter(PAL.skin1, PAL.hair3, PAL.shirt4), // Purple shirt
+			];
+
+			// ============================================================
+			// OFFICE LAYOUT — Tile map
+			// ============================================================
+			// 0 = void, 1 = floor A, 2 = floor B, 3 = wall
+			const TILEMAP = (() => {
+				const m = [];
+				for (let r = 0; r < ROWS; r++) {
+					const row = [];
+					for (let c = 0; c < COLS; c++) {
+						if (r < 2)
+							row.push(3); // wall
+						else if (r === 2 && (c < 1 || c >= COLS - 1)) row.push(3);
+						else if (c < 1 || c >= COLS - 1)
+							row.push(0); // void edges
+						else if (r >= ROWS - 1) row.push(0);
+						else row.push((r + c) % 2 === 0 ? 1 : 2);
+					}
+					m.push(row);
+				}
+				return m;
+			})();
+
+			// --- Furniture Placements ---
+			// 4 desks with lots of negative space
+			const DESKS = [
+				{ x: 3, y: 4 }, // top-left area
+				{ x: 13, y: 4 }, // top-right area
+				{ x: 5, y: 9 }, // bottom-left area
+				{ x: 15, y: 9 }, // bottom-right area
+			];
+
+			const CHAIRS = [
+				{ x: 4, y: 6.2 },
+				{ x: 14, y: 6.2 },
+				{ x: 6, y: 11.2 },
+				{ x: 16, y: 11.2 },
+			];
+
+			const MONITORS = [
+				{ x: 4.2, y: 3.6 },
+				{ x: 14.2, y: 3.6 },
+				{ x: 6.2, y: 8.6 },
+				{ x: 16.2, y: 8.6 },
+			];
+
+			const PLANTS = [
+				{ x: 8, y: 3 },
+				{ x: 19, y: 3 },
+				{ x: 2, y: 10 },
+				{ x: 11, y: 11 },
+			];
+
+			// ============================================================
+			// CHARACTERS STATE
+			// ============================================================
+			const agents = [
+				{
+					name: "Codex",
+					charIdx: 0,
+					deskIdx: 0,
+					state: "TYPE",
+					stateTimer: 0,
+					x: 0,
+					y: 0,
+					frame: 0,
+					frameTimer: 0,
+					statusColor: PAL.green,
+					walkPath: [],
+					walkTarget: null,
+					wanderTimer: 0,
+				},
+				{
+					name: "Atlas",
+					charIdx: 1,
+					deskIdx: 1,
+					state: "TYPE",
+					stateTimer: 0,
+					x: 0,
+					y: 0,
+					frame: 0,
+					frameTimer: 0,
+					statusColor: PAL.yellow,
+					walkPath: [],
+					walkTarget: null,
+					wanderTimer: 0,
+				},
+				{
+					name: "Nova",
+					charIdx: 2,
+					deskIdx: 2,
+					state: "TYPE",
+					stateTimer: 0,
+					x: 0,
+					y: 0,
+					frame: 0,
+					frameTimer: 0,
+					statusColor: PAL.green,
+					walkPath: [],
+					walkTarget: null,
+					wanderTimer: 0,
+				},
+				{
+					name: "Spark",
+					charIdx: 3,
+					deskIdx: 3,
+					state: "IDLE",
+					stateTimer: 0,
+					x: 0,
+					y: 0,
+					frame: 0,
+					frameTimer: 0,
+					statusColor: PAL.yellow,
+					walkPath: [],
+					walkTarget: null,
+					wanderTimer: 0,
+				},
+			];
+
+			// Place agents at their desks
+			agents.forEach((a) => {
+				const chair = CHAIRS[a.deskIdx];
+				a.x = chair.x * TILE;
+				a.y = chair.y * TILE - 12;
+			});
+
+			// ============================================================
+			// PARTICLES — Floating ember particles
+			// ============================================================
+			const embers = [];
+			const MAX_EMBERS = 35;
+
+			function spawnEmber() {
+				embers.push({
+					x: Math.random() * COLS * TILE,
+					y: ROWS * TILE + Math.random() * 20,
+					vx: (Math.random() - 0.5) * 6,
+					vy: -(8 + Math.random() * 15),
+					life: 3 + Math.random() * 4,
+					maxLife: 0,
+					size: 1 + Math.random() * 1.5,
+					hue: Math.random(), // 0=orange, 0.5=red, 1=yellow
+				});
+				embers[embers.length - 1].maxLife = embers[embers.length - 1].life;
+			}
+
+			// Initialize some embers
+			for (let i = 0; i < 15; i++) {
+				spawnEmber();
+				embers[embers.length - 1].y = Math.random() * ROWS * TILE;
+				embers[embers.length - 1].life = Math.random() * embers[embers.length - 1].maxLife;
+			}
+
+			// ============================================================
+			// BFS PATHFINDING
+			// ============================================================
+			function isWalkable(tx, ty) {
+				if (tx < 1 || tx >= COLS - 1 || ty < 2 || ty >= ROWS - 1) return false;
+				const tile = TILEMAP[ty]?.[tx];
+				return tile === 1 || tile === 2;
+			}
+
+			function bfs(sx, sy, ex, ey) {
+				const stx = Math.floor(sx / TILE);
+				const sty = Math.floor(sy / TILE);
+				const etx = Math.floor(ex / TILE);
+				const ety = Math.floor(ey / TILE);
+				if (stx === etx && sty === ety) return [];
+				if (!isWalkable(etx, ety)) return [];
+
+				const visited = new Set();
+				const queue = [{ x: stx, y: sty, path: [] }];
+				visited.add(`${stx},${sty}`);
+
+				while (queue.length > 0) {
+					const cur = queue.shift();
+					const dirs = [
+						[0, -1],
+						[0, 1],
+						[-1, 0],
+						[1, 0],
+					];
+					for (const [dx, dy] of dirs) {
+						const nx = cur.x + dx;
+						const ny = cur.y + dy;
+						const key = `${nx},${ny}`;
+						if (visited.has(key)) continue;
+						if (!isWalkable(nx, ny)) continue;
+						visited.add(key);
+						const newPath = [...cur.path, { x: nx * TILE + TILE / 2, y: ny * TILE + TILE / 2 }];
+						if (nx === etx && ny === ety) return newPath;
+						queue.push({ x: nx, y: ny, path: newPath });
+					}
+				}
+				return [];
+			}
+
+			// ============================================================
+			// MATRIX SPAWN EFFECT
+			// ============================================================
+			const matrixEffects = [];
+
+			function triggerMatrixEffect(agent) {
+				matrixEffects.push({
+					agent,
+					timer: 0,
+					duration: 0.6,
+					columns: Array.from({ length: 16 }, () => ({
+						offset: Math.random() * 0.3,
+						chars: Array.from({ length: 6 }, () => Math.random()),
+					})),
+				});
+			}
+
+			// Trigger initial spawn effects
+			agents.forEach((a, i) => {
+				setTimeout(() => triggerMatrixEffect(a), i * 400);
+			});
+
+			// ============================================================
+			// UPDATE
+			// ============================================================
+			const WALK_SPEED = 48; // px/sec
+
+			function update(dt) {
+				// Update agents
+				for (const a of agents) {
+					a.stateTimer += dt;
+					a.frameTimer += dt;
+
+					if (a.state === "TYPE") {
+						// Typing animation
+						if (a.frameTimer > 0.3) {
+							a.frameTimer = 0;
+							a.frame = a.frame === 0 ? 1 : 0;
+						}
+						// Occasionally switch status
+						if (a.stateTimer > 3 + Math.random() * 5) {
+							a.statusColor = Math.random() > 0.4 ? PAL.green : PAL.yellow;
+						}
+						// Wander timer
+						a.wanderTimer += dt;
+						if (a.wanderTimer > 8 + Math.random() * 15) {
+							a.wanderTimer = 0;
+							// Pick a random walkable tile
+							const tx = 2 + Math.floor(Math.random() * (COLS - 4));
+							const ty = 3 + Math.floor(Math.random() * (ROWS - 4));
+							if (isWalkable(tx, ty)) {
+								const path = bfs(a.x, a.y, tx * TILE, ty * TILE);
+								if (path.length > 0 && path.length < 12) {
+									a.walkPath = path;
+									a.walkTarget = 0;
+									a.state = "WALK";
+									a.stateTimer = 0;
+								}
+							}
+						}
+					} else if (a.state === "WALK") {
+						// Walk animation
+						if (a.frameTimer > 0.15) {
+							a.frameTimer = 0;
+							a.frame = (a.frame + 1) % 4;
+						}
+						// Move towards target
+						if (a.walkPath.length > 0 && a.walkTarget < a.walkPath.length) {
+							const target = a.walkPath[a.walkTarget];
+							const dx = target.x - a.x;
+							const dy = target.y - a.y;
+							const dist = Math.sqrt(dx * dx + dy * dy);
+							if (dist < 2) {
+								a.walkTarget++;
+								if (a.walkTarget >= a.walkPath.length) {
+									// Done walking, idle then return
+									a.state = "IDLE";
+									a.stateTimer = 0;
+									a.frame = 0;
+								}
+							} else {
+								const speed = WALK_SPEED * dt;
+								a.x += (dx / dist) * speed;
+								a.y += (dy / dist) * speed;
+							}
+						}
+					} else if (a.state === "IDLE") {
+						// Idle for a bit then return to desk
+						if (a.stateTimer > 2 + Math.random() * 3) {
+							const chair = CHAIRS[a.deskIdx];
+							const targetX = chair.x * TILE;
+							const targetY = chair.y * TILE - 12;
+							const path = bfs(a.x, a.y, targetX, targetY);
+							if (path.length > 0) {
+								a.walkPath = path;
+								a.walkTarget = 0;
+								a.state = "RETURN";
+								a.stateTimer = 0;
+							} else {
+								// Can't path, just teleport
+								a.x = targetX;
+								a.y = targetY;
+								a.state = "TYPE";
+								a.stateTimer = 0;
+							}
+						}
+					} else if (a.state === "RETURN") {
+						// Walking back to desk
+						if (a.frameTimer > 0.15) {
+							a.frameTimer = 0;
+							a.frame = (a.frame + 1) % 4;
+						}
+						if (a.walkPath.length > 0 && a.walkTarget < a.walkPath.length) {
+							const target = a.walkPath[a.walkTarget];
+							const dx = target.x - a.x;
+							const dy = target.y - a.y;
+							const dist = Math.sqrt(dx * dx + dy * dy);
+							if (dist < 2) {
+								a.walkTarget++;
+								if (a.walkTarget >= a.walkPath.length) {
+									a.state = "TYPE";
+									a.stateTimer = 0;
+									a.frame = 0;
+									a.wanderTimer = 0;
+									// Snap to chair position
+									const chair = CHAIRS[a.deskIdx];
+									a.x = chair.x * TILE;
+									a.y = chair.y * TILE - 12;
+								}
+							} else {
+								const speed = WALK_SPEED * dt;
+								a.x += (dx / dist) * speed;
+								a.y += (dy / dist) * speed;
+							}
+						}
+					}
+				}
+
+				// Update embers
+				for (let i = embers.length - 1; i >= 0; i--) {
+					const e = embers[i];
+					e.x += e.vx * dt;
+					e.y += e.vy * dt;
+					e.vx += (Math.random() - 0.5) * 10 * dt;
+					e.vy -= 2 * dt;
+					e.life -= dt;
+					if (e.life <= 0) {
+						embers.splice(i, 1);
+					}
+				}
+				while (embers.length < MAX_EMBERS) spawnEmber();
+
+				// Update matrix effects
+				for (let i = matrixEffects.length - 1; i >= 0; i--) {
+					matrixEffects[i].timer += dt;
+					if (matrixEffects[i].timer >= matrixEffects[i].duration) {
+						matrixEffects.splice(i, 1);
+					}
+				}
+			}
+
+			// ============================================================
+			// RENDER
+			// ============================================================
+			function render() {
+				ctx.clearRect(0, 0, W, H);
+
+				// Background fill
+				ctx.fillStyle = PAL.bg;
+				ctx.fillRect(0, 0, W, H);
+
+				const ox = offsetX;
+				const oy = offsetY;
+
+				// --- Draw tile grid ---
+				for (let r = 0; r < ROWS; r++) {
+					for (let c = 0; c < COLS; c++) {
+						const tile = TILEMAP[r][c];
+						const px = ox + c * TILE * ZOOM;
+						const py = oy + r * TILE * ZOOM;
+						if (tile === 1) drawSprite(FLOOR_A, px, py);
+						else if (tile === 2) drawSprite(FLOOR_B, px, py);
+						else if (tile === 3) drawSprite(WALL_TILE, px, py);
+					}
+				}
+
+				// --- Wall accent stripe (Mistral gradient) ---
+				const wallY = oy + 1.8 * TILE * ZOOM;
+				const grd = ctx.createLinearGradient(ox, 0, ox + COLS * TILE * ZOOM, 0);
+				grd.addColorStop(0, "#FF700044");
+				grd.addColorStop(0.4, "#FD3F2944");
+				grd.addColorStop(0.7, "#FF700033");
+				grd.addColorStop(1, "#FFCB0044");
+				ctx.fillStyle = grd;
+				ctx.fillRect(ox, wallY, COLS * TILE * ZOOM, 2 * ZOOM);
+
+				// --- Collect all drawables for z-sort ---
+				const drawables = [];
+
+				// Desks
+				DESKS.forEach((d, i) => {
+					drawables.push({
+						type: "desk",
+						idx: i,
+						x: d.x,
+						y: d.y,
+						zY: (d.y + 1.2) * TILE,
+					});
+				});
+
+				// Monitors
+				MONITORS.forEach((m, i) => {
+					const isOn = agents[i].state === "TYPE";
+					drawables.push({
+						type: "monitor",
+						idx: i,
+						x: m.x,
+						y: m.y,
+						on: isOn,
+						zY: m.y * TILE,
+					});
+				});
+
+				// Chairs
+				CHAIRS.forEach((ch, i) => {
+					drawables.push({
+						type: "chair",
+						idx: i,
+						x: ch.x,
+						y: ch.y,
+						zY: (ch.y + 0.8) * TILE,
+					});
+				});
+
+				// Plants
+				PLANTS.forEach((p, i) => {
+					drawables.push({
+						type: "plant",
+						idx: i,
+						x: p.x,
+						y: p.y,
+						zY: (p.y + 1) * TILE,
+					});
+				});
+
+				// Characters
+				agents.forEach((a, i) => {
+					drawables.push({
+						type: "character",
+						idx: i,
+						x: a.x / TILE,
+						y: a.y / TILE,
+						zY: a.y + TILE * 0.5 + 0.5,
+					});
+				});
+
+				// Sort by zY
+				drawables.sort((a, b) => a.zY - b.zY);
+
+				// --- Draw all sorted ---
+				for (const d of drawables) {
+					const px = ox + d.x * TILE * ZOOM;
+					const py = oy + d.y * TILE * ZOOM;
+
+					if (d.type === "desk") {
+						drawSprite(DESK, px, py);
+					} else if (d.type === "monitor") {
+						drawSprite(d.on ? MONITOR_ON : MONITOR_OFF, px, py);
+						// Screen glow when on
+						if (d.on) {
+							ctx.fillStyle = "rgba(90, 200, 140, 0.06)";
+							ctx.fillRect(px - 2 * ZOOM, py - 1 * ZOOM, 16 * ZOOM, 10 * ZOOM);
+						}
+					} else if (d.type === "chair") {
+						drawSprite(CHAIR, ox + (d.x - 0.1) * TILE * ZOOM, py);
+					} else if (d.type === "plant") {
+						drawSprite(PLANT, px + 3 * ZOOM, py);
+					} else if (d.type === "character") {
+						const a = agents[d.idx];
+						const ch = CHARACTERS[a.charIdx];
+						let sprite;
+						if (a.state === "TYPE") {
+							sprite = a.frame === 0 ? ch.typing : ch.idle;
+						} else if (a.state === "WALK" || a.state === "RETURN") {
+							sprite = a.frame < 2 ? ch.walk1 : ch.walk2;
+						} else {
+							sprite = ch.idle;
+						}
+						drawSprite(sprite, px, py);
+
+						// --- Agent label ---
+						const labelX = px + 8 * ZOOM;
+						const labelY = py - 3 * ZOOM;
+
+						// Status dot
+						ctx.fillStyle = a.statusColor;
+						ctx.beginPath();
+						const dotR = 2.5 * ZOOM;
+						const dotX = labelX - 6;
+						const dotY = labelY;
+						// pixel circle approximation
+						ctx.fillRect(dotX - dotR, dotY - dotR, dotR * 2, dotR * 2);
+
+						// Dot glow
+						ctx.fillStyle = a.statusColor + "40";
+						ctx.fillRect(dotX - dotR - 2, dotY - dotR - 2, dotR * 2 + 4, dotR * 2 + 4);
+
+						// Name background
+						const nameWidth = a.name.length * 5 * ZOOM * 0.16 + 12;
+						ctx.fillStyle = "rgba(26,26,46,0.8)";
+						ctx.fillRect(dotX + dotR + 2, dotY - 6, nameWidth, 13);
+
+						// Name text
+						ctx.fillStyle = "#c0c0d0";
+						ctx.font = `${Math.max(7, ZOOM * 2)}px monospace`;
+						ctx.fillText(a.name, dotX + dotR + 5, dotY + 4);
+					}
+				}
+
+				// --- Matrix spawn effects ---
+				for (const fx of matrixEffects) {
+					const a = fx.agent;
+					const progress = fx.timer / fx.duration;
+					const charSprite = CHARACTERS[a.charIdx].idle;
+					const cx = ox + (a.x / TILE) * TILE * ZOOM;
+					const cy = oy + (a.y / TILE) * TILE * ZOOM;
+
+					for (let col = 0; col < 16; col++) {
+						const colProgress = Math.max(
+							0,
+							Math.min(1, (progress - fx.columns[col].offset) / (1 - fx.columns[col].offset)),
+						);
+						const headRow = Math.floor(colProgress * 24);
+
+						for (let row = 0; row < 24; row++) {
+							const px = cx + col * ZOOM;
+							const py = cy + row * ZOOM;
+
+							if (row <= headRow) {
+								// Matrix rain trail
+								const trailDist = headRow - row;
+								if (trailDist === 0) {
+									ctx.fillStyle = "#ccffcc";
+									ctx.fillRect(px, py, ZOOM, ZOOM);
+								} else if (trailDist < 3) {
+									const alpha = 0.7 - trailDist * 0.2;
+									ctx.fillStyle = `rgba(90, 255, 120, ${alpha})`;
+									if (Math.random() > 0.3) ctx.fillRect(px, py, ZOOM, ZOOM);
+								} else if (trailDist < 6) {
+									ctx.fillStyle = `rgba(40, 180, 80, 0.3)`;
+									if (Math.random() > 0.5) ctx.fillRect(px, py, ZOOM, ZOOM);
+								}
+							}
+						}
+					}
+				}
+
+				// --- Ember particles ---
+				for (const e of embers) {
+					const alpha = Math.min(1, e.life / e.maxLife);
+					let color;
+					if (e.hue < 0.33) color = `rgba(255,112,0,${alpha * 0.7})`;
+					else if (e.hue < 0.66) color = `rgba(253,63,41,${alpha * 0.6})`;
+					else color = `rgba(255,203,0,${alpha * 0.8})`;
+
+					const px = ox + e.x * ZOOM;
+					const py = oy + e.y * ZOOM;
+					const sz = e.size * ZOOM;
+
+					ctx.fillStyle = color;
+					ctx.fillRect(px, py, sz, sz);
+
+					// Glow
+					ctx.fillStyle = color.replace(/[\d.]+\)$/, (alpha * 0.15).toFixed(2) + ")");
+					ctx.fillRect(px - sz, py - sz, sz * 3, sz * 3);
+				}
+
+				// --- Mistral M Logo (top-right) ---
+				const logoX = ox + (COLS - 2.5) * TILE * ZOOM;
+				const logoY = oy - TILE * ZOOM * 1.3;
+				drawSprite(MISTRAL_LOGO, logoX, logoY);
+
+				// Logo glow
+				ctx.fillStyle = "rgba(255,112,0,0.05)";
+				ctx.fillRect(logoX - 4 * ZOOM, logoY - 2 * ZOOM, 24 * ZOOM, 22 * ZOOM);
+
+				// --- Title text ---
+				ctx.fillStyle = "#FF7000";
+				ctx.font = `${Math.max(10, ZOOM * 2.5)}px monospace`;
+				ctx.fillText("MISTRAL AI OFFICE", ox + 10, oy - TILE * ZOOM * 0.4);
+
+				// Subtitle
+				ctx.fillStyle = "#4a4a6a";
+				ctx.font = `${Math.max(7, ZOOM * 1.5)}px monospace`;
+				ctx.fillText("pixel workspace", ox + 10, oy - TILE * ZOOM * 0.4 + ZOOM * 3);
+
+				// --- Bottom status bar ---
+				const barY = oy + ROWS * TILE * ZOOM + 8;
+				const barX = ox + 4;
+
+				ctx.fillStyle = "rgba(26,26,46,0.9)";
+				ctx.fillRect(barX, barY, 280, 22);
+				ctx.strokeStyle = "#3a3a5a";
+				ctx.lineWidth = 1;
+				ctx.strokeRect(barX, barY, 280, 22);
+
+				ctx.fillStyle = "#6a6a8a";
+				ctx.font = `${Math.max(7, ZOOM * 1.5)}px monospace`;
+				ctx.fillText("agents: 4  |  tasks: active  |  office: online", barX + 6, barY + 15);
+			}
+
+			// ============================================================
+			// GAME LOOP
+			// ============================================================
+			let lastTime = 0;
+
+			function gameLoop(timestamp) {
+				const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+				lastTime = timestamp;
+
+				update(dt);
+				render();
+				requestAnimationFrame(gameLoop);
+			}
+
+			requestAnimationFrame((ts) => {
+				lastTime = ts;
+				gameLoop(ts);
+			});
+		</script>
+	</body>
 </html>

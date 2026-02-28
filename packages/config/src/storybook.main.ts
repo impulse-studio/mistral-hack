@@ -7,16 +7,13 @@ function getAbsolutePath(value: string) {
 	return dirname(fileURLToPath(import.meta.resolve(`${value}/package.json`)));
 }
 
-export function createStorybookConfig(packageDir: string, overrides?: Partial<StorybookConfig>): StorybookConfig {
+export function createStorybookConfig(
+	packageDir: string,
+	overrides?: Partial<StorybookConfig>,
+): StorybookConfig {
 	return {
-		stories: [
-			"../src/**/*.mdx",
-			"../src/**/*.stories.@(ts|tsx)",
-		],
-		addons: [
-			getAbsolutePath("@storybook/addon-a11y"),
-			getAbsolutePath("@storybook/addon-docs"),
-		],
+		stories: ["../src/**/*.mdx", "../src/**/*.stories.@(ts|tsx)"],
+		addons: [getAbsolutePath("@storybook/addon-a11y"), getAbsolutePath("@storybook/addon-docs")],
 		framework: getAbsolutePath("@storybook/react-vite"),
 		viteFinal: (viteConfig) => {
 			viteConfig.resolve ??= {};

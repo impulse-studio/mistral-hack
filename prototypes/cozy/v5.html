@@ -1,911 +1,1304 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pixel Cozy AI Office</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#0a0a14;font-family:'Press Start 2P',monospace;color:#c0c0d0}
-#app{display:flex;width:100%;height:100%}
-#canvasWrap{width:70%;height:100%;display:flex;align-items:center;justify-content:center;background:#1e1e2e;position:relative;overflow:hidden}
-canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer}
-#panel{width:30%;height:100%;background:#1e1e2e;border-left:3px solid #4a4a6a;display:flex;flex-direction:column;overflow:hidden}
-.tabs{display:flex;border-bottom:2px solid #4a4a6a;flex-shrink:0}
-.tab{flex:1;padding:10px 4px;text-align:center;font-size:8px;background:rgba(255,255,255,0.05);color:#7a7a9a;cursor:pointer;border:none;border-right:2px solid #4a4a6a;font-family:'Press Start 2P',monospace;transition:background .15s}
-.tab:last-child{border-right:none}
-.tab:hover{background:rgba(255,255,255,0.12)}
-.tab.active{background:rgba(90,200,140,0.15);color:#5ac88c}
-#agentInfo{flex-shrink:0;padding:10px;border-bottom:2px solid #4a4a6a;font-size:7px;min-height:42px;display:none}
-.agent-name{color:#5ac88c;margin-bottom:4px}
-.agent-status{color:#7a7a9a}
-.status-dot{display:inline-block;width:6px;height:6px;margin-right:4px}
-#tabContent{flex:1;overflow:hidden;position:relative}
-.tab-panel{position:absolute;inset:0;display:none;overflow:hidden}
-.tab-panel.active{display:flex;flex-direction:column}
-/* Terminal */
-#termPanel{background:#0a0a0f;padding:8px;overflow-y:auto;flex:1}
-#termPanel::-webkit-scrollbar{width:6px}
-#termPanel::-webkit-scrollbar-thumb{background:#2a4a2a}
-.term-line{font-size:7px;line-height:1.8;color:#00ff41;font-family:'Press Start 2P',monospace;white-space:pre-wrap;word-break:break-all}
-.term-line.dim{color:#009926}
-.term-line.bright{color:#66ff88}
-/* Tasks */
-#tasksPanel{padding:8px;overflow-y:auto;flex:1}
-.kanban{display:flex;gap:6px;height:100%}
-.kanban-col{flex:1;display:flex;flex-direction:column;gap:4px}
-.kanban-header{font-size:7px;padding:4px 6px;text-align:center;margin-bottom:2px;border:2px solid #4a4a6a;background:rgba(255,255,255,0.05)}
-.kanban-header.todo{color:#cc4444}
-.kanban-header.working{color:#ccaa33}
-.kanban-header.done{color:#44aa66}
-.card{font-size:6px;padding:5px 6px;border:2px solid #4a4a6a;background:rgba(255,255,255,0.04);line-height:1.6;box-shadow:2px 2px 0 #0a0a14}
-.card.red{border-color:#cc4444;color:#ee8888}
-.card.yellow{border-color:#ccaa33;color:#eedd77}
-.card.green{border-color:#44aa66;color:#88ddaa}
-.card.blue{border-color:#4477aa;color:#88bbee}
-/* Files */
-#filesPanel{padding:8px;overflow-y:auto;flex:1;font-size:7px}
-.file-entry{padding:4px 6px;color:#7a7a9a;border-bottom:1px solid #2a2a3d}
-.file-entry .fname{color:#88bbee}
-.file-entry .fsize{color:#5a5a7a;float:right}
-/* Toolbar */
-#toolbar{position:fixed;bottom:12px;left:12px;display:flex;gap:6px;z-index:10}
-.tbtn{padding:8px 12px;font-size:7px;font-family:'Press Start 2P',monospace;background:rgba(255,255,255,0.08);color:#c0c0d0;border:2px solid #4a4a6a;cursor:pointer;box-shadow:2px 2px 0 #0a0a14}
-.tbtn:hover{background:rgba(255,255,255,0.15)}
-.tbtn.green{background:rgba(90,200,140,0.15);color:#5ac88c}
-</style>
-</head>
-<body>
-<div id="app">
-<div id="canvasWrap"><canvas id="c"></canvas></div>
-<div id="panel">
-<div class="tabs">
-<div class="tab active" data-tab="term">Terminal</div>
-<div class="tab" data-tab="tasks">Tasks</div>
-<div class="tab" data-tab="files">Files</div>
-</div>
-<div id="agentInfo"></div>
-<div id="tabContent">
-<div class="tab-panel active" id="termTab"><div id="termPanel"></div></div>
-<div class="tab-panel" id="tasksTab"><div id="tasksPanel">
-<div class="kanban">
-<div class="kanban-col"><div class="kanban-header todo">Todo</div>
-<div class="card red">Refactor auth module</div>
-<div class="card red">Add rate limiting</div>
-<div class="card blue">Write API docs</div>
-</div>
-<div class="kanban-col"><div class="kanban-header working">Working</div>
-<div class="card yellow">Build REST endpoints</div>
-<div class="card yellow">Fix CSS layout bug</div>
-</div>
-<div class="kanban-col"><div class="kanban-header done">Done</div>
-<div class="card green">Setup CI pipeline</div>
-<div class="card green">Init database schema</div>
-<div class="card green">Create project repo</div>
-</div>
-</div>
-</div></div>
-<div class="tab-panel" id="filesTab"><div id="filesPanel"></div></div>
-</div>
-</div>
-</div>
-<div id="toolbar">
-<div class="tbtn green">+ Agent</div>
-<div class="tbtn">Layout</div>
-<div class="tbtn">Settings</div>
-</div>
-<script>
-// ─── CONFIG ─────────────────────────────────────────
-const TILE = 16, COLS = 16, ROWS = 12, ZOOM = 4;
-const W = COLS * TILE, H = ROWS * TILE;
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-canvas.width = W; canvas.height = H;
-canvas.style.width = (W * ZOOM) + 'px';
-canvas.style.height = (H * ZOOM) + 'px';
-ctx.imageSmoothingEnabled = false;
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Pixel Cozy AI Office</title>
+		<style>
+			@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+			html,
+			body {
+				width: 100%;
+				height: 100%;
+				overflow: hidden;
+				background: #0a0a14;
+				font-family: "Press Start 2P", monospace;
+				color: #c0c0d0;
+			}
+			#app {
+				display: flex;
+				width: 100%;
+				height: 100%;
+			}
+			#canvasWrap {
+				width: 70%;
+				height: 100%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				background: #1e1e2e;
+				position: relative;
+				overflow: hidden;
+			}
+			canvas {
+				display: block;
+				image-rendering: pixelated;
+				image-rendering: crisp-edges;
+				cursor: pointer;
+			}
+			#panel {
+				width: 30%;
+				height: 100%;
+				background: #1e1e2e;
+				border-left: 3px solid #4a4a6a;
+				display: flex;
+				flex-direction: column;
+				overflow: hidden;
+			}
+			.tabs {
+				display: flex;
+				border-bottom: 2px solid #4a4a6a;
+				flex-shrink: 0;
+			}
+			.tab {
+				flex: 1;
+				padding: 10px 4px;
+				text-align: center;
+				font-size: 8px;
+				background: rgba(255, 255, 255, 0.05);
+				color: #7a7a9a;
+				cursor: pointer;
+				border: none;
+				border-right: 2px solid #4a4a6a;
+				font-family: "Press Start 2P", monospace;
+				transition: background 0.15s;
+			}
+			.tab:last-child {
+				border-right: none;
+			}
+			.tab:hover {
+				background: rgba(255, 255, 255, 0.12);
+			}
+			.tab.active {
+				background: rgba(90, 200, 140, 0.15);
+				color: #5ac88c;
+			}
+			#agentInfo {
+				flex-shrink: 0;
+				padding: 10px;
+				border-bottom: 2px solid #4a4a6a;
+				font-size: 7px;
+				min-height: 42px;
+				display: none;
+			}
+			.agent-name {
+				color: #5ac88c;
+				margin-bottom: 4px;
+			}
+			.agent-status {
+				color: #7a7a9a;
+			}
+			.status-dot {
+				display: inline-block;
+				width: 6px;
+				height: 6px;
+				margin-right: 4px;
+			}
+			#tabContent {
+				flex: 1;
+				overflow: hidden;
+				position: relative;
+			}
+			.tab-panel {
+				position: absolute;
+				inset: 0;
+				display: none;
+				overflow: hidden;
+			}
+			.tab-panel.active {
+				display: flex;
+				flex-direction: column;
+			}
+			/* Terminal */
+			#termPanel {
+				background: #0a0a0f;
+				padding: 8px;
+				overflow-y: auto;
+				flex: 1;
+			}
+			#termPanel::-webkit-scrollbar {
+				width: 6px;
+			}
+			#termPanel::-webkit-scrollbar-thumb {
+				background: #2a4a2a;
+			}
+			.term-line {
+				font-size: 7px;
+				line-height: 1.8;
+				color: #00ff41;
+				font-family: "Press Start 2P", monospace;
+				white-space: pre-wrap;
+				word-break: break-all;
+			}
+			.term-line.dim {
+				color: #009926;
+			}
+			.term-line.bright {
+				color: #66ff88;
+			}
+			/* Tasks */
+			#tasksPanel {
+				padding: 8px;
+				overflow-y: auto;
+				flex: 1;
+			}
+			.kanban {
+				display: flex;
+				gap: 6px;
+				height: 100%;
+			}
+			.kanban-col {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+			}
+			.kanban-header {
+				font-size: 7px;
+				padding: 4px 6px;
+				text-align: center;
+				margin-bottom: 2px;
+				border: 2px solid #4a4a6a;
+				background: rgba(255, 255, 255, 0.05);
+			}
+			.kanban-header.todo {
+				color: #cc4444;
+			}
+			.kanban-header.working {
+				color: #ccaa33;
+			}
+			.kanban-header.done {
+				color: #44aa66;
+			}
+			.card {
+				font-size: 6px;
+				padding: 5px 6px;
+				border: 2px solid #4a4a6a;
+				background: rgba(255, 255, 255, 0.04);
+				line-height: 1.6;
+				box-shadow: 2px 2px 0 #0a0a14;
+			}
+			.card.red {
+				border-color: #cc4444;
+				color: #ee8888;
+			}
+			.card.yellow {
+				border-color: #ccaa33;
+				color: #eedd77;
+			}
+			.card.green {
+				border-color: #44aa66;
+				color: #88ddaa;
+			}
+			.card.blue {
+				border-color: #4477aa;
+				color: #88bbee;
+			}
+			/* Files */
+			#filesPanel {
+				padding: 8px;
+				overflow-y: auto;
+				flex: 1;
+				font-size: 7px;
+			}
+			.file-entry {
+				padding: 4px 6px;
+				color: #7a7a9a;
+				border-bottom: 1px solid #2a2a3d;
+			}
+			.file-entry .fname {
+				color: #88bbee;
+			}
+			.file-entry .fsize {
+				color: #5a5a7a;
+				float: right;
+			}
+			/* Toolbar */
+			#toolbar {
+				position: fixed;
+				bottom: 12px;
+				left: 12px;
+				display: flex;
+				gap: 6px;
+				z-index: 10;
+			}
+			.tbtn {
+				padding: 8px 12px;
+				font-size: 7px;
+				font-family: "Press Start 2P", monospace;
+				background: rgba(255, 255, 255, 0.08);
+				color: #c0c0d0;
+				border: 2px solid #4a4a6a;
+				cursor: pointer;
+				box-shadow: 2px 2px 0 #0a0a14;
+			}
+			.tbtn:hover {
+				background: rgba(255, 255, 255, 0.15);
+			}
+			.tbtn.green {
+				background: rgba(90, 200, 140, 0.15);
+				color: #5ac88c;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="app">
+			<div id="canvasWrap"><canvas id="c"></canvas></div>
+			<div id="panel">
+				<div class="tabs">
+					<div class="tab active" data-tab="term">Terminal</div>
+					<div class="tab" data-tab="tasks">Tasks</div>
+					<div class="tab" data-tab="files">Files</div>
+				</div>
+				<div id="agentInfo"></div>
+				<div id="tabContent">
+					<div class="tab-panel active" id="termTab"><div id="termPanel"></div></div>
+					<div class="tab-panel" id="tasksTab">
+						<div id="tasksPanel">
+							<div class="kanban">
+								<div class="kanban-col">
+									<div class="kanban-header todo">Todo</div>
+									<div class="card red">Refactor auth module</div>
+									<div class="card red">Add rate limiting</div>
+									<div class="card blue">Write API docs</div>
+								</div>
+								<div class="kanban-col">
+									<div class="kanban-header working">Working</div>
+									<div class="card yellow">Build REST endpoints</div>
+									<div class="card yellow">Fix CSS layout bug</div>
+								</div>
+								<div class="kanban-col">
+									<div class="kanban-header done">Done</div>
+									<div class="card green">Setup CI pipeline</div>
+									<div class="card green">Init database schema</div>
+									<div class="card green">Create project repo</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="tab-panel" id="filesTab"><div id="filesPanel"></div></div>
+				</div>
+			</div>
+		</div>
+		<div id="toolbar">
+			<div class="tbtn green">+ Agent</div>
+			<div class="tbtn">Layout</div>
+			<div class="tbtn">Settings</div>
+		</div>
+		<script>
+			// ─── CONFIG ─────────────────────────────────────────
+			const TILE = 16,
+				COLS = 16,
+				ROWS = 12,
+				ZOOM = 4;
+			const W = COLS * TILE,
+				H = ROWS * TILE;
+			const canvas = document.getElementById("c");
+			const ctx = canvas.getContext("2d");
+			canvas.width = W;
+			canvas.height = H;
+			canvas.style.width = W * ZOOM + "px";
+			canvas.style.height = H * ZOOM + "px";
+			ctx.imageSmoothingEnabled = false;
 
-// ─── COLORS ─────────────────────────────────────────
-const C = {
-  void: '#1e1e2e', wall: '#2a2a3d',
-  floorA: '#8B6914', floorB: '#A07828', floorC: '#B8922E', floorD: '#6B4E0A',
-  deskA: '#8B6914', deskB: '#A07828', deskC: '#6B4E0A',
-  monFrame: '#555566', monScreen: '#334455', monGlow: '#55aacc',
-  bookR: '#CC4444', bookB: '#4477AA', bookG: '#44AA66', bookY: '#CCAA33', bookP: '#9955AA',
-  leafA: '#3D8B37', leafB: '#2D6B27', pot: '#B85C3A', potRim: '#8B4422',
-  shelfWood: '#5A4010', shelfBack: '#3a3a4d'
-};
+			// ─── COLORS ─────────────────────────────────────────
+			const C = {
+				void: "#1e1e2e",
+				wall: "#2a2a3d",
+				floorA: "#8B6914",
+				floorB: "#A07828",
+				floorC: "#B8922E",
+				floorD: "#6B4E0A",
+				deskA: "#8B6914",
+				deskB: "#A07828",
+				deskC: "#6B4E0A",
+				monFrame: "#555566",
+				monScreen: "#334455",
+				monGlow: "#55aacc",
+				bookR: "#CC4444",
+				bookB: "#4477AA",
+				bookG: "#44AA66",
+				bookY: "#CCAA33",
+				bookP: "#9955AA",
+				leafA: "#3D8B37",
+				leafB: "#2D6B27",
+				pot: "#B85C3A",
+				potRim: "#8B4422",
+				shelfWood: "#5A4010",
+				shelfBack: "#3a3a4d",
+			};
 
-// ─── SPRITE HELPERS ─────────────────────────────────
-function drawSprite(sp, x, y) {
-  for (let r = 0; r < sp.length; r++)
-    for (let c = 0; c < sp[r].length; c++)
-      if (sp[r][c]) { ctx.fillStyle = sp[r][c]; ctx.fillRect(x + c, y + r, 1, 1); }
-}
+			// ─── SPRITE HELPERS ─────────────────────────────────
+			function drawSprite(sp, x, y) {
+				for (let r = 0; r < sp.length; r++)
+					for (let c = 0; c < sp[r].length; c++)
+						if (sp[r][c]) {
+							ctx.fillStyle = sp[r][c];
+							ctx.fillRect(x + c, y + r, 1, 1);
+						}
+			}
 
-// ─── TILE SPRITES ───────────────────────────────────
-// Floor tile 16x16
-function makeFloor(seed) {
-  const s = [];
-  for (let r = 0; r < 16; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      const h = (seed * 7 + r * 13 + c * 31) & 0xFF;
-      if (r === 0 || c === 0) row.push(C.floorD);
-      else if (h % 7 === 0) row.push(C.floorA);
-      else if (h % 5 === 0) row.push(C.floorB);
-      else row.push(C.floorC);
-    }
-    s.push(row);
-  }
-  return s;
-}
+			// ─── TILE SPRITES ───────────────────────────────────
+			// Floor tile 16x16
+			function makeFloor(seed) {
+				const s = [];
+				for (let r = 0; r < 16; r++) {
+					const row = [];
+					for (let c = 0; c < 16; c++) {
+						const h = (seed * 7 + r * 13 + c * 31) & 0xff;
+						if (r === 0 || c === 0) row.push(C.floorD);
+						else if (h % 7 === 0) row.push(C.floorA);
+						else if (h % 5 === 0) row.push(C.floorB);
+						else row.push(C.floorC);
+					}
+					s.push(row);
+				}
+				return s;
+			}
 
-// Wall tile 16x16
-const WALL_SPRITE = (function() {
-  const s = [];
-  for (let r = 0; r < 16; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      if (r < 2) row.push('#3a3a5d');
-      else if (r === 2) row.push('#4a4a6a');
-      else row.push(C.wall);
-    }
-    s.push(row);
-  }
-  return s;
-})();
+			// Wall tile 16x16
+			const WALL_SPRITE = (function () {
+				const s = [];
+				for (let r = 0; r < 16; r++) {
+					const row = [];
+					for (let c = 0; c < 16; c++) {
+						if (r < 2) row.push("#3a3a5d");
+						else if (r === 2) row.push("#4a4a6a");
+						else row.push(C.wall);
+					}
+					s.push(row);
+				}
+				return s;
+			})();
 
-// Desk 32x32 (2x2 tiles)
-const DESK_SPRITE = (function(){
-  const s = [];
-  for (let r = 0; r < 32; r++) {
-    const row = [];
-    for (let c = 0; c < 32; c++) {
-      if (r < 2) row.push(C.deskC);
-      else if (r < 4) row.push(C.deskA);
-      else if (r < 14) {
-        if (c < 2 || c > 29) row.push(C.deskC);
-        else row.push(C.deskB);
-      } else if (r < 16) row.push(C.deskA);
-      else if (r < 18) {
-        if (c < 2 || c > 29) row.push(C.deskC);
-        else row.push('');
-      } else if (r < 30) {
-        if ((c >= 2 && c <= 4) || (c >= 27 && c <= 29)) row.push(C.deskA);
-        else row.push('');
-      } else {
-        if ((c >= 1 && c <= 5) || (c >= 26 && c <= 30)) row.push(C.deskC);
-        else row.push('');
-      }
-    }
-    s.push(row);
-  }
-  return s;
-})();
+			// Desk 32x32 (2x2 tiles)
+			const DESK_SPRITE = (function () {
+				const s = [];
+				for (let r = 0; r < 32; r++) {
+					const row = [];
+					for (let c = 0; c < 32; c++) {
+						if (r < 2) row.push(C.deskC);
+						else if (r < 4) row.push(C.deskA);
+						else if (r < 14) {
+							if (c < 2 || c > 29) row.push(C.deskC);
+							else row.push(C.deskB);
+						} else if (r < 16) row.push(C.deskA);
+						else if (r < 18) {
+							if (c < 2 || c > 29) row.push(C.deskC);
+							else row.push("");
+						} else if (r < 30) {
+							if ((c >= 2 && c <= 4) || (c >= 27 && c <= 29)) row.push(C.deskA);
+							else row.push("");
+						} else {
+							if ((c >= 1 && c <= 5) || (c >= 26 && c <= 30)) row.push(C.deskC);
+							else row.push("");
+						}
+					}
+					s.push(row);
+				}
+				return s;
+			})();
 
-// Monitor 16x16
-function makeMonitor(glowing) {
-  const s = [];
-  const sc = glowing ? '#2a4455' : C.monScreen;
-  const gl = glowing ? C.monGlow : '#445566';
-  for (let r = 0; r < 16; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      if (r < 1) { row.push(c >= 4 && c <= 11 ? C.monFrame : ''); }
-      else if (r < 2) { row.push(c >= 3 && c <= 12 ? C.monFrame : ''); }
-      else if (r < 10) {
-        if (c === 3 || c === 12) row.push(C.monFrame);
-        else if (c > 3 && c < 12) {
-          if (glowing && r % 2 === 0 && c > 4 && c < 11) row.push(gl);
-          else row.push(sc);
-        }
-        else row.push('');
-      }
-      else if (r === 10) row.push(c >= 3 && c <= 12 ? C.monFrame : '');
-      else if (r === 11) row.push(c >= 6 && c <= 9 ? '#666677' : '');
-      else if (r === 12) row.push(c >= 5 && c <= 10 ? '#555566' : '');
-      else row.push('');
-    }
-    s.push(row);
-  }
-  return s;
-}
+			// Monitor 16x16
+			function makeMonitor(glowing) {
+				const s = [];
+				const sc = glowing ? "#2a4455" : C.monScreen;
+				const gl = glowing ? C.monGlow : "#445566";
+				for (let r = 0; r < 16; r++) {
+					const row = [];
+					for (let c = 0; c < 16; c++) {
+						if (r < 1) {
+							row.push(c >= 4 && c <= 11 ? C.monFrame : "");
+						} else if (r < 2) {
+							row.push(c >= 3 && c <= 12 ? C.monFrame : "");
+						} else if (r < 10) {
+							if (c === 3 || c === 12) row.push(C.monFrame);
+							else if (c > 3 && c < 12) {
+								if (glowing && r % 2 === 0 && c > 4 && c < 11) row.push(gl);
+								else row.push(sc);
+							} else row.push("");
+						} else if (r === 10) row.push(c >= 3 && c <= 12 ? C.monFrame : "");
+						else if (r === 11) row.push(c >= 6 && c <= 9 ? "#666677" : "");
+						else if (r === 12) row.push(c >= 5 && c <= 10 ? "#555566" : "");
+						else row.push("");
+					}
+					s.push(row);
+				}
+				return s;
+			}
 
-// Keyboard 16x6 (placed on desk surface)
-const KEYBOARD = (function(){
-  const s = [];
-  for (let r = 0; r < 6; r++){
-    const row = [];
-    for (let c = 0; c < 16; c++){
-      if (r === 0) row.push(c >= 3 && c <= 12 ? '#444455' : '');
-      else if (r < 5) {
-        if (c >= 2 && c <= 13) {
-          if (r > 0 && r < 5 && c > 2 && c < 13 && ((c + r) % 2 === 0)) row.push('#555566');
-          else row.push('#3a3a4d');
-        } else row.push('');
-      }
-      else row.push(c >= 3 && c <= 12 ? '#333344' : '');
-    }
-    s.push(row);
-  }
-  return s;
-})();
+			// Keyboard 16x6 (placed on desk surface)
+			const KEYBOARD = (function () {
+				const s = [];
+				for (let r = 0; r < 6; r++) {
+					const row = [];
+					for (let c = 0; c < 16; c++) {
+						if (r === 0) row.push(c >= 3 && c <= 12 ? "#444455" : "");
+						else if (r < 5) {
+							if (c >= 2 && c <= 13) {
+								if (r > 0 && r < 5 && c > 2 && c < 13 && (c + r) % 2 === 0) row.push("#555566");
+								else row.push("#3a3a4d");
+							} else row.push("");
+						} else row.push(c >= 3 && c <= 12 ? "#333344" : "");
+					}
+					s.push(row);
+				}
+				return s;
+			})();
 
-// Bookshelf 16x32
-function makeBookshelf(variant) {
-  const s = [];
-  const bookColors = [
-    [C.bookR, C.bookB, C.bookG, C.bookY, C.bookP, C.bookR, C.bookB],
-    [C.bookG, C.bookP, C.bookY, C.bookR, C.bookB, C.bookG, C.bookY],
-    [C.bookB, C.bookY, C.bookR, C.bookP, C.bookG, C.bookB, C.bookR]
-  ][variant % 3];
-  for (let r = 0; r < 32; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      if (c === 0 || c === 15) row.push(C.shelfWood);
-      else if (r === 0 || r === 31) row.push(C.shelfWood);
-      else if (r === 10 || r === 11 || r === 20 || r === 21) row.push(C.shelfWood);
-      else {
-        const section = r < 10 ? 0 : r < 20 ? 1 : 2;
-        const localR = r < 10 ? r : r < 20 ? r - 11 : r - 21;
-        const bi = (c - 1) % bookColors.length;
-        const bCol = bookColors[(bi + section) % bookColors.length];
-        if (localR < 2) row.push(C.shelfBack);
-        else row.push(bCol);
-      }
-    }
-    s.push(row);
-  }
-  return s;
-}
+			// Bookshelf 16x32
+			function makeBookshelf(variant) {
+				const s = [];
+				const bookColors = [
+					[C.bookR, C.bookB, C.bookG, C.bookY, C.bookP, C.bookR, C.bookB],
+					[C.bookG, C.bookP, C.bookY, C.bookR, C.bookB, C.bookG, C.bookY],
+					[C.bookB, C.bookY, C.bookR, C.bookP, C.bookG, C.bookB, C.bookR],
+				][variant % 3];
+				for (let r = 0; r < 32; r++) {
+					const row = [];
+					for (let c = 0; c < 16; c++) {
+						if (c === 0 || c === 15) row.push(C.shelfWood);
+						else if (r === 0 || r === 31) row.push(C.shelfWood);
+						else if (r === 10 || r === 11 || r === 20 || r === 21) row.push(C.shelfWood);
+						else {
+							const section = r < 10 ? 0 : r < 20 ? 1 : 2;
+							const localR = r < 10 ? r : r < 20 ? r - 11 : r - 21;
+							const bi = (c - 1) % bookColors.length;
+							const bCol = bookColors[(bi + section) % bookColors.length];
+							if (localR < 2) row.push(C.shelfBack);
+							else row.push(bCol);
+						}
+					}
+					s.push(row);
+				}
+				return s;
+			}
 
-// Plant 16x24
-function makePlant(variant) {
-  const s = [];
-  const lA = C.leafA, lB = C.leafB;
-  for (let r = 0; r < 24; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      if (r < 3) {
-        // top leaves
-        const leafy = (variant === 0) ?
-          ((r===0&&c>=5&&c<=10)||(r===1&&c>=4&&c<=11)||(r===2&&c>=3&&c<=12)) :
-          ((r===0&&c>=6&&c<=9)||(r===1&&c>=4&&c<=11)||(r===2&&c>=3&&c<=12));
-        row.push(leafy ? ((c+r)%3===0? lB : lA) : '');
-      }
-      else if (r < 8) {
-        const leafy = (c >= 2 && c <= 13) && !((c===2||c===13)&&r>6);
-        row.push(leafy ? ((c+r)%3===0? lB : lA) : '');
-      }
-      else if (r < 11) {
-        const leafy = c >= 3 && c <= 12;
-        row.push(leafy ? ((c+r)%4===0? lB : lA) : '');
-      }
-      else if (r < 13) row.push((c >= 7 && c <= 8) ? '#5a7a44' : '');
-      else if (r === 13) row.push((c >= 5 && c <= 10) ? C.potRim : '');
-      else if (r < 22) {
-        const inPot = c >= 5 && c <= 10;
-        row.push(inPot ? C.pot : '');
-      }
-      else if (r === 22) row.push((c >= 6 && c <= 9) ? C.potRim : '');
-      else row.push('');
-    }
-    s.push(row);
-  }
-  return s;
-}
+			// Plant 16x24
+			function makePlant(variant) {
+				const s = [];
+				const lA = C.leafA,
+					lB = C.leafB;
+				for (let r = 0; r < 24; r++) {
+					const row = [];
+					for (let c = 0; c < 16; c++) {
+						if (r < 3) {
+							// top leaves
+							const leafy =
+								variant === 0
+									? (r === 0 && c >= 5 && c <= 10) ||
+										(r === 1 && c >= 4 && c <= 11) ||
+										(r === 2 && c >= 3 && c <= 12)
+									: (r === 0 && c >= 6 && c <= 9) ||
+										(r === 1 && c >= 4 && c <= 11) ||
+										(r === 2 && c >= 3 && c <= 12);
+							row.push(leafy ? ((c + r) % 3 === 0 ? lB : lA) : "");
+						} else if (r < 8) {
+							const leafy = c >= 2 && c <= 13 && !((c === 2 || c === 13) && r > 6);
+							row.push(leafy ? ((c + r) % 3 === 0 ? lB : lA) : "");
+						} else if (r < 11) {
+							const leafy = c >= 3 && c <= 12;
+							row.push(leafy ? ((c + r) % 4 === 0 ? lB : lA) : "");
+						} else if (r < 13) row.push(c >= 7 && c <= 8 ? "#5a7a44" : "");
+						else if (r === 13) row.push(c >= 5 && c <= 10 ? C.potRim : "");
+						else if (r < 22) {
+							const inPot = c >= 5 && c <= 10;
+							row.push(inPot ? C.pot : "");
+						} else if (r === 22) row.push(c >= 6 && c <= 9 ? C.potRim : "");
+						else row.push("");
+					}
+					s.push(row);
+				}
+				return s;
+			}
 
-// Chair 16x16
-function makeChair(dir) {
-  const s = [];
-  for (let r = 0; r < 16; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      if (dir === 'up') {
-        if (r >= 2 && r <= 9 && c >= 3 && c <= 12) row.push('#664422');
-        else if (r >= 10 && r <= 12 && c >= 4 && c <= 11) row.push('#553318');
-        else if (r >= 13 && ((c>=3&&c<=4)||(c>=11&&c<=12))) row.push('#553318');
-        else row.push('');
-      } else {
-        if (r >= 0 && r <= 3 && c >= 4 && c <= 11) row.push('#664422');
-        else if (r >= 4 && r <= 10 && c >= 3 && c <= 12) row.push('#553318');
-        else if (r >= 11 && ((c>=3&&c<=4)||(c>=11&&c<=12))) row.push('#553318');
-        else row.push('');
-      }
-    }
-    s.push(row);
-  }
-  return s;
-}
+			// Chair 16x16
+			function makeChair(dir) {
+				const s = [];
+				for (let r = 0; r < 16; r++) {
+					const row = [];
+					for (let c = 0; c < 16; c++) {
+						if (dir === "up") {
+							if (r >= 2 && r <= 9 && c >= 3 && c <= 12) row.push("#664422");
+							else if (r >= 10 && r <= 12 && c >= 4 && c <= 11) row.push("#553318");
+							else if (r >= 13 && ((c >= 3 && c <= 4) || (c >= 11 && c <= 12))) row.push("#553318");
+							else row.push("");
+						} else {
+							if (r >= 0 && r <= 3 && c >= 4 && c <= 11) row.push("#664422");
+							else if (r >= 4 && r <= 10 && c >= 3 && c <= 12) row.push("#553318");
+							else if (r >= 11 && ((c >= 3 && c <= 4) || (c >= 11 && c <= 12))) row.push("#553318");
+							else row.push("");
+						}
+					}
+					s.push(row);
+				}
+				return s;
+			}
 
-// Water cooler 16x24
-const COOLER = (function(){
-  const s = [];
-  for (let r = 0; r < 24; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      if (r < 3) {
-        row.push((c>=5&&c<=10)?'#aabbdd':'');
-      } else if (r < 6) {
-        row.push((c>=6&&c<=9)?'#6699cc':'');
-      } else if (r < 8) {
-        row.push((c>=4&&c<=11)?'#ccccdd':'');
-      } else if (r < 18) {
-        if (c>=4&&c<=11) {
-          if (c===4||c===11) row.push('#999aaa');
-          else row.push('#bbbbcc');
-        } else row.push('');
-      } else if (r < 20) {
-        row.push((c>=5&&c<=10)?'#888899':'');
-      } else {
-        if ((c>=4&&c<=5)||(c>=10&&c<=11)) row.push('#666677');
-        else row.push('');
-      }
-    }
-    s.push(row);
-  }
-  return s;
-})();
+			// Water cooler 16x24
+			const COOLER = (function () {
+				const s = [];
+				for (let r = 0; r < 24; r++) {
+					const row = [];
+					for (let c = 0; c < 16; c++) {
+						if (r < 3) {
+							row.push(c >= 5 && c <= 10 ? "#aabbdd" : "");
+						} else if (r < 6) {
+							row.push(c >= 6 && c <= 9 ? "#6699cc" : "");
+						} else if (r < 8) {
+							row.push(c >= 4 && c <= 11 ? "#ccccdd" : "");
+						} else if (r < 18) {
+							if (c >= 4 && c <= 11) {
+								if (c === 4 || c === 11) row.push("#999aaa");
+								else row.push("#bbbbcc");
+							} else row.push("");
+						} else if (r < 20) {
+							row.push(c >= 5 && c <= 10 ? "#888899" : "");
+						} else {
+							if ((c >= 4 && c <= 5) || (c >= 10 && c <= 11)) row.push("#666677");
+							else row.push("");
+						}
+					}
+					s.push(row);
+				}
+				return s;
+			})();
 
-// ─── CHARACTER SPRITES ──────────────────────────────
-function makeCharBody(skin, hair, shirt, pants) {
-  // 16x24 character facing down
-  const s = [];
-  for (let r = 0; r < 24; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      // Hair (top)
-      if (r < 3) {
-        row.push((c>=5&&c<=10) ? hair : '');
-      }
-      // Head
-      else if (r >= 3 && r < 5) {
-        if (c>=4&&c<=11) row.push(hair);
-        else row.push('');
-      }
-      else if (r >= 5 && r < 9) {
-        if (c>=5&&c<=10) {
-          if (r===6 && (c===6||c===9)) row.push('#222233'); // eyes
-          else if (r===8 && c>=7 && c<=8) row.push('#cc8877'); // mouth
-          else row.push(skin);
-        } else if (c===4||c===11) row.push(r<7?hair:'');
-        else row.push('');
-      }
-      // Neck
-      else if (r === 9) {
-        row.push((c>=7&&c<=8) ? skin : '');
-      }
-      // Torso
-      else if (r >= 10 && r < 16) {
-        if (c>=4&&c<=11) row.push(shirt);
-        else row.push('');
-      }
-      // Arms
-      else if (r >= 16 && r < 18) {
-        if (c>=4&&c<=11) row.push(shirt);
-        else row.push('');
-      }
-      // Hands
-      else if (r === 18) {
-        if ((c>=3&&c<=4)||(c>=11&&c<=12)) row.push(skin);
-        else if (c>=5&&c<=10) row.push(pants);
-        else row.push('');
-      }
-      // Pants
-      else if (r >= 19 && r < 22) {
-        if (c>=5&&c<=10) row.push(pants);
-        else row.push('');
-      }
-      // Shoes
-      else if (r >= 22) {
-        if ((c>=4&&c<=6)||(c>=9&&c<=11)) row.push('#333344');
-        else row.push('');
-      }
-    }
-    s.push(row);
-  }
-  return s;
-}
+			// ─── CHARACTER SPRITES ──────────────────────────────
+			function makeCharBody(skin, hair, shirt, pants) {
+				// 16x24 character facing down
+				const s = [];
+				for (let r = 0; r < 24; r++) {
+					const row = [];
+					for (let c = 0; c < 16; c++) {
+						// Hair (top)
+						if (r < 3) {
+							row.push(c >= 5 && c <= 10 ? hair : "");
+						}
+						// Head
+						else if (r >= 3 && r < 5) {
+							if (c >= 4 && c <= 11) row.push(hair);
+							else row.push("");
+						} else if (r >= 5 && r < 9) {
+							if (c >= 5 && c <= 10) {
+								if (r === 6 && (c === 6 || c === 9))
+									row.push("#222233"); // eyes
+								else if (r === 8 && c >= 7 && c <= 8)
+									row.push("#cc8877"); // mouth
+								else row.push(skin);
+							} else if (c === 4 || c === 11) row.push(r < 7 ? hair : "");
+							else row.push("");
+						}
+						// Neck
+						else if (r === 9) {
+							row.push(c >= 7 && c <= 8 ? skin : "");
+						}
+						// Torso
+						else if (r >= 10 && r < 16) {
+							if (c >= 4 && c <= 11) row.push(shirt);
+							else row.push("");
+						}
+						// Arms
+						else if (r >= 16 && r < 18) {
+							if (c >= 4 && c <= 11) row.push(shirt);
+							else row.push("");
+						}
+						// Hands
+						else if (r === 18) {
+							if ((c >= 3 && c <= 4) || (c >= 11 && c <= 12)) row.push(skin);
+							else if (c >= 5 && c <= 10) row.push(pants);
+							else row.push("");
+						}
+						// Pants
+						else if (r >= 19 && r < 22) {
+							if (c >= 5 && c <= 10) row.push(pants);
+							else row.push("");
+						}
+						// Shoes
+						else if (r >= 22) {
+							if ((c >= 4 && c <= 6) || (c >= 9 && c <= 11)) row.push("#333344");
+							else row.push("");
+						}
+					}
+					s.push(row);
+				}
+				return s;
+			}
 
-function makeTypeFrame(base, frame) {
-  // slightly shift arms for typing
-  const s = base.map(r => [...r]);
-  if (frame === 1) {
-    // raise right hand
-    if (s[17]) { s[17][11] = ''; s[16][12] = s[18][11] || '#ddbb99'; }
-  }
-  return s;
-}
+			function makeTypeFrame(base, frame) {
+				// slightly shift arms for typing
+				const s = base.map((r) => [...r]);
+				if (frame === 1) {
+					// raise right hand
+					if (s[17]) {
+						s[17][11] = "";
+						s[16][12] = s[18][11] || "#ddbb99";
+					}
+				}
+				return s;
+			}
 
-function makeWalkFrame(base, frame) {
-  const s = base.map(r => [...r]);
-  // shift legs
-  if (frame === 0 || frame === 2) return s;
-  if (frame === 1) {
-    // left foot forward
-    if(s[22]){s[22][4]='';s[22][5]='';s[22][6]='';s[23]=[...s[22]];s[22][3]='#333344';s[22][4]='#333344';s[22][5]='#333344';}
-  }
-  if (frame === 3) {
-    if(s[22]){s[22][9]='';s[22][10]='';s[22][11]='';s[22][10]='#333344';s[22][11]='#333344';s[22][12]='#333344';}
-  }
-  return s;
-}
+			function makeWalkFrame(base, frame) {
+				const s = base.map((r) => [...r]);
+				// shift legs
+				if (frame === 0 || frame === 2) return s;
+				if (frame === 1) {
+					// left foot forward
+					if (s[22]) {
+						s[22][4] = "";
+						s[22][5] = "";
+						s[22][6] = "";
+						s[23] = [...s[22]];
+						s[22][3] = "#333344";
+						s[22][4] = "#333344";
+						s[22][5] = "#333344";
+					}
+				}
+				if (frame === 3) {
+					if (s[22]) {
+						s[22][9] = "";
+						s[22][10] = "";
+						s[22][11] = "";
+						s[22][10] = "#333344";
+						s[22][11] = "#333344";
+						s[22][12] = "#333344";
+					}
+				}
+				return s;
+			}
 
-// Character definitions
-const CHAR_DEFS = [
-  { name:'Alice', skin:'#E8B88A', hair:'#8B4513', shirt:'#CC4444', pants:'#334466',
-    status:'Building REST API', statusColor:'#4499ff' },
-  { name:'Bob', skin:'#D2956A', hair:'#1a1a2e', shirt:'#4477AA', pants:'#333344',
-    status:'Debugging CSS layout', statusColor:'#ccaa33' },
-  { name:'Carol', skin:'#F5D0A9', hair:'#CC8833', shirt:'#44AA66', pants:'#3a3a4d',
-    status:'Writing unit tests', statusColor:'#4499ff' }
-];
+			// Character definitions
+			const CHAR_DEFS = [
+				{
+					name: "Alice",
+					skin: "#E8B88A",
+					hair: "#8B4513",
+					shirt: "#CC4444",
+					pants: "#334466",
+					status: "Building REST API",
+					statusColor: "#4499ff",
+				},
+				{
+					name: "Bob",
+					skin: "#D2956A",
+					hair: "#1a1a2e",
+					shirt: "#4477AA",
+					pants: "#333344",
+					status: "Debugging CSS layout",
+					statusColor: "#ccaa33",
+				},
+				{
+					name: "Carol",
+					skin: "#F5D0A9",
+					hair: "#CC8833",
+					shirt: "#44AA66",
+					pants: "#3a3a4d",
+					status: "Writing unit tests",
+					statusColor: "#4499ff",
+				},
+			];
 
-// ─── WORLD LAYOUT ───────────────────────────────────
-// 0=floor, 1=wall
-const MAP = [];
-for (let r = 0; r < ROWS; r++) {
-  MAP[r] = [];
-  for (let c = 0; c < COLS; c++) {
-    MAP[r][c] = (r < 2) ? 1 : 0;
-  }
-}
+			// ─── WORLD LAYOUT ───────────────────────────────────
+			// 0=floor, 1=wall
+			const MAP = [];
+			for (let r = 0; r < ROWS; r++) {
+				MAP[r] = [];
+				for (let c = 0; c < COLS; c++) {
+					MAP[r][c] = r < 2 ? 1 : 0;
+				}
+			}
 
-// Walkability grid (false = blocked)
-const WALKABLE = [];
-for (let r = 0; r < ROWS; r++) {
-  WALKABLE[r] = [];
-  for (let c = 0; c < COLS; c++) {
-    WALKABLE[r][c] = MAP[r][c] === 0;
-  }
-}
+			// Walkability grid (false = blocked)
+			const WALKABLE = [];
+			for (let r = 0; r < ROWS; r++) {
+				WALKABLE[r] = [];
+				for (let c = 0; c < COLS; c++) {
+					WALKABLE[r][c] = MAP[r][c] === 0;
+				}
+			}
 
-// Furniture list: {type, tx, ty, sprite, blocksWalk, sortY}
-const furniture = [];
-const floorTiles = [];
+			// Furniture list: {type, tx, ty, sprite, blocksWalk, sortY}
+			const furniture = [];
+			const floorTiles = [];
 
-// Pre-generate floor
-for (let r = 0; r < ROWS; r++)
-  for (let c = 0; c < COLS; c++)
-    if (MAP[r][c] === 0) floorTiles.push({ tx: c, ty: r, sprite: makeFloor(r * COLS + c) });
+			// Pre-generate floor
+			for (let r = 0; r < ROWS; r++)
+				for (let c = 0; c < COLS; c++)
+					if (MAP[r][c] === 0) floorTiles.push({ tx: c, ty: r, sprite: makeFloor(r * COLS + c) });
 
-// Bookshelves along top wall
-const shelfPositions = [0, 2, 4, 11, 13, 15];
-shelfPositions.forEach((tx, i) => {
-  furniture.push({ type:'shelf', tx, ty:1, sprite: makeBookshelf(i), w:1, h:2, sortY: 3*TILE });
-  WALKABLE[2][tx] = false;
-});
+			// Bookshelves along top wall
+			const shelfPositions = [0, 2, 4, 11, 13, 15];
+			shelfPositions.forEach((tx, i) => {
+				furniture.push({
+					type: "shelf",
+					tx,
+					ty: 1,
+					sprite: makeBookshelf(i),
+					w: 1,
+					h: 2,
+					sortY: 3 * TILE,
+				});
+				WALKABLE[2][tx] = false;
+			});
 
-// Desks: 2 rows of 3 desks
-const deskPositions = [
-  {tx:1, ty:4}, {tx:5, ty:4}, {tx:9, ty:4},
-  {tx:1, ty:8}, {tx:5, ty:8}, {tx:9, ty:8}
-];
-deskPositions.forEach((d, i) => {
-  furniture.push({ type:'desk', tx:d.tx, ty:d.ty, sprite:DESK_SPRITE, w:2, h:2, sortY:(d.ty+2)*TILE });
-  // Block desk tiles
-  WALKABLE[d.ty][d.tx] = false; WALKABLE[d.ty][d.tx+1] = false;
-  WALKABLE[d.ty+1][d.tx] = false; WALKABLE[d.ty+1][d.tx+1] = false;
-  // Monitor on desk
-  const mon = makeMonitor(i < 3);
-  furniture.push({ type:'monitor', tx:d.tx, ty:d.ty-0.5, sprite:mon, w:1, h:1, sortY:(d.ty)*TILE-2 });
-  // Second monitor
-  furniture.push({ type:'monitor', tx:d.tx+1, ty:d.ty-0.5, sprite:makeMonitor(i>=3), w:1, h:1, sortY:(d.ty)*TILE-2 });
-  // Keyboard
-  furniture.push({ type:'kbd', tx:d.tx+0.2, ty:d.ty+0.6, sprite:KEYBOARD, w:1, h:0.5, sortY:(d.ty+1)*TILE });
-  // Chair in front
-  const chairY = d.ty + 2;
-  if (chairY < ROWS) {
-    furniture.push({ type:'chair', tx:d.tx+0.5, ty:chairY, sprite:makeChair('up'), w:1, h:1, sortY:(chairY+1)*TILE });
-    WALKABLE[chairY][d.tx] = false;
-    WALKABLE[chairY][d.tx+1] = false;
-  }
-});
+			// Desks: 2 rows of 3 desks
+			const deskPositions = [
+				{ tx: 1, ty: 4 },
+				{ tx: 5, ty: 4 },
+				{ tx: 9, ty: 4 },
+				{ tx: 1, ty: 8 },
+				{ tx: 5, ty: 8 },
+				{ tx: 9, ty: 8 },
+			];
+			deskPositions.forEach((d, i) => {
+				furniture.push({
+					type: "desk",
+					tx: d.tx,
+					ty: d.ty,
+					sprite: DESK_SPRITE,
+					w: 2,
+					h: 2,
+					sortY: (d.ty + 2) * TILE,
+				});
+				// Block desk tiles
+				WALKABLE[d.ty][d.tx] = false;
+				WALKABLE[d.ty][d.tx + 1] = false;
+				WALKABLE[d.ty + 1][d.tx] = false;
+				WALKABLE[d.ty + 1][d.tx + 1] = false;
+				// Monitor on desk
+				const mon = makeMonitor(i < 3);
+				furniture.push({
+					type: "monitor",
+					tx: d.tx,
+					ty: d.ty - 0.5,
+					sprite: mon,
+					w: 1,
+					h: 1,
+					sortY: d.ty * TILE - 2,
+				});
+				// Second monitor
+				furniture.push({
+					type: "monitor",
+					tx: d.tx + 1,
+					ty: d.ty - 0.5,
+					sprite: makeMonitor(i >= 3),
+					w: 1,
+					h: 1,
+					sortY: d.ty * TILE - 2,
+				});
+				// Keyboard
+				furniture.push({
+					type: "kbd",
+					tx: d.tx + 0.2,
+					ty: d.ty + 0.6,
+					sprite: KEYBOARD,
+					w: 1,
+					h: 0.5,
+					sortY: (d.ty + 1) * TILE,
+				});
+				// Chair in front
+				const chairY = d.ty + 2;
+				if (chairY < ROWS) {
+					furniture.push({
+						type: "chair",
+						tx: d.tx + 0.5,
+						ty: chairY,
+						sprite: makeChair("up"),
+						w: 1,
+						h: 1,
+						sortY: (chairY + 1) * TILE,
+					});
+					WALKABLE[chairY][d.tx] = false;
+					WALKABLE[chairY][d.tx + 1] = false;
+				}
+			});
 
-// Plants
-const plantPositions = [{tx:14,ty:3},{tx:0,ty:10},{tx:14,ty:10},{tx:7,ty:2}];
-plantPositions.forEach((p, i) => {
-  furniture.push({ type:'plant', tx:p.tx, ty:p.ty, sprite:makePlant(i%2), w:1, h:1.5, sortY:(p.ty+1.5)*TILE });
-  WALKABLE[p.ty][p.tx] = false;
-  if (p.ty+1<ROWS) WALKABLE[p.ty+1][p.tx] = false;
-});
+			// Plants
+			const plantPositions = [
+				{ tx: 14, ty: 3 },
+				{ tx: 0, ty: 10 },
+				{ tx: 14, ty: 10 },
+				{ tx: 7, ty: 2 },
+			];
+			plantPositions.forEach((p, i) => {
+				furniture.push({
+					type: "plant",
+					tx: p.tx,
+					ty: p.ty,
+					sprite: makePlant(i % 2),
+					w: 1,
+					h: 1.5,
+					sortY: (p.ty + 1.5) * TILE,
+				});
+				WALKABLE[p.ty][p.tx] = false;
+				if (p.ty + 1 < ROWS) WALKABLE[p.ty + 1][p.tx] = false;
+			});
 
-// Water cooler
-furniture.push({ type:'cooler', tx:15, ty:5, sprite:COOLER, w:1, h:1.5, sortY:7*TILE });
-WALKABLE[5][15] = false; WALKABLE[6][15] = false;
+			// Water cooler
+			furniture.push({
+				type: "cooler",
+				tx: 15,
+				ty: 5,
+				sprite: COOLER,
+				w: 1,
+				h: 1.5,
+				sortY: 7 * TILE,
+			});
+			WALKABLE[5][15] = false;
+			WALKABLE[6][15] = false;
 
-// ─── BFS PATHFINDING ────────────────────────────────
-function bfs(sx, sy, ex, ey) {
-  if (sx===ex && sy===ey) return [];
-  if (!WALKABLE[ey] || !WALKABLE[ey][ex]) return null;
-  const visited = Array.from({length:ROWS}, ()=>Array(COLS).fill(false));
-  const prev = Array.from({length:ROWS}, ()=>Array(COLS).fill(null));
-  const q = [[sx, sy]]; visited[sy][sx] = true;
-  const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
-  while (q.length) {
-    const [cx, cy] = q.shift();
-    for (const [dx, dy] of dirs) {
-      const nx = cx+dx, ny = cy+dy;
-      if (nx>=0&&nx<COLS&&ny>=0&&ny<ROWS&&!visited[ny][nx]&&WALKABLE[ny][nx]) {
-        visited[ny][nx] = true;
-        prev[ny][nx] = [cx, cy];
-        if (nx===ex&&ny===ey) {
-          const path = [];
-          let px=ex, py=ey;
-          while (px!==sx||py!==sy) {
-            path.unshift({x:px,y:py});
-            [px,py]=prev[py][px];
-          }
-          return path;
-        }
-        q.push([nx, ny]);
-      }
-    }
-  }
-  return null;
-}
+			// ─── BFS PATHFINDING ────────────────────────────────
+			function bfs(sx, sy, ex, ey) {
+				if (sx === ex && sy === ey) return [];
+				if (!WALKABLE[ey] || !WALKABLE[ey][ex]) return null;
+				const visited = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+				const prev = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+				const q = [[sx, sy]];
+				visited[sy][sx] = true;
+				const dirs = [
+					[0, -1],
+					[0, 1],
+					[-1, 0],
+					[1, 0],
+				];
+				while (q.length) {
+					const [cx, cy] = q.shift();
+					for (const [dx, dy] of dirs) {
+						const nx = cx + dx,
+							ny = cy + dy;
+						if (
+							nx >= 0 &&
+							nx < COLS &&
+							ny >= 0 &&
+							ny < ROWS &&
+							!visited[ny][nx] &&
+							WALKABLE[ny][nx]
+						) {
+							visited[ny][nx] = true;
+							prev[ny][nx] = [cx, cy];
+							if (nx === ex && ny === ey) {
+								const path = [];
+								let px = ex,
+									py = ey;
+								while (px !== sx || py !== sy) {
+									path.unshift({ x: px, y: py });
+									[px, py] = prev[py][px];
+								}
+								return path;
+							}
+							q.push([nx, ny]);
+						}
+					}
+				}
+				return null;
+			}
 
-// ─── CHARACTERS ─────────────────────────────────────
-const characters = CHAR_DEFS.map((def, i) => {
-  const base = makeCharBody(def.skin, def.hair, def.shirt, def.pants);
-  const typeFrames = [base, makeTypeFrame(base, 1)];
-  const walkFrames = [base, makeWalkFrame(base,1), base, makeWalkFrame(base,3)];
+			// ─── CHARACTERS ─────────────────────────────────────
+			const characters = CHAR_DEFS.map((def, i) => {
+				const base = makeCharBody(def.skin, def.hair, def.shirt, def.pants);
+				const typeFrames = [base, makeTypeFrame(base, 1)];
+				const walkFrames = [base, makeWalkFrame(base, 1), base, makeWalkFrame(base, 3)];
 
-  // Assign to desks
-  const deskIdx = i;
-  const desk = deskPositions[deskIdx];
-  const seatX = desk.tx;
-  const seatY = desk.ty + 2;
+				// Assign to desks
+				const deskIdx = i;
+				const desk = deskPositions[deskIdx];
+				const seatX = desk.tx;
+				const seatY = desk.ty + 2;
 
-  return {
-    name: def.name, status: def.status, statusColor: def.statusColor,
-    skin: def.skin, hair: def.hair, shirt: def.shirt,
-    x: seatX * TILE, y: seatY * TILE,
-    tx: seatX, ty: seatY,
-    state: 'TYPE', // IDLE, WALK, TYPE
-    dir: 'up',
-    base, typeFrames, walkFrames,
-    frame: 0, frameTime: 0,
-    path: null, pathIdx: 0,
-    deskTx: desk.tx, deskTy: desk.ty + 2,
-    walkTarget: null, walkTimer: 0,
-    nextWalkTime: 5 + Math.random() * 10,
-    spawnEffect: 0.3, spawnCols: Array.from({length:16},()=>Math.random()*0.2),
-    selected: false
-  };
-});
+				return {
+					name: def.name,
+					status: def.status,
+					statusColor: def.statusColor,
+					skin: def.skin,
+					hair: def.hair,
+					shirt: def.shirt,
+					x: seatX * TILE,
+					y: seatY * TILE,
+					tx: seatX,
+					ty: seatY,
+					state: "TYPE", // IDLE, WALK, TYPE
+					dir: "up",
+					base,
+					typeFrames,
+					walkFrames,
+					frame: 0,
+					frameTime: 0,
+					path: null,
+					pathIdx: 0,
+					deskTx: desk.tx,
+					deskTy: desk.ty + 2,
+					walkTarget: null,
+					walkTimer: 0,
+					nextWalkTime: 5 + Math.random() * 10,
+					spawnEffect: 0.3,
+					spawnCols: Array.from({ length: 16 }, () => Math.random() * 0.2),
+					selected: false,
+				};
+			});
 
-// ─── SPAWN EFFECT ───────────────────────────────────
-function drawSpawnEffect(char, x, y) {
-  const progress = 1 - (char.spawnEffect / 0.3);
-  for (let c = 0; c < 16; c++) {
-    const colProgress = Math.max(0, Math.min(1, (progress - char.spawnCols[c]) / 0.6));
-    const headRow = Math.floor(colProgress * 24);
-    for (let r = 0; r < 24; r++) {
-      if (r <= headRow) {
-        const dist = headRow - r;
-        if (dist === 0) { ctx.fillStyle = '#ccffcc'; ctx.fillRect(x+c, y+r, 1, 1); }
-        else if (dist < 4) {
-          ctx.fillStyle = `rgba(0,255,65,${1-dist/4})`;
-          ctx.fillRect(x+c, y+r, 1, 1);
-        }
-      }
-    }
-  }
-}
+			// ─── SPAWN EFFECT ───────────────────────────────────
+			function drawSpawnEffect(char, x, y) {
+				const progress = 1 - char.spawnEffect / 0.3;
+				for (let c = 0; c < 16; c++) {
+					const colProgress = Math.max(0, Math.min(1, (progress - char.spawnCols[c]) / 0.6));
+					const headRow = Math.floor(colProgress * 24);
+					for (let r = 0; r < 24; r++) {
+						if (r <= headRow) {
+							const dist = headRow - r;
+							if (dist === 0) {
+								ctx.fillStyle = "#ccffcc";
+								ctx.fillRect(x + c, y + r, 1, 1);
+							} else if (dist < 4) {
+								ctx.fillStyle = `rgba(0,255,65,${1 - dist / 4})`;
+								ctx.fillRect(x + c, y + r, 1, 1);
+							}
+						}
+					}
+				}
+			}
 
-// ─── UPDATE ─────────────────────────────────────────
-function update(dt) {
-  characters.forEach(ch => {
-    // Spawn effect
-    if (ch.spawnEffect > 0) {
-      ch.spawnEffect -= dt;
-      if (ch.spawnEffect <= 0) ch.spawnEffect = 0;
-      return;
-    }
+			// ─── UPDATE ─────────────────────────────────────────
+			function update(dt) {
+				characters.forEach((ch) => {
+					// Spawn effect
+					if (ch.spawnEffect > 0) {
+						ch.spawnEffect -= dt;
+						if (ch.spawnEffect <= 0) ch.spawnEffect = 0;
+						return;
+					}
 
-    // Walk timer - decide when to walk
-    ch.nextWalkTime -= dt;
-    if (ch.nextWalkTime <= 0 && ch.state !== 'WALK') {
-      // Pick random walkable tile
-      const targets = [];
-      for (let r = 2; r < ROWS; r++)
-        for (let c = 0; c < COLS; c++)
-          if (WALKABLE[r][c]) targets.push({x:c, y:r});
-      if (targets.length) {
-        const t = targets[Math.floor(Math.random()*targets.length)];
-        const path = bfs(ch.tx, ch.ty, t.x, t.y);
-        if (path && path.length > 0 && path.length < 15) {
-          ch.path = path; ch.pathIdx = 0; ch.state = 'WALK'; ch.frame = 0;
-          ch.walkTarget = t;
-        }
-      }
-      ch.nextWalkTime = 8 + Math.random() * 15;
-    }
+					// Walk timer - decide when to walk
+					ch.nextWalkTime -= dt;
+					if (ch.nextWalkTime <= 0 && ch.state !== "WALK") {
+						// Pick random walkable tile
+						const targets = [];
+						for (let r = 2; r < ROWS; r++)
+							for (let c = 0; c < COLS; c++) if (WALKABLE[r][c]) targets.push({ x: c, y: r });
+						if (targets.length) {
+							const t = targets[Math.floor(Math.random() * targets.length)];
+							const path = bfs(ch.tx, ch.ty, t.x, t.y);
+							if (path && path.length > 0 && path.length < 15) {
+								ch.path = path;
+								ch.pathIdx = 0;
+								ch.state = "WALK";
+								ch.frame = 0;
+								ch.walkTarget = t;
+							}
+						}
+						ch.nextWalkTime = 8 + Math.random() * 15;
+					}
 
-    // Walking
-    if (ch.state === 'WALK' && ch.path) {
-      ch.frameTime += dt;
-      if (ch.frameTime >= 0.15) { ch.frame = (ch.frame + 1) % 4; ch.frameTime = 0; }
+					// Walking
+					if (ch.state === "WALK" && ch.path) {
+						ch.frameTime += dt;
+						if (ch.frameTime >= 0.15) {
+							ch.frame = (ch.frame + 1) % 4;
+							ch.frameTime = 0;
+						}
 
-      const target = ch.path[ch.pathIdx];
-      const tx = target.x * TILE, ty = target.y * TILE;
-      const speed = 48; // px/sec
-      const dx = tx - ch.x, dy = ty - ch.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
+						const target = ch.path[ch.pathIdx];
+						const tx = target.x * TILE,
+							ty = target.y * TILE;
+						const speed = 48; // px/sec
+						const dx = tx - ch.x,
+							dy = ty - ch.y;
+						const dist = Math.sqrt(dx * dx + dy * dy);
 
-      if (dist < speed * dt) {
-        ch.x = tx; ch.y = ty; ch.tx = target.x; ch.ty = target.y;
-        ch.pathIdx++;
-        if (ch.pathIdx >= ch.path.length) {
-          ch.path = null;
-          // Walk back to desk after a delay
-          ch.state = 'IDLE';
-          ch.walkTimer = 2 + Math.random() * 3;
-        }
-      } else {
-        const nx = dx / dist, ny = dy / dist;
-        ch.x += nx * speed * dt;
-        ch.y += ny * speed * dt;
-        // direction
-        if (Math.abs(dx) > Math.abs(dy)) ch.dir = dx > 0 ? 'right' : 'left';
-        else ch.dir = dy > 0 ? 'down' : 'up';
-      }
-    }
+						if (dist < speed * dt) {
+							ch.x = tx;
+							ch.y = ty;
+							ch.tx = target.x;
+							ch.ty = target.y;
+							ch.pathIdx++;
+							if (ch.pathIdx >= ch.path.length) {
+								ch.path = null;
+								// Walk back to desk after a delay
+								ch.state = "IDLE";
+								ch.walkTimer = 2 + Math.random() * 3;
+							}
+						} else {
+							const nx = dx / dist,
+								ny = dy / dist;
+							ch.x += nx * speed * dt;
+							ch.y += ny * speed * dt;
+							// direction
+							if (Math.abs(dx) > Math.abs(dy)) ch.dir = dx > 0 ? "right" : "left";
+							else ch.dir = dy > 0 ? "down" : "up";
+						}
+					}
 
-    // Idle - wait then return to desk
-    if (ch.state === 'IDLE') {
-      ch.walkTimer -= dt;
-      if (ch.walkTimer <= 0) {
-        // Path back to desk
-        const path = bfs(ch.tx, ch.ty, ch.deskTx, ch.deskTy);
-        if (path && path.length > 0) {
-          ch.path = path; ch.pathIdx = 0; ch.state = 'WALK'; ch.frame = 0;
-        } else {
-          ch.state = 'TYPE'; ch.frame = 0;
-        }
-        ch.walkTimer = 0;
-      }
-    }
+					// Idle - wait then return to desk
+					if (ch.state === "IDLE") {
+						ch.walkTimer -= dt;
+						if (ch.walkTimer <= 0) {
+							// Path back to desk
+							const path = bfs(ch.tx, ch.ty, ch.deskTx, ch.deskTy);
+							if (path && path.length > 0) {
+								ch.path = path;
+								ch.pathIdx = 0;
+								ch.state = "WALK";
+								ch.frame = 0;
+							} else {
+								ch.state = "TYPE";
+								ch.frame = 0;
+							}
+							ch.walkTimer = 0;
+						}
+					}
 
-    // Return to typing when back at desk
-    if (ch.state !== 'WALK' && ch.tx === ch.deskTx && ch.ty === ch.deskTy && ch.walkTimer <= 0) {
-      ch.state = 'TYPE'; ch.dir = 'up';
-    }
+					// Return to typing when back at desk
+					if (
+						ch.state !== "WALK" &&
+						ch.tx === ch.deskTx &&
+						ch.ty === ch.deskTy &&
+						ch.walkTimer <= 0
+					) {
+						ch.state = "TYPE";
+						ch.dir = "up";
+					}
 
-    // Typing animation
-    if (ch.state === 'TYPE') {
-      ch.frameTime += dt;
-      if (ch.frameTime >= 0.3) { ch.frame = (ch.frame + 1) % 2; ch.frameTime = 0; }
-    }
-  });
-}
+					// Typing animation
+					if (ch.state === "TYPE") {
+						ch.frameTime += dt;
+						if (ch.frameTime >= 0.3) {
+							ch.frame = (ch.frame + 1) % 2;
+							ch.frameTime = 0;
+						}
+					}
+				});
+			}
 
-// ─── RENDER ─────────────────────────────────────────
-function render() {
-  ctx.imageSmoothingEnabled = false;
+			// ─── RENDER ─────────────────────────────────────────
+			function render() {
+				ctx.imageSmoothingEnabled = false;
 
-  // Clear
-  ctx.fillStyle = C.void;
-  ctx.fillRect(0, 0, W, H);
+				// Clear
+				ctx.fillStyle = C.void;
+				ctx.fillRect(0, 0, W, H);
 
-  // Draw walls
-  for (let c = 0; c < COLS; c++) {
-    for (let r = 0; r < 2; r++) {
-      drawSprite(WALL_SPRITE, c*TILE, r*TILE);
-    }
-  }
+				// Draw walls
+				for (let c = 0; c < COLS; c++) {
+					for (let r = 0; r < 2; r++) {
+						drawSprite(WALL_SPRITE, c * TILE, r * TILE);
+					}
+				}
 
-  // Draw floor
-  floorTiles.forEach(f => drawSprite(f.sprite, f.tx*TILE, f.ty*TILE));
+				// Draw floor
+				floorTiles.forEach((f) => drawSprite(f.sprite, f.tx * TILE, f.ty * TILE));
 
-  // Collect all render items for z-sorting
-  const renderItems = [];
+				// Collect all render items for z-sorting
+				const renderItems = [];
 
-  // Furniture
-  furniture.forEach(f => {
-    renderItems.push({
-      sortY: f.sortY,
-      draw: () => drawSprite(f.sprite, f.tx*TILE, f.ty*TILE)
-    });
-  });
+				// Furniture
+				furniture.forEach((f) => {
+					renderItems.push({
+						sortY: f.sortY,
+						draw: () => drawSprite(f.sprite, f.tx * TILE, f.ty * TILE),
+					});
+				});
 
-  // Characters
-  characters.forEach(ch => {
-    const drawY = ch.y - 8; // anchor bottom-center offset
-    renderItems.push({
-      sortY: ch.y + 16,
-      draw: () => {
-        if (ch.spawnEffect > 0) {
-          drawSpawnEffect(ch, ch.x, drawY);
-          return;
-        }
-        let sprite;
-        if (ch.state === 'TYPE') sprite = ch.typeFrames[ch.frame];
-        else if (ch.state === 'WALK') sprite = ch.walkFrames[ch.frame];
-        else sprite = ch.base;
-        drawSprite(sprite, ch.x, drawY);
+				// Characters
+				characters.forEach((ch) => {
+					const drawY = ch.y - 8; // anchor bottom-center offset
+					renderItems.push({
+						sortY: ch.y + 16,
+						draw: () => {
+							if (ch.spawnEffect > 0) {
+								drawSpawnEffect(ch, ch.x, drawY);
+								return;
+							}
+							let sprite;
+							if (ch.state === "TYPE") sprite = ch.typeFrames[ch.frame];
+							else if (ch.state === "WALK") sprite = ch.walkFrames[ch.frame];
+							else sprite = ch.base;
+							drawSprite(sprite, ch.x, drawY);
 
-        // Floating label
-        const labelX = ch.x + 8;
-        const labelY = drawY - 6;
-        const name = ch.name;
-        ctx.fillStyle = 'rgba(30,30,46,0.75)';
-        ctx.fillRect(labelX - name.length*2 - 3, labelY - 4, name.length*4 + 10, 7);
-        // Status dot
-        ctx.fillStyle = ch.statusColor;
-        ctx.fillRect(labelX - name.length*2 - 1, labelY - 2, 2, 3);
-        // Name text (pixel by pixel approximation - tiny)
-        ctx.fillStyle = '#c0c0d0';
-        ctx.font = '3px monospace';
-        ctx.fillText(name, labelX - name.length*2 + 3, labelY + 1);
+							// Floating label
+							const labelX = ch.x + 8;
+							const labelY = drawY - 6;
+							const name = ch.name;
+							ctx.fillStyle = "rgba(30,30,46,0.75)";
+							ctx.fillRect(labelX - name.length * 2 - 3, labelY - 4, name.length * 4 + 10, 7);
+							// Status dot
+							ctx.fillStyle = ch.statusColor;
+							ctx.fillRect(labelX - name.length * 2 - 1, labelY - 2, 2, 3);
+							// Name text (pixel by pixel approximation - tiny)
+							ctx.fillStyle = "#c0c0d0";
+							ctx.font = "3px monospace";
+							ctx.fillText(name, labelX - name.length * 2 + 3, labelY + 1);
 
-        // Selection highlight
-        if (ch.selected) {
-          ctx.strokeStyle = '#5ac88c';
-          ctx.lineWidth = 0.5;
-          ctx.strokeRect(ch.x - 0.5, drawY - 0.5, 17, 25);
-        }
-      }
-    });
-  });
+							// Selection highlight
+							if (ch.selected) {
+								ctx.strokeStyle = "#5ac88c";
+								ctx.lineWidth = 0.5;
+								ctx.strokeRect(ch.x - 0.5, drawY - 0.5, 17, 25);
+							}
+						},
+					});
+				});
 
-  // Sort by Y and draw
-  renderItems.sort((a, b) => a.sortY - b.sortY);
-  renderItems.forEach(item => item.draw());
-}
+				// Sort by Y and draw
+				renderItems.sort((a, b) => a.sortY - b.sortY);
+				renderItems.forEach((item) => item.draw());
+			}
 
-// ─── GAME LOOP ──────────────────────────────────────
-let lastTime = 0;
-function frame(time) {
-  const dt = lastTime === 0 ? 0 : Math.min((time - lastTime) / 1000, 0.1);
-  lastTime = time;
-  update(dt);
-  ctx.imageSmoothingEnabled = false;
-  render();
-  requestAnimationFrame(frame);
-}
-requestAnimationFrame(frame);
+			// ─── GAME LOOP ──────────────────────────────────────
+			let lastTime = 0;
+			function frame(time) {
+				const dt = lastTime === 0 ? 0 : Math.min((time - lastTime) / 1000, 0.1);
+				lastTime = time;
+				update(dt);
+				ctx.imageSmoothingEnabled = false;
+				render();
+				requestAnimationFrame(frame);
+			}
+			requestAnimationFrame(frame);
 
-// ─── CLICK HANDLING ─────────────────────────────────
-canvas.addEventListener('click', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX - rect.left) / ZOOM;
-  const my = (e.clientY - rect.top) / ZOOM;
+			// ─── CLICK HANDLING ─────────────────────────────────
+			canvas.addEventListener("click", (e) => {
+				const rect = canvas.getBoundingClientRect();
+				const mx = (e.clientX - rect.left) / ZOOM;
+				const my = (e.clientY - rect.top) / ZOOM;
 
-  let clicked = null;
-  characters.forEach(ch => {
-    const drawY = ch.y - 8;
-    if (mx >= ch.x && mx <= ch.x + 16 && my >= drawY && my <= drawY + 24) {
-      clicked = ch;
-    }
-  });
+				let clicked = null;
+				characters.forEach((ch) => {
+					const drawY = ch.y - 8;
+					if (mx >= ch.x && mx <= ch.x + 16 && my >= drawY && my <= drawY + 24) {
+						clicked = ch;
+					}
+				});
 
-  characters.forEach(ch => ch.selected = false);
-  const agentInfo = document.getElementById('agentInfo');
+				characters.forEach((ch) => (ch.selected = false));
+				const agentInfo = document.getElementById("agentInfo");
 
-  if (clicked) {
-    clicked.selected = true;
-    agentInfo.style.display = 'block';
-    agentInfo.innerHTML = `
+				if (clicked) {
+					clicked.selected = true;
+					agentInfo.style.display = "block";
+					agentInfo.innerHTML = `
       <div class="agent-name"><span class="status-dot" style="background:${clicked.statusColor}"></span>${clicked.name}</div>
       <div class="agent-status">${clicked.status}</div>
     `;
-  } else {
-    agentInfo.style.display = 'none';
-  }
-});
+				} else {
+					agentInfo.style.display = "none";
+				}
+			});
 
-// ─── TABS ───────────────────────────────────────────
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    tab.classList.add('active');
-    const target = tab.dataset.tab;
-    document.getElementById(target + 'Tab').classList.add('active');
-  });
-});
+			// ─── TABS ───────────────────────────────────────────
+			document.querySelectorAll(".tab").forEach((tab) => {
+				tab.addEventListener("click", () => {
+					document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+					document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+					tab.classList.add("active");
+					const target = tab.dataset.tab;
+					document.getElementById(target + "Tab").classList.add("active");
+				});
+			});
 
-// ─── TERMINAL LOG ───────────────────────────────────
-const termLogs = [
-  '[build] Compiling TypeScript...',
-  '[build] src/api/routes.ts → dist/routes.js',
-  '[test]  PASS  auth.test.ts (4 tests)',
-  '[lint]  No warnings found',
-  '[build] Bundle size: 142kb (gzipped)',
-  '[deploy] Uploading to staging...',
-  '[deploy] Health check passed ✓',
-  '[git]   commit a3f2c1d "fix: resolve CORS issue"',
-  '[build] src/models/user.ts → dist/user.js',
-  '[test]  PASS  user.test.ts (7 tests)',
-  '[api]   GET /health → 200 (3ms)',
-  '[api]   POST /auth/login → 200 (45ms)',
-  '[db]    Migration 003_add_roles applied',
-  '[build] Watching for changes...',
-  '[test]  Running test suite...',
-  '[lint]  Checking 42 files...',
-  '[api]   GET /users → 200 (12ms)',
-  '[git]   pull origin main (fast-forward)',
-  '[build] src/utils/crypto.ts → dist/crypto.js',
-  '[test]  PASS  integration.test.ts (12 tests)',
-  '[deploy] Container image built (0.8s)',
-  '[api]   WebSocket connection established',
-  '[db]    Query optimized: 340ms → 12ms',
-  '[build] Hot reload triggered',
-  '[test]  Coverage: 94.2% (+0.3%)',
-  '[git]   branch feature/auth-v2 created',
-  '[lint]  Fixed 2 auto-fixable issues',
-  '[api]   Rate limiter: 150 req/min',
-  '[build] Tree-shaking removed 23 modules',
-  '[deploy] Rolling update: 2/3 pods ready',
-  '[agent] Alice: Analyzing codebase structure...',
-  '[agent] Bob: Found 3 related components',
-  '[agent] Carol: Test coverage increased to 96%',
-  '[agent] Alice: Refactoring auth middleware...',
-  '[agent] Bob: CSS grid layout fixed',
-  '[agent] Carol: Added edge case tests',
-];
+			// ─── TERMINAL LOG ───────────────────────────────────
+			const termLogs = [
+				"[build] Compiling TypeScript...",
+				"[build] src/api/routes.ts → dist/routes.js",
+				"[test]  PASS  auth.test.ts (4 tests)",
+				"[lint]  No warnings found",
+				"[build] Bundle size: 142kb (gzipped)",
+				"[deploy] Uploading to staging...",
+				"[deploy] Health check passed ✓",
+				'[git]   commit a3f2c1d "fix: resolve CORS issue"',
+				"[build] src/models/user.ts → dist/user.js",
+				"[test]  PASS  user.test.ts (7 tests)",
+				"[api]   GET /health → 200 (3ms)",
+				"[api]   POST /auth/login → 200 (45ms)",
+				"[db]    Migration 003_add_roles applied",
+				"[build] Watching for changes...",
+				"[test]  Running test suite...",
+				"[lint]  Checking 42 files...",
+				"[api]   GET /users → 200 (12ms)",
+				"[git]   pull origin main (fast-forward)",
+				"[build] src/utils/crypto.ts → dist/crypto.js",
+				"[test]  PASS  integration.test.ts (12 tests)",
+				"[deploy] Container image built (0.8s)",
+				"[api]   WebSocket connection established",
+				"[db]    Query optimized: 340ms → 12ms",
+				"[build] Hot reload triggered",
+				"[test]  Coverage: 94.2% (+0.3%)",
+				"[git]   branch feature/auth-v2 created",
+				"[lint]  Fixed 2 auto-fixable issues",
+				"[api]   Rate limiter: 150 req/min",
+				"[build] Tree-shaking removed 23 modules",
+				"[deploy] Rolling update: 2/3 pods ready",
+				"[agent] Alice: Analyzing codebase structure...",
+				"[agent] Bob: Found 3 related components",
+				"[agent] Carol: Test coverage increased to 96%",
+				"[agent] Alice: Refactoring auth middleware...",
+				"[agent] Bob: CSS grid layout fixed",
+				"[agent] Carol: Added edge case tests",
+			];
 
-const termPanel = document.getElementById('termPanel');
-let termIdx = 0;
-function addTermLine() {
-  const line = document.createElement('div');
-  line.className = 'term-line' + (Math.random()>0.6?' dim':'') + (Math.random()>0.85?' bright':'');
-  line.textContent = '> ' + termLogs[termIdx % termLogs.length];
-  termPanel.appendChild(line);
-  termIdx++;
-  // Keep max 80 lines
-  while (termPanel.children.length > 80) termPanel.removeChild(termPanel.firstChild);
-  termPanel.scrollTop = termPanel.scrollHeight;
-}
-// Initial lines
-for (let i = 0; i < 12; i++) addTermLine();
-setInterval(addTermLine, 1800 + Math.random() * 1200);
+			const termPanel = document.getElementById("termPanel");
+			let termIdx = 0;
+			function addTermLine() {
+				const line = document.createElement("div");
+				line.className =
+					"term-line" +
+					(Math.random() > 0.6 ? " dim" : "") +
+					(Math.random() > 0.85 ? " bright" : "");
+				line.textContent = "> " + termLogs[termIdx % termLogs.length];
+				termPanel.appendChild(line);
+				termIdx++;
+				// Keep max 80 lines
+				while (termPanel.children.length > 80) termPanel.removeChild(termPanel.firstChild);
+				termPanel.scrollTop = termPanel.scrollHeight;
+			}
+			// Initial lines
+			for (let i = 0; i < 12; i++) addTermLine();
+			setInterval(addTermLine, 1800 + Math.random() * 1200);
 
-// ─── FILES TAB ──────────────────────────────────────
-const files = [
-  {name:'src/index.ts', size:'2.4kb'},
-  {name:'src/api/routes.ts', size:'8.1kb'},
-  {name:'src/api/auth.ts', size:'3.7kb'},
-  {name:'src/models/user.ts', size:'1.9kb'},
-  {name:'src/models/task.ts', size:'1.2kb'},
-  {name:'src/utils/crypto.ts', size:'0.8kb'},
-  {name:'src/utils/logger.ts', size:'0.6kb'},
-  {name:'tests/auth.test.ts', size:'4.3kb'},
-  {name:'tests/user.test.ts', size:'3.1kb'},
-  {name:'tests/integration.test.ts', size:'6.8kb'},
-  {name:'package.json', size:'1.1kb'},
-  {name:'tsconfig.json', size:'0.4kb'},
-  {name:'.env.example', size:'0.2kb'},
-  {name:'Dockerfile', size:'0.5kb'},
-  {name:'docker-compose.yml', size:'0.7kb'},
-  {name:'README.md', size:'3.2kb'},
-];
-const filesPanel = document.getElementById('filesPanel');
-files.forEach(f => {
-  const div = document.createElement('div');
-  div.className = 'file-entry';
-  div.innerHTML = `<span class="fname">${f.name}</span><span class="fsize">${f.size}</span>`;
-  filesPanel.appendChild(div);
-});
+			// ─── FILES TAB ──────────────────────────────────────
+			const files = [
+				{ name: "src/index.ts", size: "2.4kb" },
+				{ name: "src/api/routes.ts", size: "8.1kb" },
+				{ name: "src/api/auth.ts", size: "3.7kb" },
+				{ name: "src/models/user.ts", size: "1.9kb" },
+				{ name: "src/models/task.ts", size: "1.2kb" },
+				{ name: "src/utils/crypto.ts", size: "0.8kb" },
+				{ name: "src/utils/logger.ts", size: "0.6kb" },
+				{ name: "tests/auth.test.ts", size: "4.3kb" },
+				{ name: "tests/user.test.ts", size: "3.1kb" },
+				{ name: "tests/integration.test.ts", size: "6.8kb" },
+				{ name: "package.json", size: "1.1kb" },
+				{ name: "tsconfig.json", size: "0.4kb" },
+				{ name: ".env.example", size: "0.2kb" },
+				{ name: "Dockerfile", size: "0.5kb" },
+				{ name: "docker-compose.yml", size: "0.7kb" },
+				{ name: "README.md", size: "3.2kb" },
+			];
+			const filesPanel = document.getElementById("filesPanel");
+			files.forEach((f) => {
+				const div = document.createElement("div");
+				div.className = "file-entry";
+				div.innerHTML = `<span class="fname">${f.name}</span><span class="fsize">${f.size}</span>`;
+				filesPanel.appendChild(div);
+			});
 
-// ─── RESPONSIVE CANVAS ─────────────────────────────
-function resizeCanvas() {
-  const wrap = document.getElementById('canvasWrap');
-  const maxW = wrap.clientWidth - 20;
-  const maxH = wrap.clientHeight - 20;
-  const scaleX = maxW / (W * ZOOM) * ZOOM;
-  const scaleY = maxH / (H * ZOOM) * ZOOM;
-  const scale = Math.min(scaleX, scaleY, ZOOM);
-  const finalScale = Math.max(1, Math.floor(scale));
-  canvas.style.width = (W * finalScale) + 'px';
-  canvas.style.height = (H * finalScale) + 'px';
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
-</script>
-</body>
+			// ─── RESPONSIVE CANVAS ─────────────────────────────
+			function resizeCanvas() {
+				const wrap = document.getElementById("canvasWrap");
+				const maxW = wrap.clientWidth - 20;
+				const maxH = wrap.clientHeight - 20;
+				const scaleX = (maxW / (W * ZOOM)) * ZOOM;
+				const scaleY = (maxH / (H * ZOOM)) * ZOOM;
+				const scale = Math.min(scaleX, scaleY, ZOOM);
+				const finalScale = Math.max(1, Math.floor(scale));
+				canvas.style.width = W * finalScale + "px";
+				canvas.style.height = H * finalScale + "px";
+			}
+			window.addEventListener("resize", resizeCanvas);
+			resizeCanvas();
+		</script>
+	</body>
 </html>

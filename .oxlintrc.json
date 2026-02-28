@@ -38,12 +38,7 @@
 	},
 	"overrides": [
 		{
-			"files": [
-				"**/*.test.ts",
-				"**/*.test.tsx",
-				"**/*.spec.ts",
-				"**/*.spec.tsx"
-			],
+			"files": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
 			"rules": {
 				"typescript/no-explicit-any": "off",
 				"typescript/no-unsafe-type-assertion": "off"
@@ -62,10 +57,7 @@
 			}
 		},
 		{
-			"files": [
-				"**/*.stories.ts",
-				"**/*.stories.tsx"
-			],
+			"files": ["**/*.stories.ts", "**/*.stories.tsx"],
 			"rules": {
 				"import/no-default-export": "off",
 				"react-perf/jsx-no-new-object-as-prop": "off",
@@ -85,19 +77,13 @@
 			}
 		},
 		{
-			"files": [
-				"**/.storybook/main.ts",
-				"**/.storybook/preview.ts",
-				"**/.storybook/preview.tsx"
-			],
+			"files": ["**/.storybook/main.ts", "**/.storybook/preview.ts", "**/.storybook/preview.tsx"],
 			"rules": {
 				"import/no-default-export": "off"
 			}
 		},
 		{
-			"files": [
-				"**/routes/**"
-			],
+			"files": ["**/routes/**"],
 			"rules": {
 				"import/no-default-export": "off"
 			}

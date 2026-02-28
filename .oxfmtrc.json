@@ -16,6 +16,7 @@
 		".claude/**",
 		"apps/experiments/**",
 		"**/routeTree.gen.ts",
-		"**/_generated/**"
+		"**/_generated/**",
+		"**/*.md"
 	]
 }

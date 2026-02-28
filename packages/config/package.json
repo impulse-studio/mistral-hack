@@ -1,18 +1,18 @@
 {
-  "name": "@mistral-hack/config",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "exports": {
-    "./tsconfig.base.json": "./tsconfig.base.json",
-    "./storybook.main.ts": "./src/storybook.main.ts",
-    "./storybook.preview.ts": "./src/storybook.preview.ts"
-  },
-  "devDependencies": {
-    "@storybook/addon-a11y": "^10.2.10",
-    "@storybook/addon-docs": "^10.2.10",
-    "@storybook/react-vite": "^10.2.10",
-    "@tailwindcss/vite": "^4.1.8",
-    "storybook": "^10.2.10"
-  }
+	"name": "@mistral-hack/config",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./tsconfig.base.json": "./tsconfig.base.json",
+		"./storybook.main.ts": "./src/storybook.main.ts",
+		"./storybook.preview.ts": "./src/storybook.preview.ts"
+	},
+	"devDependencies": {
+		"@storybook/addon-a11y": "^10.2.10",
+		"@storybook/addon-docs": "^10.2.10",
+		"@storybook/react-vite": "^10.2.10",
+		"@tailwindcss/vite": "^4.1.8",
+		"storybook": "^10.2.10"
+	}
 }

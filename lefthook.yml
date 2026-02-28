@@ -6,7 +6,7 @@ pre-commit:
   parallel: true
   commands:
     oxfmt:
-      glob: "*.{ts,tsx,js,jsx,json,jsonc,css,md,html}"
+      glob: "*.{ts,tsx,js,jsx,json,jsonc,css,html}"
       exclude: ".claude/**"
       run: bunx oxfmt --write {staged_files}
       stage_fixed: true

@@ -2,12 +2,7 @@
 	"mcpServers": {
 		"playwright": {
 			"command": "npx",
-			"args": [
-				"-y",
-				"@playwright/mcp",
-				"--output-dir",
-				".mcp/screenshots"
-			]
+			"args": ["-y", "@playwright/mcp", "--output-dir", ".mcp/screenshots"]
 		}
 	}
 }
