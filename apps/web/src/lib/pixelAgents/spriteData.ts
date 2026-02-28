@@ -776,6 +776,61 @@ export const PC_SPRITE: SpriteData = (() => {
 	];
 })();
 
+/** PC (off): 16x16 — same monitor shape with dark/black screen */
+export const PC_OFF_SPRITE: SpriteData = (() => {
+	const F = "#555555";
+	const S = "#3A3A5C";
+	const B = "#2A2A3C"; // dark screen (off)
+	const D = "#444444";
+	return [
+		[_, _, _, F, F, F, F, F, F, F, F, F, F, _, _, _],
+		[_, _, _, F, S, S, S, S, S, S, S, S, F, _, _, _],
+		[_, _, _, F, S, B, B, B, B, B, B, S, F, _, _, _],
+		[_, _, _, F, S, B, B, B, B, B, B, S, F, _, _, _],
+		[_, _, _, F, S, B, B, B, B, B, B, S, F, _, _, _],
+		[_, _, _, F, S, B, B, B, B, B, B, S, F, _, _, _],
+		[_, _, _, F, S, B, B, B, B, B, B, S, F, _, _, _],
+		[_, _, _, F, S, B, B, B, B, B, B, S, F, _, _, _],
+		[_, _, _, F, S, S, S, S, S, S, S, S, F, _, _, _],
+		[_, _, _, F, F, F, F, F, F, F, F, F, F, _, _, _],
+		[_, _, _, _, _, _, _, D, D, _, _, _, _, _, _, _],
+		[_, _, _, _, _, _, _, D, D, _, _, _, _, _, _, _],
+		[_, _, _, _, _, _, D, D, D, D, _, _, _, _, _, _],
+		[_, _, _, _, _, D, D, D, D, D, D, _, _, _, _, _],
+		[_, _, _, _, _, D, D, D, D, D, D, _, _, _, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+	];
+})();
+
+/** Laptop (off): 16x16 — closed/dark screen laptop */
+export const LAPTOP_OFF_SPRITE: SpriteData = (() => {
+	const B = "#454560"; // body border
+	const S = "#2A2A3C"; // dark screen (off)
+	const L = "#2A2A3C"; // dark screen (off)
+	const H = "#2A2A3A"; // hinge line
+	const K = "#505065"; // keyboard base
+	const k = "#404055"; // keys
+	const T = "#555570"; // trackpad
+	return [
+		[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+		[_, _, B, B, B, B, B, B, B, B, B, B, B, B, _, _],
+		[_, _, B, S, S, S, S, S, S, S, S, S, S, B, _, _],
+		[_, _, B, S, L, L, L, L, L, L, L, L, S, B, _, _],
+		[_, _, B, S, L, S, S, S, S, S, S, L, S, B, _, _],
+		[_, _, B, S, L, L, L, L, L, L, L, L, S, B, _, _],
+		[_, _, B, S, S, S, S, S, S, S, S, S, S, B, _, _],
+		[_, _, H, H, H, H, H, H, H, H, H, H, H, H, _, _],
+		[_, B, B, K, K, K, K, K, K, K, K, K, K, B, B, _],
+		[_, B, K, k, k, k, k, k, k, k, k, k, k, K, B, _],
+		[_, B, K, k, k, k, k, k, k, k, k, k, k, K, B, _],
+		[_, B, K, k, k, k, k, k, k, k, k, k, k, K, B, _],
+		[_, B, K, k, k, T, T, T, T, T, k, k, k, K, B, _],
+		[_, B, K, k, k, T, T, T, T, T, k, k, k, K, B, _],
+		[_, B, B, B, B, B, B, B, B, B, B, B, B, B, B, _],
+		[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+	];
+})();
+
 /** Desk lamp: 16x16 — top-down lamp with light cone */
 export const LAMP_SPRITE: SpriteData = (() => {
 	const Y = "#FFDD55";

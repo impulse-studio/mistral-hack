@@ -8,6 +8,11 @@ import { Loader } from "./components/Loader";
 import "./index.css";
 import { routeTree } from "./routeTree.gen";
 
+export interface RouterAppContext {
+	queryClient: QueryClient;
+	convexQueryClient: ConvexQueryClient;
+}
+
 export function getRouter() {
 	const convexUrl = env.VITE_CONVEX_URL;
 	if (!convexUrl) {

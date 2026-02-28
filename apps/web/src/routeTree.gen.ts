@@ -9,13 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TestRouteImport } from './routes/test'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SignInRouteImport } from './routes/sign-in'
-import { Route as OfficeRouteImport } from './routes/office'
-import { Route as ManagerRouteImport } from './routes/manager'
-import { Route as KanbanRouteImport } from './routes/kanban'
-import { Route as AiRouteImport } from './routes/ai'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProtoV9RouteImport } from './routes/proto/v9'
 import { Route as ProtoV8RouteImport } from './routes/proto/v8'
@@ -23,13 +19,13 @@ import { Route as ProtoV5RouteImport } from './routes/proto/v5'
 import { Route as ProtoV4RouteImport } from './routes/proto/v4'
 import { Route as ProtoV3RouteImport } from './routes/proto/v3'
 import { Route as ProtoV2RouteImport } from './routes/proto/v2'
+import { Route as AuthenticatedTestRouteImport } from './routes/_authenticated/test'
+import { Route as AuthenticatedOfficeRouteImport } from './routes/_authenticated/office'
+import { Route as AuthenticatedManagerRouteImport } from './routes/_authenticated/manager'
+import { Route as AuthenticatedKanbanRouteImport } from './routes/_authenticated/kanban'
+import { Route as AuthenticatedAiRouteImport } from './routes/_authenticated/ai'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
-const TestRoute = TestRouteImport.update({
-  id: '/test',
-  path: '/test',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SignUpRoute = SignUpRouteImport.update({
   id: '/sign-up',
   path: '/sign-up',
@@ -40,24 +36,8 @@ const SignInRoute = SignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OfficeRoute = OfficeRouteImport.update({
-  id: '/office',
-  path: '/office',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ManagerRoute = ManagerRouteImport.update({
-  id: '/manager',
-  path: '/manager',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const KanbanRoute = KanbanRouteImport.update({
-  id: '/kanban',
-  path: '/kanban',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AiRoute = AiRouteImport.update({
-  id: '/ai',
-  path: '/ai',
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -95,6 +75,31 @@ const ProtoV2Route = ProtoV2RouteImport.update({
   path: '/proto/v2',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTestRoute = AuthenticatedTestRouteImport.update({
+  id: '/test',
+  path: '/test',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedOfficeRoute = AuthenticatedOfficeRouteImport.update({
+  id: '/office',
+  path: '/office',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedManagerRoute = AuthenticatedManagerRouteImport.update({
+  id: '/manager',
+  path: '/manager',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedKanbanRoute = AuthenticatedKanbanRouteImport.update({
+  id: '/kanban',
+  path: '/kanban',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAiRoute = AuthenticatedAiRouteImport.update({
+  id: '/ai',
+  path: '/ai',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -103,13 +108,13 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/ai': typeof AiRoute
-  '/kanban': typeof KanbanRoute
-  '/manager': typeof ManagerRoute
-  '/office': typeof OfficeRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
-  '/test': typeof TestRoute
+  '/ai': typeof AuthenticatedAiRoute
+  '/kanban': typeof AuthenticatedKanbanRoute
+  '/manager': typeof AuthenticatedManagerRoute
+  '/office': typeof AuthenticatedOfficeRoute
+  '/test': typeof AuthenticatedTestRoute
   '/proto/v2': typeof ProtoV2Route
   '/proto/v3': typeof ProtoV3Route
   '/proto/v4': typeof ProtoV4Route
@@ -120,13 +125,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/ai': typeof AiRoute
-  '/kanban': typeof KanbanRoute
-  '/manager': typeof ManagerRoute
-  '/office': typeof OfficeRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
-  '/test': typeof TestRoute
+  '/ai': typeof AuthenticatedAiRoute
+  '/kanban': typeof AuthenticatedKanbanRoute
+  '/manager': typeof AuthenticatedManagerRoute
+  '/office': typeof AuthenticatedOfficeRoute
+  '/test': typeof AuthenticatedTestRoute
   '/proto/v2': typeof ProtoV2Route
   '/proto/v3': typeof ProtoV3Route
   '/proto/v4': typeof ProtoV4Route
@@ -138,13 +143,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/ai': typeof AiRoute
-  '/kanban': typeof KanbanRoute
-  '/manager': typeof ManagerRoute
-  '/office': typeof OfficeRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
-  '/test': typeof TestRoute
+  '/_authenticated/ai': typeof AuthenticatedAiRoute
+  '/_authenticated/kanban': typeof AuthenticatedKanbanRoute
+  '/_authenticated/manager': typeof AuthenticatedManagerRoute
+  '/_authenticated/office': typeof AuthenticatedOfficeRoute
+  '/_authenticated/test': typeof AuthenticatedTestRoute
   '/proto/v2': typeof ProtoV2Route
   '/proto/v3': typeof ProtoV3Route
   '/proto/v4': typeof ProtoV4Route
@@ -157,12 +163,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/sign-in'
+    | '/sign-up'
     | '/ai'
     | '/kanban'
     | '/manager'
     | '/office'
-    | '/sign-in'
-    | '/sign-up'
     | '/test'
     | '/proto/v2'
     | '/proto/v3'
@@ -174,12 +180,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/sign-in'
+    | '/sign-up'
     | '/ai'
     | '/kanban'
     | '/manager'
     | '/office'
-    | '/sign-in'
-    | '/sign-up'
     | '/test'
     | '/proto/v2'
     | '/proto/v3'
@@ -191,13 +197,14 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/ai'
-    | '/kanban'
-    | '/manager'
-    | '/office'
+    | '/_authenticated'
     | '/sign-in'
     | '/sign-up'
-    | '/test'
+    | '/_authenticated/ai'
+    | '/_authenticated/kanban'
+    | '/_authenticated/manager'
+    | '/_authenticated/office'
+    | '/_authenticated/test'
     | '/proto/v2'
     | '/proto/v3'
     | '/proto/v4'
@@ -209,13 +216,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AiRoute: typeof AiRoute
-  KanbanRoute: typeof KanbanRoute
-  ManagerRoute: typeof ManagerRoute
-  OfficeRoute: typeof OfficeRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
-  TestRoute: typeof TestRoute
   ProtoV2Route: typeof ProtoV2Route
   ProtoV3Route: typeof ProtoV3Route
   ProtoV4Route: typeof ProtoV4Route
@@ -227,13 +230,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/test': {
-      id: '/test'
-      path: '/test'
-      fullPath: '/test'
-      preLoaderRoute: typeof TestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/sign-up': {
       id: '/sign-up'
       path: '/sign-up'
@@ -248,32 +244,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignInRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/office': {
-      id: '/office'
-      path: '/office'
-      fullPath: '/office'
-      preLoaderRoute: typeof OfficeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/manager': {
-      id: '/manager'
-      path: '/manager'
-      fullPath: '/manager'
-      preLoaderRoute: typeof ManagerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/kanban': {
-      id: '/kanban'
-      path: '/kanban'
-      fullPath: '/kanban'
-      preLoaderRoute: typeof KanbanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ai': {
-      id: '/ai'
-      path: '/ai'
-      fullPath: '/ai'
-      preLoaderRoute: typeof AiRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -325,6 +300,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtoV2RouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/test': {
+      id: '/_authenticated/test'
+      path: '/test'
+      fullPath: '/test'
+      preLoaderRoute: typeof AuthenticatedTestRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/office': {
+      id: '/_authenticated/office'
+      path: '/office'
+      fullPath: '/office'
+      preLoaderRoute: typeof AuthenticatedOfficeRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/manager': {
+      id: '/_authenticated/manager'
+      path: '/manager'
+      fullPath: '/manager'
+      preLoaderRoute: typeof AuthenticatedManagerRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/kanban': {
+      id: '/_authenticated/kanban'
+      path: '/kanban'
+      fullPath: '/kanban'
+      preLoaderRoute: typeof AuthenticatedKanbanRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/ai': {
+      id: '/_authenticated/ai'
+      path: '/ai'
+      fullPath: '/ai'
+      preLoaderRoute: typeof AuthenticatedAiRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -335,15 +345,31 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedAiRoute: typeof AuthenticatedAiRoute
+  AuthenticatedKanbanRoute: typeof AuthenticatedKanbanRoute
+  AuthenticatedManagerRoute: typeof AuthenticatedManagerRoute
+  AuthenticatedOfficeRoute: typeof AuthenticatedOfficeRoute
+  AuthenticatedTestRoute: typeof AuthenticatedTestRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAiRoute: AuthenticatedAiRoute,
+  AuthenticatedKanbanRoute: AuthenticatedKanbanRoute,
+  AuthenticatedManagerRoute: AuthenticatedManagerRoute,
+  AuthenticatedOfficeRoute: AuthenticatedOfficeRoute,
+  AuthenticatedTestRoute: AuthenticatedTestRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AiRoute: AiRoute,
-  KanbanRoute: KanbanRoute,
-  ManagerRoute: ManagerRoute,
-  OfficeRoute: OfficeRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
-  TestRoute: TestRoute,
   ProtoV2Route: ProtoV2Route,
   ProtoV3Route: ProtoV3Route,
   ProtoV4Route: ProtoV4Route,

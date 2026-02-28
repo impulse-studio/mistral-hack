@@ -8,7 +8,7 @@ import {
 	type KanbanBoardTask,
 } from "@/lib/kanban/KanbanBoard.component";
 
-export const Route = createFileRoute("/kanban")({
+export const Route = createFileRoute("/_authenticated/kanban")({
 	component: RouteComponent,
 });
 

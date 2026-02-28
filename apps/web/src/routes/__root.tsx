@@ -1,6 +1,3 @@
-import type { ConvexQueryClient } from "@convex-dev/react-query";
-import type { QueryClient } from "@tanstack/react-query";
-
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
 import {
 	HeadContent,
@@ -11,23 +8,14 @@ import {
 	useRouterState,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { createServerFn } from "@tanstack/react-start";
 
 import { Toaster } from "@/components/ui/sonner";
 import { authClient } from "@/lib/auth-client";
-import { getToken } from "@/lib/auth-server";
+import { getAuth } from "@/lib/auth.functions";
 
 import { Header } from "../components/Header";
 import appCss from "../index.css?url";
-
-const getAuth = createServerFn({ method: "GET" }).handler(async () => {
-	return await getToken();
-});
-
-export interface RouterAppContext {
-	queryClient: QueryClient;
-	convexQueryClient: ConvexQueryClient;
-}
+import type { RouterAppContext } from "../router";
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
 	head: () => ({

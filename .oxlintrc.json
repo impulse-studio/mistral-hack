@@ -280,8 +280,9 @@
 		"mistral-hack/folder-camel-case": [
 			"error",
 			{
+				"casing": "kebab-case",
 				"basePaths": ["apps/web/src"],
-				"exclude": ["ui", "routes", "api", "auth"]
+				"exclude": ["ui", "routes", "api", "auth", "_authenticated"]
 			}
 		],
 		"mistral-hack/no-re-export": ["error", { "exclude": ["pixelAgents/"] }],
@@ -292,7 +293,14 @@
 					{
 						"path": "apps/web/src",
 						"stripPrefixes": ["components", "lib"],
-						"exclude": ["routes", "components/ui", "router.tsx", "lib/utils.ts", "lib/pixelAgents"]
+						"exclude": [
+							"routes",
+							"components/ui",
+							"router.tsx",
+							"lib/utils.ts",
+							"lib/pixelAgents",
+							"lib/auth"
+						]
 					}
 				]
 			}

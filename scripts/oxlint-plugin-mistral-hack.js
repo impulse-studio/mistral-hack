@@ -12,6 +12,7 @@
 
 const PASCAL_CASE_RE = /^[A-Z][a-zA-Z0-9]*$/;
 const CAMEL_CASE_RE = /^[a-z][a-zA-Z0-9]*$/;
+const KEBAB_CASE_RE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
 /** @param {string} str */
 function isPascalCase(str) {
@@ -32,6 +33,11 @@ function toPascalCase(str) {
 }
 
 /** @param {string} str */
+function isKebabCase(str) {
+	return KEBAB_CASE_RE.test(str);
+}
+
+/** @param {string} str */
 function toCamelCase(str) {
 	const parts = str.split(/[-_]/);
 	return (
@@ -43,9 +49,18 @@ function toCamelCase(str) {
 	);
 }
 
+/** @param {string} str */
+function toKebabCase(str) {
+	return str
+		.replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+		.replace(/[_\s]+/g, "-")
+		.toLowerCase();
+}
+
 const CASING = {
 	PascalCase: { check: isPascalCase, convert: toPascalCase },
 	camelCase: { check: isCamelCase, convert: toCamelCase },
+	"kebab-case": { check: isKebabCase, convert: toKebabCase },
 };
 
 /** @param {string[]} segments */
@@ -185,13 +200,18 @@ const tsxPascalCaseRule = {
 const folderCamelCaseRule = {
 	meta: {
 		docs: {
-			description: "Enforce camelCase folder names within configured base paths",
+			description:
+				"Enforce folder name casing within configured base paths (camelCase or kebab-case)",
 		},
 		fixable: null,
 		schema: [
 			{
 				type: "object",
 				properties: {
+					casing: {
+						type: "string",
+						enum: ["camelCase", "kebab-case"],
+					},
 					basePaths: {
 						type: "array",
 						items: { type: "string" },
@@ -206,6 +226,8 @@ const folderCamelCaseRule = {
 	},
 	create(context) {
 		const options = context.options[0] || {};
+		const casingName = options.casing || "camelCase";
+		const { check, convert } = CASING[casingName];
 		const basePaths = options.basePaths || [];
 		const exclude = options.exclude || [];
 		const filename = context.filename || context.getFilename();
@@ -230,12 +252,12 @@ const folderCamelCaseRule = {
 
 		if (segments.length === 0) return {};
 
-		// Find first non-camelCase folder that isn't excluded
-		const bad = segments.find((seg) => !isCamelCase(seg) && !exclude.includes(seg));
+		// Find first non-conforming folder that isn't excluded
+		const bad = segments.find((seg) => !check(seg) && !exclude.includes(seg));
 
 		if (!bad) return {};
 
-		const suggestion = toCamelCase(bad);
+		const suggestion = convert(bad);
 		let reported = false;
 
 		return {
@@ -243,7 +265,7 @@ const folderCamelCaseRule = {
 				if (reported) return;
 				reported = true;
 				context.report({
-					message: `Folder name "${bad}" must use camelCase. Rename to "${suggestion}".`,
+					message: `Folder name "${bad}" must use ${casingName}. Rename to "${suggestion}".`,
 					node,
 				});
 			},
@@ -312,7 +334,11 @@ const exportPrefixRule = {
 		// Check exclusions
 		const exclude = matchedTarget.exclude || [];
 		for (const pattern of exclude) {
-			if (relativePath.startsWith(`${pattern}/`) || relativePath === pattern) {
+			if (
+				relativePath.startsWith(`${pattern}/`) ||
+				relativePath.startsWith(`${pattern}.`) ||
+				relativePath === pattern
+			) {
 				return {};
 			}
 		}

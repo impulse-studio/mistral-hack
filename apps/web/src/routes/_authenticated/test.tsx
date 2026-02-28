@@ -21,7 +21,7 @@ const useUIMessages = useUIMessagesRaw as (
 	options: { initialNumItems: number; stream?: boolean },
 ) => UsePaginatedQueryResult<UIMessage>;
 
-export const Route = createFileRoute("/test")({
+export const Route = createFileRoute("/_authenticated/test")({
 	component: TestDashboard,
 });
 
@@ -195,7 +195,7 @@ interface ConvexTask {
 
 // ── Office State Panel ────────────────────────────────────────
 
-function OfficeState() {
+function OfficeStatePanel() {
 	const officeState = useQuery(api.office.queries.getOfficeState);
 	const sandboxStatus = useQuery(api.sandbox.queries.getStatus);
 	const allSandboxes = useQuery(api.sandbox.queries.getAllSandboxes);
@@ -518,7 +518,7 @@ function TestDashboard() {
 	return (
 		<div className="grid grid-cols-3 gap-4 p-4 h-full overflow-hidden">
 			<ManagerChat />
-			<OfficeState />
+			<OfficeStatePanel />
 			<TasksBoard />
 		</div>
 	);

@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { MasterAgentPanel } from "@/lib/masterAgentPanel/MasterAgentPanel.component";
+import { MasterAgentPanel } from "@/lib/master-agent-panel/MasterAgentPanel.component";
 
-export const Route = createFileRoute("/manager")({
+export const Route = createFileRoute("/_authenticated/manager")({
 	component: RouteComponent,
 });
 

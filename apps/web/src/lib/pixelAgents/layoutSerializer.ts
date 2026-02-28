@@ -347,36 +347,36 @@ export function createDefaultLayout(): OfficeLayout {
 		// Top row — desks 1-4 at rows 2-3
 		{ uid: "desk-1", type: FurnitureType.DESK, col: 2, row: 2 },
 		{ uid: "chair-1", type: "chair-back", col: 3, row: 3 },
-		{ uid: "pc-1", type: FurnitureType.PC, col: 3, row: 2 },
+		{ uid: "pc-1", type: FurnitureType.PC_OFF, col: 3, row: 2 },
 
 		{ uid: "desk-2", type: FurnitureType.DESK, col: 6, row: 2 },
 		{ uid: "chair-2", type: "chair-back", col: 7, row: 3 },
-		{ uid: "laptop-1", type: FurnitureType.LAPTOP, col: 7, row: 2 },
+		{ uid: "laptop-1", type: FurnitureType.LAPTOP_OFF, col: 7, row: 2 },
 
 		{ uid: "desk-3", type: FurnitureType.DESK, col: 10, row: 2 },
 		{ uid: "chair-3", type: "chair-back", col: 11, row: 3 },
-		{ uid: "pc-2", type: FurnitureType.PC, col: 11, row: 2 },
+		{ uid: "pc-2", type: FurnitureType.PC_OFF, col: 11, row: 2 },
 
 		{ uid: "desk-4", type: FurnitureType.DESK, col: 14, row: 2 },
 		{ uid: "chair-4", type: "chair-back", col: 15, row: 3 },
-		{ uid: "laptop-2", type: FurnitureType.LAPTOP, col: 15, row: 2 },
+		{ uid: "laptop-2", type: FurnitureType.LAPTOP_OFF, col: 15, row: 2 },
 
 		// Bottom row — desks 5-8 at rows 5-6
 		{ uid: "desk-5", type: FurnitureType.DESK, col: 2, row: 5 },
 		{ uid: "chair-5", type: "chair-back", col: 3, row: 6 },
-		{ uid: "laptop-3", type: FurnitureType.LAPTOP, col: 3, row: 5 },
+		{ uid: "laptop-3", type: FurnitureType.LAPTOP_OFF, col: 3, row: 5 },
 
 		{ uid: "desk-6", type: FurnitureType.DESK, col: 6, row: 5 },
 		{ uid: "chair-6", type: "chair-back", col: 7, row: 6 },
-		{ uid: "pc-3", type: FurnitureType.PC, col: 7, row: 5 },
+		{ uid: "pc-3", type: FurnitureType.PC_OFF, col: 7, row: 5 },
 
 		{ uid: "desk-7", type: FurnitureType.DESK, col: 10, row: 5 },
 		{ uid: "chair-7", type: "chair-back", col: 11, row: 6 },
-		{ uid: "laptop-4", type: FurnitureType.LAPTOP, col: 11, row: 5 },
+		{ uid: "laptop-4", type: FurnitureType.LAPTOP_OFF, col: 11, row: 5 },
 
 		{ uid: "desk-8", type: FurnitureType.DESK, col: 14, row: 5 },
 		{ uid: "chair-8", type: "chair-back", col: 15, row: 6 },
-		{ uid: "pc-4", type: FurnitureType.PC, col: 15, row: 5 },
+		{ uid: "pc-4", type: FurnitureType.PC_OFF, col: 15, row: 5 },
 
 		// Workspace decor
 		{ uid: "plant-ws-1", type: FurnitureType.PLANT, col: 1, row: 1 },
@@ -390,7 +390,7 @@ export function createDefaultLayout(): OfficeLayout {
 		// Manager desk with PC — cols 24-26, rows 3-4
 		{ uid: "desk-mgr", type: FurnitureType.DESK, col: 24, row: 3 },
 		{ uid: "chair-mgr", type: "chair-back", col: 25, row: 4 },
-		{ uid: "pc-mgr", type: FurnitureType.PC, col: 25, row: 3 },
+		{ uid: "pc-mgr", type: FurnitureType.PC_OFF, col: 25, row: 3 },
 
 		// Manager office decor
 		{ uid: "wb-mgr", type: FurnitureType.WHITEBOARD, col: 22, row: 0 },

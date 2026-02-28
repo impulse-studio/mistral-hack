@@ -1,13 +1,13 @@
 import { api } from "@mistral-hack/backend/convex/_generated/api";
-import { createFileRoute, Navigate } from "@tanstack/react-router";
-import { Authenticated, AuthLoading, Unauthenticated, useMutation, useQuery } from "convex/react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQuery } from "convex/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PixelAvatar } from "@/components/PixelAvatar";
 import { OfficeAgentPanel } from "@/components/office/OfficeAgentPanel.component";
 import { OfficeCanvas } from "@/components/office/OfficeCanvas.component";
 import { authClient } from "@/lib/auth-client";
-import { MasterAgentPanel } from "@/lib/masterAgentPanel/MasterAgentPanel.component";
+import { MasterAgentPanel } from "@/lib/master-agent-panel/MasterAgentPanel.component";
 import { initTileset } from "@/lib/pixelAgents/initTileset";
 import { OfficeState } from "@/lib/pixelAgents/officeState";
 
@@ -42,32 +42,12 @@ function deskPositionToChairUid(position: { x: number; y: number }, label?: stri
 	return `chair-${index}`;
 }
 
-export const Route = createFileRoute("/office")({
-	component: OfficePage,
+export const Route = createFileRoute("/_authenticated/office")({
+	component: OfficeContent,
 });
-
-function OfficePage() {
-	return (
-		<>
-			<Authenticated>
-				<OfficeContent />
-			</Authenticated>
-			<Unauthenticated>
-				<Navigate to="/sign-in" />
-			</Unauthenticated>
-			<AuthLoading>
-				<div className="flex h-full w-full items-center justify-center bg-background">
-					<span className="font-mono text-xs text-muted-foreground animate-pulse">Loading...</span>
-				</div>
-			</AuthLoading>
-		</>
-	);
-}
 
 function OfficeContent() {
 	const user = useQuery(api.auth.getCurrentUser);
-
-	console.log(user);
 
 	const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 	const [showManagerModal, setShowManagerModal] = useState(false);
@@ -130,10 +110,10 @@ function OfficeContent() {
 			activeConvexIds.add(agent._id);
 
 			// Manager agents from Convex map to the permanent local manager character
+			// Manager is always visually active (screen on) since they're always at their desk
 			if (agent.type === "manager") {
 				agentMapRef.current.set(agent._id, MANAGER_CANVAS_ID);
-				const isActive = agent.status === "working" || agent.status === "thinking";
-				os.setAgentActive(MANAGER_CANVAS_ID, isActive);
+				os.setAgentActive(MANAGER_CANVAS_ID, true);
 				continue;
 			}
 

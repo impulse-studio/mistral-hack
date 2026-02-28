@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { ChatWindowSmart } from "@/lib/chat/ChatWindow.smart";
 
-export const Route = createFileRoute("/ai")({
+export const Route = createFileRoute("/_authenticated/ai")({
 	component: RouteComponent,
 });
 

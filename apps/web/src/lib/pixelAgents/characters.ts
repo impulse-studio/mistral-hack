@@ -93,6 +93,7 @@ export function updateCharacter(
 	seats: Map<string, Seat>,
 	tileMap: TileTypeVal[][],
 	blockedTiles: Set<string>,
+	loungeWalkableTiles?: Array<{ col: number; row: number }>,
 ): void {
 	ch.frameTimer += dt;
 
@@ -183,8 +184,12 @@ export function updateCharacter(
 						}
 					}
 				}
-				if (walkableTiles.length > 0) {
-					const target = walkableTiles[Math.floor(Math.random() * walkableTiles.length)];
+				const wanderPool =
+					loungeWalkableTiles && loungeWalkableTiles.length > 0
+						? loungeWalkableTiles
+						: walkableTiles;
+				if (wanderPool.length > 0) {
+					const target = wanderPool[Math.floor(Math.random() * wanderPool.length)];
 					const path = findPath(
 						ch.tileCol,
 						ch.tileRow,

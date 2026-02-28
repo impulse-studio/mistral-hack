@@ -18,6 +18,28 @@ import { loadTilesetImage, extractSprite } from "./tilesetLoader";
 import { TILESET_ASSETS } from "./tilesetMetadata";
 import type { SpriteData } from "./types";
 
+/** Darken a sprite's bright/blue pixels to simulate a turned-off screen.
+ *  Replaces any pixel with high blue or brightness with a dark gray. */
+function darkenScreenPixels(sprite: SpriteData): SpriteData {
+	return sprite.map((row) =>
+		row.map((px) => {
+			if (!px) return px; // transparent
+			const r = parseInt(px.slice(1, 3), 16);
+			const g = parseInt(px.slice(3, 5), 16);
+			const b = parseInt(px.slice(5, 7), 16);
+			// Detect screen pixels: blue-dominant or bright
+			if ((b > r + 20 && b > 80) || (r > 140 && g > 140 && b > 140)) {
+				// Darken to ~25% brightness
+				const dr = Math.round(r * 0.25);
+				const dg = Math.round(g * 0.25);
+				const db = Math.round(b * 0.25);
+				return `#${dr.toString(16).padStart(2, "0")}${dg.toString(16).padStart(2, "0")}${db.toString(16).padStart(2, "0")}`;
+			}
+			return px;
+		}),
+	);
+}
+
 let initialized = false;
 
 /**
@@ -49,13 +71,18 @@ export async function initTileset(
 			const catalog: LoadedAssetData["catalog"] = [];
 
 			for (const asset of TILESET_ASSETS) {
-				const sprite = extractSprite(imageData, asset.sx, asset.sy, asset.sw, asset.sh);
+				let sprite = extractSprite(imageData, asset.sx, asset.sy, asset.sw, asset.sh);
 
 				// Skip empty sprites (all transparent)
 				const hasPixels = sprite.some((row) => row.some((px) => px !== ""));
 				if (!hasPixels) {
 					console.warn(`Skipping empty sprite: ${asset.id}`);
 					continue;
+				}
+
+				// Darken screen pixels for "off" state electronics
+				if (asset.state === "off") {
+					sprite = darkenScreenPixels(sprite);
 				}
 
 				sprites[asset.id] = sprite;

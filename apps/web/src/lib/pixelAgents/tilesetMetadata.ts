@@ -140,10 +140,10 @@ const TILESET_REPLACEMENTS: TilesetAssetMeta[] = [
 		isDesk: false,
 	},
 
-	// PC: ASSET_75 — monitor screen (actual 16×15 at (224,360))
+	// PC: ASSET_75 — monitor screen ON (actual 16×15 at (224,360))
 	{
 		id: "pc",
-		label: "Monitor",
+		label: "Monitor - On",
 		category: "electronics",
 		sx: 224,
 		sy: 358,
@@ -153,12 +153,30 @@ const TILESET_REPLACEMENTS: TilesetAssetMeta[] = [
 		footprintH: 1,
 		isDesk: false,
 		canPlaceOnSurfaces: true,
+		groupId: "monitor",
+		state: "on",
+	},
+	// PC OFF — same sprite region, darkened at load time
+	{
+		id: "pc_off",
+		label: "Monitor - Off",
+		category: "electronics",
+		sx: 224,
+		sy: 358,
+		sw: 16,
+		sh: 18,
+		footprintW: 1,
+		footprintH: 1,
+		isDesk: false,
+		canPlaceOnSurfaces: true,
+		groupId: "monitor",
+		state: "off",
 	},
 
-	// Laptop: ASSET_73 — dark monitor/laptop (actual 16×15 at (192,360))
+	// Laptop: ASSET_73 — laptop screen ON (actual 16×15 at (192,360))
 	{
 		id: "laptop",
-		label: "Laptop",
+		label: "Laptop - On",
 		category: "electronics",
 		sx: 192,
 		sy: 358,
@@ -168,6 +186,24 @@ const TILESET_REPLACEMENTS: TilesetAssetMeta[] = [
 		footprintH: 1,
 		isDesk: false,
 		canPlaceOnSurfaces: true,
+		groupId: "laptop-screen",
+		state: "on",
+	},
+	// Laptop OFF — same sprite region, darkened at load time
+	{
+		id: "laptop_off",
+		label: "Laptop - Off",
+		category: "electronics",
+		sx: 192,
+		sy: 358,
+		sw: 16,
+		sh: 18,
+		footprintW: 1,
+		footprintH: 1,
+		isDesk: false,
+		canPlaceOnSurfaces: true,
+		groupId: "laptop-screen",
+		state: "off",
 	},
 
 	// Whiteboard: ASSET_104 — landscape frame/board (actual 30×16 at (1,395))

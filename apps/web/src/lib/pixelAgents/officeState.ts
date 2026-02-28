@@ -12,6 +12,8 @@ import {
 	CHARACTER_SITTING_OFFSET_PX,
 	CHARACTER_HIT_HALF_WIDTH,
 	CHARACTER_HIT_HEIGHT,
+	LOUNGE_ROW_START,
+	LOUNGE_COL_MAX,
 } from "./constants";
 import type {
 	Character,
@@ -40,6 +42,7 @@ export class OfficeState {
 	blockedTiles: Set<string>;
 	furniture: FurnitureInstance[];
 	walkableTiles: Array<{ col: number; row: number }>;
+	loungeWalkableTiles: Array<{ col: number; row: number }>;
 	characters: Map<number, Character> = new Map();
 	selectedAgentId: number | null = null;
 	cameraFollowId: number | null = null;
@@ -58,6 +61,9 @@ export class OfficeState {
 		this.blockedTiles = getBlockedTiles(this.layout.furniture);
 		this.furniture = layoutToFurnitureInstances(this.layout.furniture);
 		this.walkableTiles = getWalkableTiles(this.tileMap, this.blockedTiles);
+		this.loungeWalkableTiles = this.walkableTiles.filter(
+			(t) => t.row >= LOUNGE_ROW_START && t.col <= LOUNGE_COL_MAX,
+		);
 	}
 
 	/** Rebuild all derived state from a new layout. Reassigns existing characters.
@@ -69,6 +75,9 @@ export class OfficeState {
 		this.blockedTiles = getBlockedTiles(layout.furniture);
 		this.rebuildFurnitureInstances();
 		this.walkableTiles = getWalkableTiles(this.tileMap, this.blockedTiles);
+		this.loungeWalkableTiles = this.walkableTiles.filter(
+			(t) => t.row >= LOUNGE_ROW_START && t.col <= LOUNGE_COL_MAX,
+		);
 
 		// Shift character positions when grid expands left/up
 		if (shift && (shift.col !== 0 || shift.row !== 0)) {
@@ -243,6 +252,19 @@ export class OfficeState {
 			const seat = this.seats.get(seatId)!;
 			seat.assigned = true;
 			ch = createCharacter(id, palette, seatId, seat, hueShift);
+
+			// Workers spawn in the lounge, not at their desk.
+			// They'll walk to their seat when setAgentActive(true) is called.
+			if (!skipSpawnEffect && this.loungeWalkableTiles.length > 0) {
+				const spawn =
+					this.loungeWalkableTiles[Math.floor(Math.random() * this.loungeWalkableTiles.length)];
+				ch.x = spawn.col * TILE_SIZE + TILE_SIZE / 2;
+				ch.y = spawn.row * TILE_SIZE + TILE_SIZE / 2;
+				ch.tileCol = spawn.col;
+				ch.tileRow = spawn.row;
+				ch.state = CharacterState.IDLE;
+				ch.isActive = false;
+			}
 		} else {
 			// No seats — spawn at random walkable tile
 			const spawn =
@@ -265,6 +287,7 @@ export class OfficeState {
 			ch.matrixEffectSeeds = matrixEffectSeeds();
 		}
 		this.characters.set(id, ch);
+		this.rebuildFurnitureInstances();
 	}
 
 	removeAgent(id: number): void {
@@ -655,7 +678,15 @@ export class OfficeState {
 
 			// Temporarily unblock own seat so character can pathfind to it
 			this.withOwnSeatUnblocked(ch, () =>
-				updateCharacter(ch, dt, this.walkableTiles, this.seats, this.tileMap, this.blockedTiles),
+				updateCharacter(
+					ch,
+					dt,
+					this.walkableTiles,
+					this.seats,
+					this.tileMap,
+					this.blockedTiles,
+					this.loungeWalkableTiles,
+				),
 			);
 
 			// Tick bubble timer for waiting bubbles

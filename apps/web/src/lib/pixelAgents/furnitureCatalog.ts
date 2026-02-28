@@ -8,8 +8,10 @@ import {
 	WHITEBOARD_SPRITE,
 	CHAIR_SPRITE,
 	PC_SPRITE,
+	PC_OFF_SPRITE,
 	LAMP_SPRITE,
 	LAPTOP_SPRITE,
+	LAPTOP_OFF_SPRITE,
 	COFFEE_MACHINE_SPRITE,
 } from "./spriteData";
 
@@ -127,6 +129,26 @@ export const FURNITURE_CATALOG: CatalogEntryWithCategory[] = [
 		footprintW: 1,
 		footprintH: 1,
 		sprite: LAPTOP_SPRITE,
+		isDesk: false,
+		category: "electronics",
+		canPlaceOnSurfaces: true,
+	},
+	{
+		type: FurnitureType.PC_OFF,
+		label: "PC (Off)",
+		footprintW: 1,
+		footprintH: 1,
+		sprite: PC_OFF_SPRITE,
+		isDesk: false,
+		category: "electronics",
+		canPlaceOnSurfaces: true,
+	},
+	{
+		type: FurnitureType.LAPTOP_OFF,
+		label: "Laptop (Off)",
+		footprintW: 1,
+		footprintH: 1,
+		sprite: LAPTOP_OFF_SPRITE,
 		isDesk: false,
 		category: "electronics",
 		canPlaceOnSurfaces: true,
@@ -392,14 +414,24 @@ export function getToggledType(currentType: string): string | null {
 	return stateGroups.get(currentType) ?? null;
 }
 
+// Hardcoded on/off pairs for built-in furniture (survive buildDynamicCatalog clears)
+const HARDCODED_OFF_TO_ON: Record<string, string> = {
+	[FurnitureType.PC_OFF]: FurnitureType.PC,
+	[FurnitureType.LAPTOP_OFF]: FurnitureType.LAPTOP,
+};
+const HARDCODED_ON_TO_OFF: Record<string, string> = {
+	[FurnitureType.PC]: FurnitureType.PC_OFF,
+	[FurnitureType.LAPTOP]: FurnitureType.LAPTOP_OFF,
+};
+
 /** Returns the "on" variant if this type has one, otherwise returns the type unchanged. */
 export function getOnStateType(currentType: string): string {
-	return offToOn.get(currentType) ?? currentType;
+	return offToOn.get(currentType) ?? HARDCODED_OFF_TO_ON[currentType] ?? currentType;
 }
 
 /** Returns the "off" variant if this type has one, otherwise returns the type unchanged. */
 export function getOffStateType(currentType: string): string {
-	return onToOff.get(currentType) ?? currentType;
+	return onToOff.get(currentType) ?? HARDCODED_ON_TO_OFF[currentType] ?? currentType;
 }
 
 /** Returns true if the given furniture type is part of a rotation group. */
