@@ -1,7 +1,11 @@
-import { useUIMessages, useSmoothText, type UIMessage } from "@convex-dev/agent/react";
+import {
+	useUIMessages as useUIMessagesRaw,
+	useSmoothText,
+	type UIMessage,
+} from "@convex-dev/agent/react";
 import { api } from "@mistral-hack/backend/convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, type UsePaginatedQueryResult } from "convex/react";
 import { Send, Loader, Monitor, Users, Plus, Reload, Circle } from "pixelarticons/react";
 import { useRef, useEffect, useState } from "react";
 import { Streamdown } from "streamdown";
@@ -9,6 +13,13 @@ import { Streamdown } from "streamdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+
+// Typed wrapper — @convex-dev/agent@0.6.0-alpha generic inference is broken
+const useUIMessages = useUIMessagesRaw as (
+	query: typeof api.chat.listMessages,
+	args: { threadId: string } | "skip",
+	options: { initialNumItems: number; stream?: boolean },
+) => UsePaginatedQueryResult<UIMessage>;
 
 export const Route = createFileRoute("/test")({
 	component: TestDashboard,

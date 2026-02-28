@@ -1,3 +1,5 @@
+const pixelatedStyle = { imageRendering: "pixelated" as const };
+
 /**
  * Tiny avatar: shows profile image if available, otherwise renders
  * a pixel-art character head via an inline SVG.
@@ -11,7 +13,7 @@ export function PixelAvatar({ src, size = 28 }: { src?: string | null; size?: nu
 				width={size}
 				height={size}
 				className="border-2 border-border"
-				style={{ imageRendering: "pixelated" }}
+				style={pixelatedStyle}
 			/>
 		);
 	}
@@ -41,7 +43,7 @@ export function PixelAvatar({ src, size = 28 }: { src?: string | null; size?: nu
 			height={size}
 			viewBox={`0 0 ${size} ${size}`}
 			className="border-2 border-border"
-			style={{ imageRendering: "pixelated" }}
+			style={pixelatedStyle}
 		>
 			{grid.map((row, y) =>
 				row.map((cell, x) =>

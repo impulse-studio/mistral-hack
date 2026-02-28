@@ -1,7 +1,14 @@
-import { useUIMessages, type UIMessage } from "@convex-dev/agent/react";
+import { useUIMessages as useUIMessagesRaw, type UIMessage } from "@convex-dev/agent/react";
 import { api } from "@mistral-hack/backend/convex/_generated/api";
-import { useMutation } from "convex/react";
+import { useMutation, type UsePaginatedQueryResult } from "convex/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+// Typed wrapper — @convex-dev/agent@0.6.0-alpha generic inference is broken
+const useUIMessages = useUIMessagesRaw as (
+	query: typeof api.chat.listMessages,
+	args: { threadId: string } | "skip",
+	options: { initialNumItems: number; stream?: boolean },
+) => UsePaginatedQueryResult<UIMessage>;
 
 import type { KanbanDragData } from "@/lib/kanban/KanbanItem.component";
 
@@ -59,8 +66,7 @@ function ChatWindowSmart({
 
 	const { results: chatRawMessages } = useUIMessages(
 		api.chat.listMessages,
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- useUIMessages overload doesn't narrow union correctly
-		(chatActiveThreadId ? { threadId: chatActiveThreadId } : "skip") as any,
+		chatActiveThreadId ? { threadId: chatActiveThreadId } : "skip",
 		{ initialNumItems: 50, stream: true },
 	);
 

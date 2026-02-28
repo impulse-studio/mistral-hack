@@ -73,6 +73,7 @@ export const KANBAN_DRAG_TYPE = "kanban-item";
 
 export interface KanbanDragData {
 	id: string;
+	title: string;
 	sourceStatus: string;
 }
 
@@ -90,6 +91,8 @@ export interface KanbanItemProps {
 	subtasksTotal?: number;
 	assigneeInitials?: string;
 	assigneeColor?: string;
+	draggable?: boolean;
+	sourceStatus?: string;
 	className?: string;
 	onClick?: () => void;
 }
@@ -146,6 +149,8 @@ function KanbanItem({
 	subtasksTotal,
 	assigneeInitials,
 	assigneeColor,
+	draggable = false,
+	sourceStatus,
 	className,
 	onClick,
 }: KanbanItemProps) {
@@ -156,6 +161,16 @@ function KanbanItem({
 	return (
 		<div
 			data-slot="kanban-item"
+			draggable={draggable}
+			onDragStart={
+				draggable
+					? (e) => {
+							const dragData: KanbanDragData = { id, title, sourceStatus: sourceStatus ?? "" };
+							e.dataTransfer.setData(KANBAN_DRAG_TYPE, JSON.stringify(dragData));
+							e.dataTransfer.effectAllowed = "move";
+						}
+					: undefined
+			}
 			className={cn(kanbanItemVariants({ priority }), className)}
 			onClick={onClick}
 		>

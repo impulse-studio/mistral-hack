@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import { CHARACTER_PALETTES, CHARACTER_TEMPLATES } from "@/lib/pixelAgents/spriteData";
 
@@ -48,18 +48,12 @@ function CharacterSprite({
 		}
 	}, [palette, template]);
 
-	return (
-		<canvas
-			ref={canvasRef}
-			width={16}
-			height={24}
-			style={{
-				width: 16 * scale,
-				height: 24 * scale,
-				imageRendering: "pixelated",
-			}}
-		/>
+	const canvasStyle = useMemo(
+		() => ({ width: 16 * scale, height: 24 * scale, imageRendering: "pixelated" as const }),
+		[scale],
 	);
+
+	return <canvas ref={canvasRef} width={16} height={24} style={canvasStyle} />;
 }
 
 /** A sticker-style wrapper: white border, slight rotation, drop shadow */
@@ -72,10 +66,12 @@ function Sticker({
 	rotate?: number;
 	className?: string;
 }) {
+	const rotateStyle = useMemo(() => ({ transform: `rotate(${rotate}deg)` }), [rotate]);
+
 	return (
 		<div
 			className={`inline-block border-[3px] border-white/90 bg-white/10 shadow-pixel-lg ${className ?? ""}`}
-			style={{ transform: `rotate(${rotate}deg)` }}
+			style={rotateStyle}
 		>
 			{children}
 		</div>
