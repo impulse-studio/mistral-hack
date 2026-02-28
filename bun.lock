@@ -6,6 +6,7 @@
       "name": "mistral-hack",
       "dependencies": {
         "@mistral-hack/env": "workspace:*",
+        "convex": "^1.32.0",
         "dotenv": "catalog:",
         "zod": "catalog:",
       },

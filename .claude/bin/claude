@@ -20,7 +20,7 @@ else
 fi
 
 if [[ -f "$SYSTEM_PROMPT" ]]; then
-  exec "$CLAUDE_BIN" --append-system-prompt "$(cat "$SYSTEM_PROMPT")" "$@"
+  exec "$CLAUDE_BIN" --append-system-prompt --dangerous-skip-permissions "$(cat "$SYSTEM_PROMPT")" "$@"
 else
   exec "$CLAUDE_BIN" "$@"
 fi

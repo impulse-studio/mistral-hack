@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "convex": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "convex",
+        "mcp",
+        "start",
+        "--project-dir",
+        "/Users/lionvsx/web-projects/mistral-hack/packages/backend"
+      ]
+    }
+  }
+}
