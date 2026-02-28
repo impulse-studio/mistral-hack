@@ -1,62 +1,77 @@
 import {
-  createThread,
-  listUIMessages,
-  saveMessage,
-  syncStreams,
-  vStreamArgs,
+	createThread,
+	listUIMessages,
+	saveMessage,
+	syncStreams,
+	vStreamArgs,
 } from "@convex-dev/agent";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
 import { components, internal } from "./_generated/api";
 import { internalAction, mutation, query } from "./_generated/server";
-import { chatAgent } from "./agent";
+import { managerAgent } from "./agent";
 
 export const createNewThread = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const threadId = await createThread(ctx, components.agent, {});
-    return threadId;
-  },
+	args: {},
+	handler: async (ctx) => {
+		const threadId = await createThread(ctx, components.agent, {});
+		return threadId;
+	},
 });
 
 export const listMessages = query({
-  args: {
-    threadId: v.string(),
-    paginationOpts: paginationOptsValidator,
-    streamArgs: vStreamArgs,
-  },
-  handler: async (ctx, args) => {
-    const paginated = await listUIMessages(ctx, components.agent, args);
-    const streams = await syncStreams(ctx, components.agent, args);
-    return { ...paginated, streams };
-  },
+	args: {
+		threadId: v.string(),
+		paginationOpts: paginationOptsValidator,
+		streamArgs: vStreamArgs,
+	},
+	handler: async (ctx, args) => {
+		const paginated = await listUIMessages(ctx, components.agent, args);
+		const streams = await syncStreams(ctx, components.agent, args);
+		return { ...paginated, streams };
+	},
 });
 
 export const sendMessage = mutation({
-  args: {
-    threadId: v.string(),
-    prompt: v.string(),
-  },
-  handler: async (ctx, { threadId, prompt }) => {
-    const { messageId } = await saveMessage(ctx, components.agent, {
-      threadId,
-      prompt,
-    });
-    await ctx.scheduler.runAfter(0, internal.chat.generateResponseAsync, {
-      threadId,
-      promptMessageId: messageId,
-    });
-    return messageId;
-  },
+	args: {
+		threadId: v.string(),
+		prompt: v.string(),
+		channel: v.optional(v.union(v.literal("web"), v.literal("telegram"))),
+	},
+	handler: async (ctx, { threadId, prompt, channel }) => {
+		const { messageId } = await saveMessage(ctx, components.agent, {
+			threadId,
+			prompt,
+		});
+
+		// Also save to our messages table for multi-channel history
+		await ctx.db.insert("messages", {
+			content: prompt,
+			role: "user",
+			channel: channel ?? "web",
+			createdAt: Date.now(),
+		});
+
+		await ctx.scheduler.runAfter(0, internal.chat.generateResponseAsync, {
+			threadId,
+			promptMessageId: messageId,
+		});
+		return messageId;
+	},
 });
 
 export const generateResponseAsync = internalAction({
-  args: {
-    threadId: v.string(),
-    promptMessageId: v.string(),
-  },
-  handler: async (ctx, { threadId, promptMessageId }) => {
-    await chatAgent.streamText(ctx, { threadId }, { promptMessageId }, { saveStreamDeltas: true });
-  },
+	args: {
+		threadId: v.string(),
+		promptMessageId: v.string(),
+	},
+	handler: async (ctx, { threadId, promptMessageId }) => {
+		await managerAgent.streamText(
+			ctx,
+			{ threadId },
+			{ promptMessageId },
+			{ saveStreamDeltas: true },
+		);
+	},
 });

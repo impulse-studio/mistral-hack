@@ -1,1145 +1,1563 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Underground Hacker Den</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Press Start 2P',monospace}
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-canvas{display:block;width:100%;height:calc(100% - 36px);cursor:grab;image-rendering:pixelated;image-rendering:crisp-edges}
-canvas:active{cursor:grabbing}
-#bottom-bar{position:fixed;bottom:0;left:0;right:0;height:36px;background:#0d0d0d;border-top:2px solid #00ff41;display:flex;align-items:center;padding:0 12px;font-family:'Press Start 2P',monospace;font-size:10px;color:#00ff41;z-index:10}
-#bottom-bar .prompt{opacity:.9}
-#bottom-bar .cursor{display:inline-block;width:8px;height:14px;background:#00ff41;animation:blink 1s step-end infinite;vertical-align:middle;margin-left:2px}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-#bottom-bar .status{margin-left:auto;opacity:.6;font-size:8px}
-</style>
-</head>
-<body>
-<canvas id="c"></canvas>
-<div id="bottom-bar">
-<span class="prompt">&gt; _</span><span class="cursor"></span>
-<span class="status">NODES:6 | UPLINK:OK | TOR:ACTIVE</span>
-</div>
-<script>
-"use strict";
-// ============================================================
-// UNDERGROUND HACKER DEN — Pixel Art AI Office
-// Single-file Canvas 2D engine
-// ============================================================
-
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-
-// ── Constants ──
-const T = 16; // tile size
-const MAP_W = 22;
-const MAP_H = 14;
-let zoom = 3;
-let panX = 0, panY = 0;
-let isDragging = false, dragStartX = 0, dragStartY = 0, panStartX = 0, panStartY = 0;
-
-// ── Colors ──
-const C_WALL = '#0d0d0d';
-const C_FLOOR1 = '#1a1a1a';
-const C_FLOOR2 = '#171717';
-const C_GREEN = '#00ff41';
-const C_GREEN_DIM = '#00aa2a';
-const C_GREEN_DARK = '#005510';
-const C_ORANGE = '#FF7000';
-const C_VOID = '';
-
-// ── Tile Map (0=void, 1=dark concrete, 2=slightly lighter concrete, 3=wall) ──
-const tileMap = [
-  [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],
-  [3,1,1,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,3],
-  [3,1,2,1,1,2,1,1,1,1,3,1,1,2,1,1,1,2,1,1,1,3],
-  [3,1,1,1,1,1,1,1,2,1,3,1,1,1,1,1,1,1,1,2,1,3],
-  [3,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,3],
-  [3,1,1,1,1,1,2,1,1,1,1,1,2,1,1,1,1,1,1,1,1,3],
-  [3,1,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,3],
-  [3,1,1,1,1,2,1,1,1,1,1,1,1,1,2,1,1,1,1,2,1,3],
-  [3,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,3],
-  [3,1,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1,2,1,1,1,3],
-  [3,1,1,1,1,1,2,1,1,1,1,1,1,1,1,2,1,1,1,1,1,3],
-  [3,1,1,2,1,1,1,1,1,1,3,1,1,1,1,1,1,1,2,1,1,3],
-  [3,1,1,1,1,1,1,1,2,1,3,1,2,1,1,1,1,1,1,1,1,3],
-  [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],
-];
-
-// Walkable tiles
-function isWalkable(tx, ty) {
-  if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return false;
-  const t = tileMap[ty][tx];
-  return t === 1 || t === 2;
-}
-
-// ── Sprite Cache ──
-const spriteCache = new Map();
-function getSpriteCanvas(key, data, z) {
-  const ck = key + '_' + z;
-  if (spriteCache.has(ck)) return spriteCache.get(ck);
-  const h = data.length, w = data[0].length;
-  const oc = document.createElement('canvas');
-  oc.width = w * z; oc.height = h * z;
-  const ox = oc.getContext('2d');
-  for (let r = 0; r < h; r++) {
-    for (let c = 0; c < w; c++) {
-      const col = data[r][c];
-      if (col && col !== '') {
-        ox.fillStyle = col;
-        ox.fillRect(c * z, r * z, z, z);
-      }
-    }
-  }
-  spriteCache.set(ck, oc);
-  return oc;
-}
-
-function clearSpriteCache() { spriteCache.clear(); }
-
-// ── SPRITE DATA ──
-
-// Cable pixels (floor decoration) - green/dark cables
-const SPRITE_CABLE_H = [ // horizontal cable segment
-  ['','','','','','','','','','','','','','','',''],
-  ['','','','','','','','','','','','','','','',''],
-  ['','','','','','','','','','','','','','','',''],
-  ['','','','','','','','','','','','','','','',''],
-  ['','','','','','','','','','','','','','','',''],
-  ['','','','','','','','','','','','','','','',''],
-  ['#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a'],
-  ['#0f2f0f','#0f2f0f','#0f2f0f','#0f2f0f','#0f2f0f','#0f2f0f','#0f2f0f','#0f2f0f','#0f2f0f','#0f2f0f','#0f2f0f','#0f2f0f','#0f2f0f','#0f2f0f','#0f2f0f','#0f2f0f'],
-  ['#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a','#1a3a1a'],
-  ['','','','','','','','','','','','','','','',''],
-  ['','','','','','','','','','','','','','','',''],
-  ['','','','','','','','','','','','','','','',''],
-  ['','','','','','','','','','','','','','','',''],
-  ['','','','','','','','','','','','','','','',''],
-  ['','','','','','','','','','','','','','','',''],
-  ['','','','','','','','','','','','','','','',''],
-];
-
-const SPRITE_CABLE_V = [ // vertical cable segment
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-  ['','','','','','','#1a3a1a','#0f2f0f','#1a3a1a','','','','','','',''],
-];
-
-// Hacker desk (32x32) — dark, messy, with monitors
-const _='';
-const SPRITE_DESK = (() => {
-  const d = Array.from({length:32}, ()=>Array(32).fill(''));
-  // Desk top surface
-  for(let r=8;r<14;r++) for(let c=1;c<31;c++) d[r][c]='#1c1c1c';
-  for(let r=8;r<14;r++){d[r][0]='#111';d[r][31]='#111';}
-  // Desk edge
-  for(let c=0;c<32;c++) d[14][c]='#0a0a0a';
-  // Legs
-  for(let r=15;r<32;r++){d[r][1]='#111';d[r][2]='#111';d[r][29]='#111';d[r][30]='#111';}
-  // Under-desk shelf
-  for(let r=22;r<24;r++) for(let c=2;c<30;c++) d[r][c]='#131313';
-  return d;
-})();
-
-// Manager desk with orange trim
-const SPRITE_DESK_MANAGER = (() => {
-  const d = JSON.parse(JSON.stringify(SPRITE_DESK));
-  // Orange LED strip along front edge
-  for(let c=0;c<32;c++) d[14][c]=C_ORANGE;
-  // Orange accent on corners
-  d[8][0]=C_ORANGE;d[8][31]=C_ORANGE;d[13][0]=C_ORANGE;d[13][31]=C_ORANGE;
-  return d;
-})();
-
-// Monitor (16x16) — green text on black screen
-const SPRITE_MONITOR = (() => {
-  const m = Array.from({length:16}, ()=>Array(16).fill(''));
-  // Monitor frame
-  for(let r=0;r<12;r++) for(let c=2;c<14;c++) m[r][c]='#222';
-  // Screen
-  for(let r=1;r<11;r++) for(let c=3;c<13;c++) m[r][c]='#0a0f0a';
-  // Green text lines on screen
-  for(let c=4;c<12;c++) {m[2][c]='#00ff41';m[4][c]='#00aa2a';m[6][c]='#00ff41';m[8][c]='#005510';}
-  // shorter lines
-  m[3][4]='#005510';m[3][5]='#005510';m[3][6]='#005510';
-  m[5][4]='#00ff41';m[5][5]='#00ff41';
-  m[7][4]='#00aa2a';m[7][5]='#00aa2a';m[7][6]='#00aa2a';m[7][7]='#00aa2a';
-  m[9][4]='#00ff41';m[9][5]='#00ff41';m[9][6]='#00ff41';
-  // Stand
-  for(let r=12;r<14;r++){m[r][7]='#222';m[r][8]='#222';}
-  // Base
-  for(let c=5;c<11;c++) m[14][c]='#222';
-  for(let c=5;c<11;c++) m[15][c]='#1a1a1a';
-  // Power LED
-  m[11][12]='#00ff41';
-  return m;
-})();
-
-// Second monitor variant (different text pattern)
-const SPRITE_MONITOR2 = (() => {
-  const m = JSON.parse(JSON.stringify(SPRITE_MONITOR));
-  // Different text pattern
-  for(let r=1;r<11;r++) for(let c=3;c<13;c++) m[r][c]='#0a0f0a';
-  m[2][4]='#00ff41';m[2][5]='#00ff41';m[2][6]='#00ff41';m[2][7]='#00ff41';m[2][8]='#00ff41';
-  m[3][4]='#005510';m[3][5]='#005510';m[3][6]='#005510';m[3][7]='#005510';m[3][8]='#005510';m[3][9]='#005510';m[3][10]='#005510';
-  m[4][4]='#00aa2a';m[4][5]='#00aa2a';m[4][6]='#00aa2a';
-  m[5][4]='#00ff41';m[5][5]='#00ff41';m[5][6]='#00ff41';m[5][7]='#00ff41';m[5][8]='#00ff41';m[5][9]='#00ff41';
-  m[6][4]='#005510';m[6][5]='#005510';m[6][6]='#005510';m[6][7]='#005510';
-  m[7][4]='#00ff41';m[7][5]='#00ff41';m[7][6]='#00ff41';m[7][7]='#00ff41';m[7][8]='#00ff41';
-  m[8][4]='#00aa2a';m[8][5]='#00aa2a';m[8][6]='#00aa2a';m[8][7]='#00aa2a';m[8][8]='#00aa2a';m[8][9]='#00aa2a';
-  m[9][4]='#00ff41';m[9][5]='#00ff41';m[9][6]='#00ff41';
-  return m;
-})();
-
-// Chair (16x16) — dark, mesh-style
-const SPRITE_CHAIR = (() => {
-  const ch = Array.from({length:16}, ()=>Array(16).fill(''));
-  // Seat
-  for(let r=6;r<10;r++) for(let c=3;c<13;c++) ch[r][c]='#1a1a1a';
-  for(let r=6;r<10;r++){ch[r][3]='#111';ch[r][12]='#111';}
-  // Back
-  for(let r=0;r<7;r++) for(let c=4;c<12;c++) ch[r][c]='#1a1a1a';
-  for(let r=0;r<7;r++){ch[r][4]='#111';ch[r][11]='#111';}
-  // Legs/wheels
-  ch[10][4]='#222';ch[10][11]='#222';
-  ch[11][3]='#222';ch[11][12]='#222';
-  ch[12][3]='#1a1a1a';ch[12][12]='#1a1a1a';
-  ch[13][2]='#222';ch[13][13]='#222';
-  ch[14][2]='#1a1a1a';ch[14][13]='#1a1a1a';
-  // Center pole
-  ch[10][7]='#222';ch[10][8]='#222';
-  ch[11][7]='#222';ch[11][8]='#222';
-  ch[12][7]='#222';ch[12][8]='#222';
-  return ch;
-})();
-
-// Pizza box (16x16)
-const SPRITE_PIZZA = (() => {
-  const p = Array.from({length:16}, ()=>Array(16).fill(''));
-  // Box
-  for(let r=4;r<13;r++) for(let c=2;c<14;c++) p[r][c]='#8B6914';
-  for(let r=4;r<13;r++){p[r][2]='#6B4F0A';p[r][13]='#6B4F0A';}
-  for(let c=2;c<14;c++){p[4][c]='#9B7924';p[12][c]='#6B4F0A';}
-  // Lid line
-  for(let c=3;c<13;c++) p[7][c]='#6B4F0A';
-  // Grease stain
-  p[9][6]='#7B5910';p[9][7]='#7B5910';p[10][6]='#7B5910';
-  // Open lid showing pizza
-  p[5][5]='#CC3333';p[5][6]='#FFCC00';p[5][7]='#CC3333';p[5][8]='#FFCC00';
-  p[6][5]='#FFCC00';p[6][6]='#CC3333';p[6][7]='#FFCC00';p[6][8]='#CC3333';
-  return p;
-})();
-
-// Server rack (16x32)
-const SPRITE_SERVER = (() => {
-  const s = Array.from({length:32}, ()=>Array(16).fill(''));
-  // Rack body
-  for(let r=0;r<30;r++) for(let c=1;c<15;c++) s[r][c]='#111';
-  for(let r=0;r<30;r++){s[r][0]='#0a0a0a';s[r][15]='#0a0a0a';}
-  for(let c=0;c<16;c++){s[0][c]='#0a0a0a';s[30][c]='#0a0a0a';}
-  // Server units with blinking LEDs
-  for(let u=0;u<5;u++){
-    const ry=2+u*6;
-    for(let c=2;c<14;c++) s[ry][c]='#1a1a1a';
-    for(let c=2;c<14;c++) s[ry+1][c]='#151515';
-    for(let c=2;c<14;c++) s[ry+2][c]='#1a1a1a';
-    for(let c=2;c<14;c++) s[ry+3][c]='#151515';
-    // LEDs
-    s[ry][3]='#00ff41';s[ry][5]='#00ff41';
-    s[ry+2][3]='#00aa2a';s[ry+2][5]='#ff3333';
-    // Ventilation holes
-    for(let c=8;c<13;c++) s[ry+1][c]='#0d0d0d';
-  }
-  // Base/feet
-  for(let c=1;c<15;c++) s[31][c]='#0a0a0a';
-  return s;
-})();
-
-// Plant (dead/neglected, green-ish) 16x24
-const SPRITE_PLANT = (() => {
-  const p = Array.from({length:24}, ()=>Array(16).fill(''));
-  // Pot
-  for(let r=16;r<23;r++) for(let c=4;c<12;c++) p[r][c]='#1a1a1a';
-  for(let r=16;r<23;r++){p[r][4]='#111';p[r][11]='#111';}
-  for(let c=5;c<11;c++) p[23][c]='#111';
-  // Dirt
-  for(let c=5;c<11;c++) p[16][c]='#2a1a0a';
-  // Scraggly plant
-  p[15][7]='#1a4a1a';p[15][8]='#1a4a1a';
-  p[14][6]='#1a4a1a';p[14][7]='#224a22';p[14][8]='#224a22';p[14][9]='#1a4a1a';
-  p[13][7]='#224a22';p[13][8]='#224a22';
-  p[12][5]='#1a4a1a';p[12][8]='#224a22';p[12][10]='#1a4a1a';
-  p[11][6]='#224a22';p[11][9]='#224a22';
-  p[10][7]='#1a4a1a';p[10][8]='#1a4a1a';
-  p[9][6]='#224a22';p[9][9]='#224a22';
-  return p;
-})();
-
-// Energy drink can (16x16)
-const SPRITE_ENERGYDRINK = (() => {
-  const e = Array.from({length:16}, ()=>Array(16).fill(''));
-  for(let r=4;r<15;r++){e[r][6]='#222';e[r][7]='#333';e[r][8]='#333';e[r][9]='#222';}
-  for(let c=6;c<10;c++) e[4][c]='#2a2a2a';
-  for(let c=6;c<10;c++) e[15][c]='#1a1a1a';
-  // Label
-  e[7][7]='#00ff41';e[7][8]='#00ff41';
-  e[8][7]='#00aa2a';e[8][8]='#00aa2a';
-  e[9][7]='#00ff41';e[9][8]='#00ff41';
-  // Pull tab
-  e[3][7]='#444';e[3][8]='#444';
-  return e;
-})();
-
-// Whiteboard / hack board (32x32)
-const SPRITE_HACKBOARD = (() => {
-  const b = Array.from({length:32}, ()=>Array(32).fill(''));
-  // Board frame
-  for(let r=0;r<24;r++) for(let c=0;c<32;c++) b[r][c]='#111';
-  for(let r=1;r<23;r++) for(let c=1;c<31;c++) b[r][c]='#1a1a1a';
-  // Green scribbles (network diagrams, code)
-  for(let c=3;c<12;c++) b[3][c]='#00ff41';
-  for(let c=3;c<8;c++) b[5][c]='#00aa2a';
-  for(let c=14;c<28;c++) b[4][c]='#005510';
-  for(let c=3;c<20;c++) b[7][c]='#00ff41';
-  for(let c=3;c<15;c++) b[9][c]='#00aa2a';
-  for(let c=18;c<28;c++) b[9][c]='#00ff41';
-  // Box diagram
-  for(let r=12;r<18;r++){b[r][4]='#00ff41';b[r][12]='#00ff41';}
-  for(let c=4;c<13;c++){b[12][c]='#00ff41';b[17][c]='#00ff41';}
-  // Arrow
-  for(let c=13;c<20;c++) b[14][c]='#00aa2a';
-  b[13][19]='#00aa2a';b[15][19]='#00aa2a';
-  // Another box
-  for(let r=12;r<18;r++){b[r][20]='#00ff41';b[r][28]='#00ff41';}
-  for(let c=20;c<29;c++){b[12][c]='#00ff41';b[17][c]='#00ff41';}
-  // text lines bottom
-  for(let c=3;c<25;c++) b[20][c]='#005510';
-  // Stand posts
-  for(let r=24;r<32;r++){b[r][5]='#111';b[r][6]='#111';b[r][25]='#111';b[r][26]='#111';}
-  return b;
-})();
-
-// ── Character Sprites (16x24, hoodie-wearing hackers) ──
-function makeHacker(hoodieColor, skinColor, hairColor) {
-  const s = Array.from({length:24}, ()=>Array(16).fill(''));
-  const hc = hoodieColor, sk = skinColor, hr = hairColor;
-  const hd = shadeColor(hoodieColor, -30);
-  // Hair/head top
-  s[0][6]=hr;s[0][7]=hr;s[0][8]=hr;s[0][9]=hr;
-  s[1][5]=hr;s[1][6]=hr;s[1][7]=hr;s[1][8]=hr;s[1][9]=hr;s[1][10]=hr;
-  // Face
-  s[2][5]=hr;s[2][6]=sk;s[2][7]=sk;s[2][8]=sk;s[2][9]=sk;s[2][10]=hr;
-  s[3][5]=sk;s[3][6]=sk;s[3][7]=sk;s[3][8]=sk;s[3][9]=sk;s[3][10]=sk;
-  // Eyes (green glow from screens)
-  s[3][6]='#00ff41';s[3][9]='#00ff41';
-  s[4][5]=sk;s[4][6]=sk;s[4][7]=sk;s[4][8]=sk;s[4][9]=sk;s[4][10]=sk;
-  // Neck
-  s[5][7]=sk;s[5][8]=sk;
-  // Hoodie
-  s[6][4]=hc;s[6][5]=hc;s[6][6]=hc;s[6][7]=hc;s[6][8]=hc;s[6][9]=hc;s[6][10]=hc;s[6][11]=hc;
-  s[7][3]=hc;s[7][4]=hc;s[7][5]=hc;s[7][6]=hc;s[7][7]=hc;s[7][8]=hc;s[7][9]=hc;s[7][10]=hc;s[7][11]=hc;s[7][12]=hc;
-  // Hood drawstrings
-  s[7][7]=hd;s[7][8]=hd;
-  s[8][3]=hc;s[8][4]=hc;s[8][5]=hc;s[8][6]=hc;s[8][7]=hc;s[8][8]=hc;s[8][9]=hc;s[8][10]=hc;s[8][11]=hc;s[8][12]=hc;
-  s[9][3]=hc;s[9][4]=hc;s[9][5]=hc;s[9][6]=hc;s[9][7]=hc;s[9][8]=hc;s[9][9]=hc;s[9][10]=hc;s[9][11]=hc;s[9][12]=hc;
-  s[10][3]=hd;s[10][4]=hc;s[10][5]=hc;s[10][6]=hc;s[10][7]=hc;s[10][8]=hc;s[10][9]=hc;s[10][10]=hc;s[10][11]=hc;s[10][12]=hd;
-  // Hoodie pocket
-  s[9][6]=hd;s[9][7]=hd;s[9][8]=hd;s[9][9]=hd;
-  // Arms
-  s[7][2]=hc;s[8][2]=hc;s[9][2]=sk;
-  s[7][13]=hc;s[8][13]=hc;s[9][13]=sk;
-  // Lower body (dark pants)
-  s[11][5]='#111';s[11][6]='#111';s[11][7]='#111';s[11][8]='#111';s[11][9]='#111';s[11][10]='#111';
-  s[12][5]='#111';s[12][6]='#111';s[12][7]='#111';s[12][8]='#111';s[12][9]='#111';s[12][10]='#111';
-  s[13][5]='#0d0d0d';s[13][6]='#111';s[13][7]='#111';s[13][8]='#111';s[13][9]='#111';s[13][10]='#0d0d0d';
-  // Legs
-  s[14][5]='#111';s[14][6]='#111';s[14][9]='#111';s[14][10]='#111';
-  s[15][5]='#111';s[15][6]='#111';s[15][9]='#111';s[15][10]='#111';
-  s[16][5]='#0d0d0d';s[16][6]='#0d0d0d';s[16][9]='#0d0d0d';s[16][10]='#0d0d0d';
-  // Shoes
-  s[17][4]='#1a1a1a';s[17][5]='#1a1a1a';s[17][6]='#1a1a1a';s[17][9]='#1a1a1a';s[17][10]='#1a1a1a';s[17][11]='#1a1a1a';
-  return s;
-}
-
-// Walking frames — shift legs
-function makeWalkFrame(base, frame) {
-  const s = JSON.parse(JSON.stringify(base));
-  if (frame === 1 || frame === 3) {
-    // Legs apart
-    s[15][5]='';s[15][10]='';
-    s[16][4]='#111';s[16][11]='#111';
-    s[17][3]='#1a1a1a';s[17][4]='#1a1a1a';s[17][5]='#1a1a1a';
-    s[17][10]='#1a1a1a';s[17][11]='#1a1a1a';s[17][12]='#1a1a1a';
-  }
-  if (frame === 2) {
-    // Other leg forward
-    s[16][5]='#111';s[16][6]='';s[16][9]='';s[16][10]='#111';
-    s[17][5]='#1a1a1a';s[17][6]='';s[17][9]='';s[17][10]='#1a1a1a';
-  }
-  return s;
-}
-
-// Typing frames — arms move
-function makeTypeFrame(base, frame) {
-  const s = JSON.parse(JSON.stringify(base));
-  if (frame === 0) {
-    s[9][2]='';s[9][13]='';
-    s[8][1]=s[7][2];s[8][14]=s[7][13];
-    s[9][1]=base[4][5]; // skin at lower pos
-  } else {
-    s[9][2]='';s[9][13]='';
-    s[9][1]=s[7][2];s[9][14]=s[7][13];
-  }
-  return s;
-}
-
-function shadeColor(hex, amt) {
-  let r = parseInt(hex.slice(1,3),16)+amt;
-  let g = parseInt(hex.slice(3,5),16)+amt;
-  let b = parseInt(hex.slice(5,7),16)+amt;
-  r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b));
-  return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
-}
-
-// Create 6 hacker variants
-const HACKER_PALETTES = [
-  { hoodie:'#1a1a2e', skin:'#c4956a', hair:'#2a2a2a' }, // dark blue hoodie
-  { hoodie:'#0d2b0d', skin:'#e0b088', hair:'#1a1a1a' }, // dark green hoodie
-  { hoodie:'#2a0a2a', skin:'#c49060', hair:'#3a3a3a' }, // purple hoodie
-  { hoodie:'#1a1a1a', skin:'#d4a070', hair:'#4a2a1a' }, // black hoodie
-  { hoodie:'#0a1a2a', skin:'#8b6040', hair:'#111'    }, // navy hoodie
-  { hoodie:'#2a1a0a', skin:'#e8c098', hair:'#5a3a1a' }, // brown hoodie
-];
-
-const HACKER_SPRITES = HACKER_PALETTES.map(p => {
-  const idle = makeHacker(p.hoodie, p.skin, p.hair);
-  return {
-    idle,
-    walk: [idle, makeWalkFrame(idle,1), makeWalkFrame(idle,2), makeWalkFrame(idle,3)],
-    type: [makeTypeFrame(idle,0), makeTypeFrame(idle,1)],
-  };
-});
-
-// ── Furniture Layout ──
-// {type, x, y, sprite, zY} — x,y in tiles
-const furniture = [
-  // Left room desks (messy hacker stations, 2 monitors each)
-  {type:'desk', x:2, y:2, sprite:SPRITE_DESK, w:32, h:32},
-  {type:'monitor', x:2, y:1, sprite:SPRITE_MONITOR, w:16, h:16},
-  {type:'monitor', x:3, y:1, sprite:SPRITE_MONITOR2, w:16, h:16},
-  {type:'chair', x:2, y:4, sprite:SPRITE_CHAIR, w:16, h:16},
-
-  {type:'desk', x:5, y:2, sprite:SPRITE_DESK, w:32, h:32},
-  {type:'monitor', x:5, y:1, sprite:SPRITE_MONITOR2, w:16, h:16},
-  {type:'monitor', x:6, y:1, sprite:SPRITE_MONITOR, w:16, h:16},
-  {type:'chair', x:5, y:4, sprite:SPRITE_CHAIR, w:16, h:16},
-  {type:'pizza', x:6, y:2, sprite:SPRITE_PIZZA, w:16, h:16}, // Pizza on desk!
-
-  {type:'desk', x:2, y:7, sprite:SPRITE_DESK, w:32, h:32},
-  {type:'monitor', x:2, y:6, sprite:SPRITE_MONITOR, w:16, h:16},
-  {type:'monitor', x:3, y:6, sprite:SPRITE_MONITOR2, w:16, h:16},
-  {type:'chair', x:2, y:9, sprite:SPRITE_CHAIR, w:16, h:16},
-
-  {type:'desk', x:5, y:7, sprite:SPRITE_DESK, w:32, h:32},
-  {type:'monitor', x:5, y:6, sprite:SPRITE_MONITOR, w:16, h:16},
-  {type:'monitor', x:6, y:6, sprite:SPRITE_MONITOR2, w:16, h:16},
-  {type:'energydrink', x:7, y:7, sprite:SPRITE_ENERGYDRINK, w:16, h:16},
-  {type:'chair', x:5, y:9, sprite:SPRITE_CHAIR, w:16, h:16},
-
-  // Right room — manager area with orange desk
-  {type:'desk', x:14, y:3, sprite:SPRITE_DESK_MANAGER, w:32, h:32},
-  {type:'monitor', x:14, y:2, sprite:SPRITE_MONITOR, w:16, h:16},
-  {type:'monitor', x:15, y:2, sprite:SPRITE_MONITOR2, w:16, h:16},
-  {type:'monitor', x:14, y:3, sprite:SPRITE_MONITOR, w:16, h:16, offsetX:8, offsetY:-4}, // triple monitor
-  {type:'chair', x:14, y:5, sprite:SPRITE_CHAIR, w:16, h:16},
-
-  // More hacker desks right room
-  {type:'desk', x:17, y:3, sprite:SPRITE_DESK, w:32, h:32},
-  {type:'monitor', x:17, y:2, sprite:SPRITE_MONITOR2, w:16, h:16},
-  {type:'monitor', x:18, y:2, sprite:SPRITE_MONITOR, w:16, h:16},
-  {type:'chair', x:17, y:5, sprite:SPRITE_CHAIR, w:16, h:16},
-
-  {type:'desk', x:14, y:8, sprite:SPRITE_DESK, w:32, h:32},
-  {type:'monitor', x:14, y:7, sprite:SPRITE_MONITOR, w:16, h:16},
-  {type:'monitor', x:15, y:7, sprite:SPRITE_MONITOR2, w:16, h:16},
-  {type:'chair', x:14, y:10, sprite:SPRITE_CHAIR, w:16, h:16},
-
-  {type:'desk', x:17, y:8, sprite:SPRITE_DESK, w:32, h:32},
-  {type:'monitor', x:17, y:7, sprite:SPRITE_MONITOR2, w:16, h:16},
-  {type:'monitor', x:18, y:7, sprite:SPRITE_MONITOR, w:16, h:16},
-  {type:'chair', x:17, y:10, sprite:SPRITE_CHAIR, w:16, h:16},
-  {type:'pizza', x:18, y:8, sprite:SPRITE_PIZZA, w:16, h:16},
-
-  // Server racks along walls
-  {type:'server', x:8, y:1, sprite:SPRITE_SERVER, w:16, h:32},
-  {type:'server', x:9, y:1, sprite:SPRITE_SERVER, w:16, h:32},
-
-  {type:'server', x:11, y:1, sprite:SPRITE_SERVER, w:16, h:32},
-  {type:'server', x:12, y:1, sprite:SPRITE_SERVER, w:16, h:32},
-
-  // Hack board
-  {type:'hackboard', x:11, y:10, sprite:SPRITE_HACKBOARD, w:32, h:32},
-
-  // Plants
-  {type:'plant', x:1, y:1, sprite:SPRITE_PLANT, w:16, h:24},
-  {type:'plant', x:20, y:1, sprite:SPRITE_PLANT, w:16, h:24},
-  {type:'plant', x:1, y:12, sprite:SPRITE_PLANT, w:16, h:24},
-  {type:'plant', x:20, y:12, sprite:SPRITE_PLANT, w:16, h:24},
-
-  // Cables on floor
-  {type:'cable', x:4, y:5, sprite:SPRITE_CABLE_H, w:16, h:16},
-  {type:'cable', x:7, y:3, sprite:SPRITE_CABLE_V, w:16, h:16},
-  {type:'cable', x:7, y:4, sprite:SPRITE_CABLE_V, w:16, h:16},
-  {type:'cable', x:8, y:5, sprite:SPRITE_CABLE_H, w:16, h:16},
-  {type:'cable', x:13, y:6, sprite:SPRITE_CABLE_V, w:16, h:16},
-  {type:'cable', x:13, y:7, sprite:SPRITE_CABLE_V, w:16, h:16},
-  {type:'cable', x:16, y:6, sprite:SPRITE_CABLE_H, w:16, h:16},
-  {type:'cable', x:8, y:10, sprite:SPRITE_CABLE_H, w:16, h:16},
-  {type:'cable', x:9, y:10, sprite:SPRITE_CABLE_H, w:16, h:16},
-  {type:'cable', x:9, y:9, sprite:SPRITE_CABLE_V, w:16, h:16},
-];
-
-// Compute zY for furniture
-furniture.forEach(f => {
-  f.zY = (f.y * T) + f.h;
-  f.offsetX = f.offsetX || 0;
-  f.offsetY = f.offsetY || 0;
-});
-
-// ── Desk/Seat positions for characters ──
-const SEATS = [
-  {deskX:2, deskY:2, seatX:3, seatY:4},   // left room
-  {deskX:5, deskY:2, seatX:6, seatY:4},
-  {deskX:2, deskY:7, seatX:3, seatY:9},
-  {deskX:5, deskY:7, seatX:6, seatY:9},
-  {deskX:14,deskY:3, seatX:15,seatY:5},   // right room (manager seat)
-  {deskX:17,deskY:3, seatX:18,seatY:5},
-  {deskX:14,deskY:8, seatX:15,seatY:10},
-  {deskX:17,deskY:8, seatX:18,seatY:10},
-];
-
-// ── Characters ──
-const NAMES = ['r00t','z3r0','n3m0','gh0st','cyph3r','v0id','n1nja','gl1tch'];
-
-// States: 'idle', 'walk', 'type', 'spawn', 'despawn'
-const characters = [];
-for (let i = 0; i < 6; i++) {
-  const seat = SEATS[i];
-  const pal = HACKER_SPRITES[i % HACKER_SPRITES.length];
-  characters.push({
-    id: i,
-    name: NAMES[i],
-    x: seat.seatX * T + T/2,
-    y: seat.seatY * T + T/2,
-    tx: seat.seatX, ty: seat.seatY,
-    seatIdx: i,
-    state: 'type',
-    dir: 'up',
-    spriteSet: pal,
-    animFrame: 0,
-    animTimer: 0,
-    stateTimer: Math.random() * 120 + 60, // time before wandering
-    path: [],
-    pathIdx: 0,
-    moveProgress: 0,
-    spawnProgress: 0,
-    wanderReturn: false,
-    zY: seat.seatY * T + T/2 + T,
-  });
-}
-
-// ── BFS Pathfinding ──
-function bfs(sx, sy, ex, ey) {
-  if (sx===ex && sy===ey) return [];
-  const visited = new Set();
-  const queue = [{x:sx,y:sy,path:[]}];
-  visited.add(sy*MAP_W+sx);
-  while (queue.length > 0) {
-    const cur = queue.shift();
-    const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
-    for (const [dx,dy] of dirs) {
-      const nx = cur.x+dx, ny = cur.y+dy;
-      const key = ny*MAP_W+nx;
-      if (!visited.has(key) && isWalkable(nx,ny)) {
-        const np = [...cur.path, {x:nx,y:ny}];
-        if (nx===ex && ny===ey) return np;
-        visited.add(key);
-        queue.push({x:nx,y:ny,path:np});
-      }
-    }
-  }
-  return [];
-}
-
-// ── Matrix Rain Effect ──
-function renderMatrixRain(ctx, ch, ox, oy, z, progress, isSpawn) {
-  const sprite = ch.spriteSet.idle;
-  const h = sprite.length, w = sprite[0].length;
-  const colStagger = [];
-  // Generate deterministic stagger per character
-  for (let c = 0; c < w; c++) {
-    colStagger.push(((ch.id * 7 + c * 13) % 100) / 100 * 0.3);
-  }
-  for (let c = 0; c < w; c++) {
-    const colProg = Math.max(0, Math.min(1, (progress - colStagger[c]) / 0.7));
-    const headY = Math.floor(colProg * (h + 4));
-    for (let r = 0; r < h; r++) {
-      const px = ox + c * z;
-      const py = oy + r * z;
-      const distFromHead = headY - r;
-      if (distFromHead >= 0 && distFromHead < 6) {
-        // Matrix rain trail
-        const hash = ((ch.id * 31 + c * 17 + r * 7 + Math.floor(progress * 10)) % 10);
-        if (hash < 7) {
-          let color;
-          if (distFromHead === 0) color = '#ccffcc';
-          else if (distFromHead === 1) color = '#00ff41';
-          else if (distFromHead === 2) color = '#00cc33';
-          else if (distFromHead === 3) color = '#009922';
-          else color = '#005510';
-          ctx.fillStyle = color;
-          ctx.fillRect(px, py, z, z);
-        }
-      }
-      // Show character pixel if rain has passed
-      if (isSpawn && distFromHead > 3) {
-        const col = sprite[r][c];
-        if (col && col !== '') {
-          ctx.fillStyle = col;
-          ctx.fillRect(px, py, z, z);
-        }
-      }
-      if (!isSpawn && distFromHead < 0) {
-        const col = sprite[r][c];
-        if (col && col !== '') {
-          ctx.fillStyle = col;
-          ctx.fillRect(px, py, z, z);
-        }
-      }
-    }
-  }
-}
-
-// ── Screen Flicker State ──
-let flickerTimer = 0;
-let flickerActive = false;
-let flickerIntensity = 0;
-
-// ── Scrolling green text data ──
-const terminalLines = [
-  "$ nmap -sV 192.168.1.0/24",
-  "PORT   STATE SERVICE VERSION",
-  "22/tcp open  ssh     OpenSSH",
-  "80/tcp open  http    nginx",
-  "$ sqlmap --dbs -u target",
-  "fetching database names...",
-  "[*] information_schema",
-  "[*] mysql",
-  "[*] target_db",
-  "$ hydra -l admin -P pass.txt",
-  "STATUS: 1024/14344 attempts",
-  "[22][ssh] host: 10.0.0.1",
-  "$ python3 exploit.py",
-  ">>> payload = shellcode",
-  ">>> send(payload)",
-  "[+] shell obtained!",
-  "$ cat /etc/shadow",
-  "root:$6$xyz...truncated",
-  "$ gcc -o rootkit rootkit.c",
-  "$ ./rootkit --install",
-];
-let scrollOffset = 0;
-
-// ── Update ──
-let lastTime = 0;
-const WALK_SPEED = 48; // px/sec
-const WALK_FRAME_DUR = 0.15;
-const TYPE_FRAME_DUR = 0.3;
-const SPAWN_DUR = 0.6;
-
-function update(dt) {
-  scrollOffset += dt * 12;
-  if (scrollOffset > terminalLines.length * 10) scrollOffset = 0;
-
-  // Screen flicker
-  flickerTimer += dt;
-  if (!flickerActive && Math.random() < 0.003) {
-    flickerActive = true;
-    flickerIntensity = 0.1 + Math.random() * 0.2;
-    flickerTimer = 0;
-  }
-  if (flickerActive && flickerTimer > 0.05 + Math.random() * 0.1) {
-    flickerActive = false;
-  }
-
-  for (const ch of characters) {
-    ch.animTimer += dt;
-
-    switch (ch.state) {
-      case 'spawn':
-        ch.spawnProgress += dt / SPAWN_DUR;
-        if (ch.spawnProgress >= 1) {
-          ch.spawnProgress = 1;
-          ch.state = 'type';
-          ch.stateTimer = 60 + Math.random() * 120;
-        }
-        break;
-
-      case 'despawn':
-        ch.spawnProgress += dt / SPAWN_DUR;
-        if (ch.spawnProgress >= 1) {
-          ch.state = 'idle';
-          ch.spawnProgress = 0;
-        }
-        break;
-
-      case 'type':
-        if (ch.animTimer >= TYPE_FRAME_DUR) {
-          ch.animTimer = 0;
-          ch.animFrame = (ch.animFrame + 1) % 2;
-        }
-        ch.stateTimer -= dt;
-        if (ch.stateTimer <= 0) {
-          // Wander
-          const wx = ch.tx + Math.floor(Math.random()*7) - 3;
-          const wy = ch.ty + Math.floor(Math.random()*5) - 2;
-          if (isWalkable(wx, wy)) {
-            const path = bfs(ch.tx, ch.ty, wx, wy);
-            if (path.length > 0) {
-              ch.state = 'walk';
-              ch.path = path;
-              ch.pathIdx = 0;
-              ch.moveProgress = 0;
-              ch.wanderReturn = false;
-            } else {
-              ch.stateTimer = 30 + Math.random() * 60;
-            }
-          } else {
-            ch.stateTimer = 30 + Math.random() * 60;
-          }
-        }
-        break;
-
-      case 'idle':
-        ch.stateTimer -= dt;
-        if (ch.stateTimer <= 0) {
-          // Return to seat
-          const seat = SEATS[ch.seatIdx];
-          const path = bfs(ch.tx, ch.ty, seat.seatX, seat.seatY);
-          if (path.length > 0) {
-            ch.state = 'walk';
-            ch.path = path;
-            ch.pathIdx = 0;
-            ch.moveProgress = 0;
-            ch.wanderReturn = true;
-          } else {
-            ch.state = 'type';
-            ch.stateTimer = 60 + Math.random() * 120;
-            ch.tx = seat.seatX;
-            ch.ty = seat.seatY;
-            ch.x = seat.seatX * T + T/2;
-            ch.y = seat.seatY * T + T/2;
-          }
-        }
-        break;
-
-      case 'walk':
-        if (ch.pathIdx < ch.path.length) {
-          const target = ch.path[ch.pathIdx];
-          const startX = ch.pathIdx === 0 ? ch.tx : ch.path[ch.pathIdx-1].x;
-          const startY = ch.pathIdx === 0 ? ch.ty : ch.path[ch.pathIdx-1].y;
-
-          ch.moveProgress += (WALK_SPEED * dt) / T;
-
-          // Direction
-          const ddx = target.x - startX;
-          const ddy = target.y - startY;
-          if (Math.abs(ddx) > Math.abs(ddy)) ch.dir = ddx > 0 ? 'right' : 'left';
-          else ch.dir = ddy > 0 ? 'down' : 'up';
-
-          if (ch.moveProgress >= 1) {
-            ch.moveProgress = 0;
-            ch.tx = target.x;
-            ch.ty = target.y;
-            ch.x = target.x * T + T/2;
-            ch.y = target.y * T + T/2;
-            ch.pathIdx++;
-          } else {
-            ch.x = (startX + (target.x - startX) * ch.moveProgress) * T + T/2;
-            ch.y = (startY + (target.y - startY) * ch.moveProgress) * T + T/2;
-          }
-
-          // Walk animation
-          if (ch.animTimer >= WALK_FRAME_DUR) {
-            ch.animTimer = 0;
-            ch.animFrame = (ch.animFrame + 1) % 4;
-          }
-        } else {
-          // Path complete
-          if (ch.wanderReturn) {
-            ch.state = 'type';
-            ch.dir = 'up';
-            ch.stateTimer = 60 + Math.random() * 120;
-          } else {
-            ch.state = 'idle';
-            ch.stateTimer = 3 + Math.random() * 5;
-          }
-          ch.animFrame = 0;
-        }
-        break;
-    }
-
-    ch.zY = ch.y + T/2 + 0.5;
-  }
-}
-
-// ── Render ──
-function render() {
-  const dpr = window.devicePixelRatio || 1;
-  const cw = canvas.clientWidth;
-  const ch = canvas.clientHeight;
-  canvas.width = cw * dpr;
-  canvas.height = ch * dpr;
-
-  ctx.imageSmoothingEnabled = false;
-
-  const mapPxW = MAP_W * T * zoom;
-  const mapPxH = MAP_H * T * zoom;
-  const offsetX = Math.floor((cw * dpr - mapPxW) / 2 + panX * dpr);
-  const offsetY = Math.floor((ch * dpr - mapPxH) / 2 + panY * dpr);
-
-  // Clear
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // ── Draw Tiles ──
-  for (let ty = 0; ty < MAP_H; ty++) {
-    for (let tx = 0; tx < MAP_W; tx++) {
-      const tile = tileMap[ty][tx];
-      const px = offsetX + tx * T * zoom;
-      const py = offsetY + ty * T * zoom;
-      const sz = T * zoom;
-
-      if (tile === 3) {
-        ctx.fillStyle = C_WALL;
-        ctx.fillRect(px, py, sz, sz);
-        // Wall detail — subtle line
-        if (ty === 0 || ty === MAP_H - 1) {
-          ctx.fillStyle = '#0a0a0a';
-          ctx.fillRect(px, py + sz - zoom, sz, zoom);
-        }
-        if (tx === 0 || tx === MAP_W - 1) {
-          ctx.fillStyle = '#0a0a0a';
-          ctx.fillRect(px + sz - zoom, py, zoom, sz);
-        }
-      } else if (tile === 1) {
-        ctx.fillStyle = C_FLOOR1;
-        ctx.fillRect(px, py, sz, sz);
-        // Concrete texture
-        ctx.fillStyle = '#1d1d1d';
-        ctx.fillRect(px + zoom * 3, py + zoom * 7, zoom, zoom);
-        ctx.fillRect(px + zoom * 11, py + zoom * 2, zoom, zoom);
-      } else if (tile === 2) {
-        ctx.fillStyle = C_FLOOR2;
-        ctx.fillRect(px, py, sz, sz);
-        ctx.fillStyle = '#1e1e1e';
-        ctx.fillRect(px + zoom * 5, py + zoom * 9, zoom, zoom);
-      }
-      // Tile grid lines
-      if (tile === 1 || tile === 2) {
-        ctx.fillStyle = '#141414';
-        ctx.fillRect(px, py, sz, zoom * 0.5);
-        ctx.fillRect(px, py, zoom * 0.5, sz);
-      }
-    }
-  }
-
-  // ── Divider wall in middle ──
-  // The wall at x=10 between rooms (rows 1-3 and 11-12)
-  for (let ty = 1; ty <= 3; ty++) {
-    const px = offsetX + 10 * T * zoom;
-    const py = offsetY + ty * T * zoom;
-    ctx.fillStyle = C_WALL;
-    ctx.fillRect(px, py, T * zoom, T * zoom);
-  }
-  for (let ty = 11; ty <= 12; ty++) {
-    const px = offsetX + 10 * T * zoom;
-    const py = offsetY + ty * T * zoom;
-    ctx.fillStyle = C_WALL;
-    ctx.fillRect(px, py, T * zoom, T * zoom);
-  }
-
-  // ── Collect all drawables ──
-  const drawables = [];
-
-  // Furniture
-  for (const f of furniture) {
-    drawables.push({
-      type: 'furniture',
-      data: f,
-      zY: f.zY,
-    });
-  }
-
-  // Characters
-  for (const c of characters) {
-    drawables.push({
-      type: 'character',
-      data: c,
-      zY: c.zY,
-    });
-  }
-
-  // Sort by zY
-  drawables.sort((a, b) => a.zY - b.zY);
-
-  // ── Draw all ──
-  const now = performance.now() / 1000;
-  for (const d of drawables) {
-    if (d.type === 'furniture') {
-      const f = d.data;
-      const px = offsetX + f.x * T * zoom + (f.offsetX || 0) * zoom;
-      const py = offsetY + f.y * T * zoom + (f.offsetY || 0) * zoom;
-
-      // Screen flicker for monitors
-      if (f.type === 'monitor' && flickerActive) {
-        // Draw slightly offset/brightened
-        const sc = getSpriteCanvas('monitor_flicker_' + f.x + '_' + f.y, f.sprite, zoom);
-        ctx.globalAlpha = 1 - flickerIntensity;
-        ctx.drawImage(sc, px, py);
-        ctx.globalAlpha = flickerIntensity;
-        ctx.drawImage(sc, px + zoom, py);
-        ctx.globalAlpha = 1;
-      } else {
-        const key = f.type + '_' + f.x + '_' + f.y;
-        const sc = getSpriteCanvas(key, f.sprite, zoom);
-        ctx.drawImage(sc, px, py);
-      }
-
-      // Scrolling green text on monitors
-      if (f.type === 'monitor') {
-        const screenX = px + 3 * zoom;
-        const screenY = py + 1 * zoom;
-        const screenW = 10 * zoom;
-        const screenH = 10 * zoom;
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(screenX, screenY, screenW, screenH);
-        ctx.clip();
-
-        const lineH = 2 * zoom;
-        const baseY = screenY - (scrollOffset * zoom) % (terminalLines.length * lineH);
-        ctx.font = `${Math.max(zoom, 1)}px monospace`;
-
-        for (let i = 0; i < terminalLines.length * 2; i++) {
-          const li = i % terminalLines.length;
-          const ly = baseY + i * lineH;
-          if (ly > screenY - lineH && ly < screenY + screenH) {
-            const brightness = Math.sin(now * 2 + i * 0.5) * 0.3 + 0.7;
-            const g = Math.floor(brightness * 255);
-            ctx.fillStyle = `rgb(0,${g},${Math.floor(g * 0.25)})`;
-            // Draw pixel text representation
-            const line = terminalLines[li];
-            for (let ci = 0; ci < Math.min(line.length, 10); ci++) {
-              if (line[ci] !== ' ') {
-                ctx.fillRect(screenX + ci * zoom, ly, zoom * 0.8, zoom * 0.8);
-              }
-            }
-          }
-        }
-        ctx.restore();
-
-        // CRT scanline effect
-        ctx.fillStyle = 'rgba(0,0,0,0.15)';
-        for (let sy = screenY; sy < screenY + screenH; sy += zoom * 2) {
-          ctx.fillRect(screenX, sy, screenW, zoom * 0.5);
-        }
-
-        // Screen glow
-        ctx.fillStyle = 'rgba(0,255,65,0.03)';
-        ctx.fillRect(screenX - zoom, screenY - zoom, screenW + zoom*2, screenH + zoom*2);
-      }
-    } else if (d.type === 'character') {
-      const c = d.data;
-      const spriteH = 24;
-      const spriteW = 16;
-      const px = offsetX + Math.floor(c.x * zoom) - (spriteW/2) * zoom;
-      const py = offsetY + Math.floor(c.y * zoom) - (spriteH - T/2) * zoom;
-
-      if (c.state === 'spawn') {
-        renderMatrixRain(ctx, c, px, py, zoom, c.spawnProgress, true);
-      } else if (c.state === 'despawn') {
-        renderMatrixRain(ctx, c, px, py, zoom, c.spawnProgress, false);
-      } else {
-        let sprite;
-        if (c.state === 'walk') {
-          sprite = c.spriteSet.walk[c.animFrame % 4];
-        } else if (c.state === 'type') {
-          sprite = c.spriteSet.type[c.animFrame % 2];
-        } else {
-          sprite = c.spriteSet.idle;
-        }
-        const key = 'char_' + c.id + '_' + c.state + '_' + c.animFrame;
-        const sc = getSpriteCanvas(key, sprite, zoom);
-        ctx.drawImage(sc, px, py);
-      }
-
-      // Name label
-      const labelY = py - 6 * zoom;
-      const labelX = px + (spriteW/2) * zoom;
-      ctx.fillStyle = 'rgba(0,0,0,0.7)';
-      const nameW = c.name.length * 4 * zoom + 4 * zoom;
-      ctx.fillRect(labelX - nameW/2, labelY - 4*zoom, nameW, 6*zoom);
-
-      // Status dot
-      const dotColor = c.state === 'type' ? C_GREEN : (c.state === 'walk' ? '#FFCB00' : '#555');
-      ctx.fillStyle = dotColor;
-      ctx.fillRect(labelX - nameW/2 + zoom, labelY - 3*zoom, 2*zoom, 2*zoom);
-
-      // Name text (pixel-style)
-      ctx.fillStyle = C_GREEN;
-      const fontSize = Math.max(zoom * 3, 6);
-      ctx.font = `${fontSize}px "Press Start 2P", monospace`;
-      ctx.textAlign = 'center';
-      ctx.fillText(c.name, labelX, labelY);
-      ctx.textAlign = 'start';
-    }
-  }
-
-  // ── Ambient green glow from monitors ──
-  ctx.fillStyle = 'rgba(0,255,65,0.02)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // ── CRT overlay scanlines (subtle) ──
-  ctx.fillStyle = 'rgba(0,0,0,0.05)';
-  for (let sy = 0; sy < canvas.height; sy += 4) {
-    ctx.fillRect(0, sy, canvas.width, 1);
-  }
-
-  // ── Vignette ──
-  const grd = ctx.createRadialGradient(
-    canvas.width/2, canvas.height/2, canvas.width * 0.3,
-    canvas.width/2, canvas.height/2, canvas.width * 0.7
-  );
-  grd.addColorStop(0, 'rgba(0,0,0,0)');
-  grd.addColorStop(1, 'rgba(0,0,0,0.4)');
-  ctx.fillStyle = grd;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-// ── Game Loop ──
-function gameLoop(timestamp) {
-  const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
-  lastTime = timestamp;
-  update(dt);
-  render();
-  requestAnimationFrame(gameLoop);
-}
-
-// ── Input Handling ──
-canvas.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  const oldZoom = zoom;
-  if (e.deltaY < 0) zoom = Math.min(zoom + 1, 10);
-  else zoom = Math.max(zoom - 1, 1);
-  if (zoom !== oldZoom) {
-    clearSpriteCache();
-    // Adjust pan to zoom towards mouse
-    const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    panX = mx - (mx - panX) * (zoom / oldZoom);
-    panY = my - (my - panY) * (zoom / oldZoom);
-  }
-}, {passive: false});
-
-canvas.addEventListener('mousedown', (e) => {
-  if (e.button === 1 || e.button === 0) {
-    isDragging = true;
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
-    panStartX = panX;
-    panStartY = panY;
-  }
-});
-
-canvas.addEventListener('mousemove', (e) => {
-  if (isDragging) {
-    panX = panStartX + (e.clientX - dragStartX);
-    panY = panStartY + (e.clientY - dragStartY);
-  }
-});
-
-canvas.addEventListener('mouseup', () => { isDragging = false; });
-canvas.addEventListener('mouseleave', () => { isDragging = false; });
-
-// Touch support
-canvas.addEventListener('touchstart', (e) => {
-  const t = e.touches[0];
-  isDragging = true;
-  dragStartX = t.clientX;
-  dragStartY = t.clientY;
-  panStartX = panX;
-  panStartY = panY;
-}, {passive: true});
-
-canvas.addEventListener('touchmove', (e) => {
-  if (isDragging && e.touches.length === 1) {
-    const t = e.touches[0];
-    panX = panStartX + (t.clientX - dragStartX);
-    panY = panStartY + (t.clientY - dragStartY);
-  }
-}, {passive: true});
-
-canvas.addEventListener('touchend', () => { isDragging = false; });
-
-// Handle resize
-window.addEventListener('resize', () => { clearSpriteCache(); });
-
-// ── Trigger initial spawns with matrix effect ──
-function initSpawns() {
-  characters.forEach((ch, i) => {
-    ch.state = 'spawn';
-    ch.spawnProgress = -i * 0.3; // stagger
-  });
-}
-
-// ── Bottom bar terminal animation ──
-const statusEl = document.querySelector('#bottom-bar .status');
-const statusTexts = [
-  'NODES:6 | UPLINK:OK | TOR:ACTIVE',
-  'NODES:6 | UPLINK:OK | PROXY:SOCKS5',
-  'NODES:7 | UPLINK:OK | VPN:WIREGUARD',
-  'NODES:6 | UPLINK:!! | TOR:ACTIVE',
-  'NODES:6 | UPLINK:OK | TUNNEL:SSH',
-];
-let statusIdx = 0;
-setInterval(() => {
-  statusIdx = (statusIdx + 1) % statusTexts.length;
-  statusEl.textContent = statusTexts[statusIdx];
-}, 4000);
-
-// ── Start ──
-initSpawns();
-requestAnimationFrame(gameLoop);
-
-</script>
-</body>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Underground Hacker Den</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+			html,
+			body {
+				width: 100%;
+				height: 100%;
+				overflow: hidden;
+				background: #000;
+				font-family: "Press Start 2P", monospace;
+			}
+			@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+			canvas {
+				display: block;
+				width: 100%;
+				height: calc(100% - 36px);
+				cursor: grab;
+				image-rendering: pixelated;
+				image-rendering: crisp-edges;
+			}
+			canvas:active {
+				cursor: grabbing;
+			}
+			#bottom-bar {
+				position: fixed;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				height: 36px;
+				background: #0d0d0d;
+				border-top: 2px solid #00ff41;
+				display: flex;
+				align-items: center;
+				padding: 0 12px;
+				font-family: "Press Start 2P", monospace;
+				font-size: 10px;
+				color: #00ff41;
+				z-index: 10;
+			}
+			#bottom-bar .prompt {
+				opacity: 0.9;
+			}
+			#bottom-bar .cursor {
+				display: inline-block;
+				width: 8px;
+				height: 14px;
+				background: #00ff41;
+				animation: blink 1s step-end infinite;
+				vertical-align: middle;
+				margin-left: 2px;
+			}
+			@keyframes blink {
+				0%,
+				100% {
+					opacity: 1;
+				}
+				50% {
+					opacity: 0;
+				}
+			}
+			#bottom-bar .status {
+				margin-left: auto;
+				opacity: 0.6;
+				font-size: 8px;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="c"></canvas>
+		<div id="bottom-bar">
+			<span class="prompt">&gt; _</span><span class="cursor"></span>
+			<span class="status">NODES:6 | UPLINK:OK | TOR:ACTIVE</span>
+		</div>
+		<script>
+			"use strict";
+			// ============================================================
+			// UNDERGROUND HACKER DEN — Pixel Art AI Office
+			// Single-file Canvas 2D engine
+			// ============================================================
+
+			const canvas = document.getElementById("c");
+			const ctx = canvas.getContext("2d");
+
+			// ── Constants ──
+			const T = 16; // tile size
+			const MAP_W = 22;
+			const MAP_H = 14;
+			let zoom = 3;
+			let panX = 0,
+				panY = 0;
+			let isDragging = false,
+				dragStartX = 0,
+				dragStartY = 0,
+				panStartX = 0,
+				panStartY = 0;
+
+			// ── Colors ──
+			const C_WALL = "#0d0d0d";
+			const C_FLOOR1 = "#1a1a1a";
+			const C_FLOOR2 = "#171717";
+			const C_GREEN = "#00ff41";
+			const C_GREEN_DIM = "#00aa2a";
+			const C_GREEN_DARK = "#005510";
+			const C_ORANGE = "#FF7000";
+			const C_VOID = "";
+
+			// ── Tile Map (0=void, 1=dark concrete, 2=slightly lighter concrete, 3=wall) ──
+			const tileMap = [
+				[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+				[3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3],
+				[3, 1, 2, 1, 1, 2, 1, 1, 1, 1, 3, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 3],
+				[3, 1, 1, 1, 1, 1, 1, 1, 2, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 3],
+				[3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 3],
+				[3, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 3],
+				[3, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 3],
+				[3, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 3],
+				[3, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3],
+				[3, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 3],
+				[3, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 3],
+				[3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 3],
+				[3, 1, 1, 1, 1, 1, 1, 1, 2, 1, 3, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 3],
+				[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+			];
+
+			// Walkable tiles
+			function isWalkable(tx, ty) {
+				if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return false;
+				const t = tileMap[ty][tx];
+				return t === 1 || t === 2;
+			}
+
+			// ── Sprite Cache ──
+			const spriteCache = new Map();
+			function getSpriteCanvas(key, data, z) {
+				const ck = key + "_" + z;
+				if (spriteCache.has(ck)) return spriteCache.get(ck);
+				const h = data.length,
+					w = data[0].length;
+				const oc = document.createElement("canvas");
+				oc.width = w * z;
+				oc.height = h * z;
+				const ox = oc.getContext("2d");
+				for (let r = 0; r < h; r++) {
+					for (let c = 0; c < w; c++) {
+						const col = data[r][c];
+						if (col && col !== "") {
+							ox.fillStyle = col;
+							ox.fillRect(c * z, r * z, z, z);
+						}
+					}
+				}
+				spriteCache.set(ck, oc);
+				return oc;
+			}
+
+			function clearSpriteCache() {
+				spriteCache.clear();
+			}
+
+			// ── SPRITE DATA ──
+
+			// Cable pixels (floor decoration) - green/dark cables
+			const SPRITE_CABLE_H = [
+				// horizontal cable segment
+				["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+				[
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+				],
+				[
+					"#0f2f0f",
+					"#0f2f0f",
+					"#0f2f0f",
+					"#0f2f0f",
+					"#0f2f0f",
+					"#0f2f0f",
+					"#0f2f0f",
+					"#0f2f0f",
+					"#0f2f0f",
+					"#0f2f0f",
+					"#0f2f0f",
+					"#0f2f0f",
+					"#0f2f0f",
+					"#0f2f0f",
+					"#0f2f0f",
+					"#0f2f0f",
+				],
+				[
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+					"#1a3a1a",
+				],
+				["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+			];
+
+			const SPRITE_CABLE_V = [
+				// vertical cable segment
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+				["", "", "", "", "", "", "#1a3a1a", "#0f2f0f", "#1a3a1a", "", "", "", "", "", "", ""],
+			];
+
+			// Hacker desk (32x32) — dark, messy, with monitors
+			const _ = "";
+			const SPRITE_DESK = (() => {
+				const d = Array.from({ length: 32 }, () => Array(32).fill(""));
+				// Desk top surface
+				for (let r = 8; r < 14; r++) for (let c = 1; c < 31; c++) d[r][c] = "#1c1c1c";
+				for (let r = 8; r < 14; r++) {
+					d[r][0] = "#111";
+					d[r][31] = "#111";
+				}
+				// Desk edge
+				for (let c = 0; c < 32; c++) d[14][c] = "#0a0a0a";
+				// Legs
+				for (let r = 15; r < 32; r++) {
+					d[r][1] = "#111";
+					d[r][2] = "#111";
+					d[r][29] = "#111";
+					d[r][30] = "#111";
+				}
+				// Under-desk shelf
+				for (let r = 22; r < 24; r++) for (let c = 2; c < 30; c++) d[r][c] = "#131313";
+				return d;
+			})();
+
+			// Manager desk with orange trim
+			const SPRITE_DESK_MANAGER = (() => {
+				const d = JSON.parse(JSON.stringify(SPRITE_DESK));
+				// Orange LED strip along front edge
+				for (let c = 0; c < 32; c++) d[14][c] = C_ORANGE;
+				// Orange accent on corners
+				d[8][0] = C_ORANGE;
+				d[8][31] = C_ORANGE;
+				d[13][0] = C_ORANGE;
+				d[13][31] = C_ORANGE;
+				return d;
+			})();
+
+			// Monitor (16x16) — green text on black screen
+			const SPRITE_MONITOR = (() => {
+				const m = Array.from({ length: 16 }, () => Array(16).fill(""));
+				// Monitor frame
+				for (let r = 0; r < 12; r++) for (let c = 2; c < 14; c++) m[r][c] = "#222";
+				// Screen
+				for (let r = 1; r < 11; r++) for (let c = 3; c < 13; c++) m[r][c] = "#0a0f0a";
+				// Green text lines on screen
+				for (let c = 4; c < 12; c++) {
+					m[2][c] = "#00ff41";
+					m[4][c] = "#00aa2a";
+					m[6][c] = "#00ff41";
+					m[8][c] = "#005510";
+				}
+				// shorter lines
+				m[3][4] = "#005510";
+				m[3][5] = "#005510";
+				m[3][6] = "#005510";
+				m[5][4] = "#00ff41";
+				m[5][5] = "#00ff41";
+				m[7][4] = "#00aa2a";
+				m[7][5] = "#00aa2a";
+				m[7][6] = "#00aa2a";
+				m[7][7] = "#00aa2a";
+				m[9][4] = "#00ff41";
+				m[9][5] = "#00ff41";
+				m[9][6] = "#00ff41";
+				// Stand
+				for (let r = 12; r < 14; r++) {
+					m[r][7] = "#222";
+					m[r][8] = "#222";
+				}
+				// Base
+				for (let c = 5; c < 11; c++) m[14][c] = "#222";
+				for (let c = 5; c < 11; c++) m[15][c] = "#1a1a1a";
+				// Power LED
+				m[11][12] = "#00ff41";
+				return m;
+			})();
+
+			// Second monitor variant (different text pattern)
+			const SPRITE_MONITOR2 = (() => {
+				const m = JSON.parse(JSON.stringify(SPRITE_MONITOR));
+				// Different text pattern
+				for (let r = 1; r < 11; r++) for (let c = 3; c < 13; c++) m[r][c] = "#0a0f0a";
+				m[2][4] = "#00ff41";
+				m[2][5] = "#00ff41";
+				m[2][6] = "#00ff41";
+				m[2][7] = "#00ff41";
+				m[2][8] = "#00ff41";
+				m[3][4] = "#005510";
+				m[3][5] = "#005510";
+				m[3][6] = "#005510";
+				m[3][7] = "#005510";
+				m[3][8] = "#005510";
+				m[3][9] = "#005510";
+				m[3][10] = "#005510";
+				m[4][4] = "#00aa2a";
+				m[4][5] = "#00aa2a";
+				m[4][6] = "#00aa2a";
+				m[5][4] = "#00ff41";
+				m[5][5] = "#00ff41";
+				m[5][6] = "#00ff41";
+				m[5][7] = "#00ff41";
+				m[5][8] = "#00ff41";
+				m[5][9] = "#00ff41";
+				m[6][4] = "#005510";
+				m[6][5] = "#005510";
+				m[6][6] = "#005510";
+				m[6][7] = "#005510";
+				m[7][4] = "#00ff41";
+				m[7][5] = "#00ff41";
+				m[7][6] = "#00ff41";
+				m[7][7] = "#00ff41";
+				m[7][8] = "#00ff41";
+				m[8][4] = "#00aa2a";
+				m[8][5] = "#00aa2a";
+				m[8][6] = "#00aa2a";
+				m[8][7] = "#00aa2a";
+				m[8][8] = "#00aa2a";
+				m[8][9] = "#00aa2a";
+				m[9][4] = "#00ff41";
+				m[9][5] = "#00ff41";
+				m[9][6] = "#00ff41";
+				return m;
+			})();
+
+			// Chair (16x16) — dark, mesh-style
+			const SPRITE_CHAIR = (() => {
+				const ch = Array.from({ length: 16 }, () => Array(16).fill(""));
+				// Seat
+				for (let r = 6; r < 10; r++) for (let c = 3; c < 13; c++) ch[r][c] = "#1a1a1a";
+				for (let r = 6; r < 10; r++) {
+					ch[r][3] = "#111";
+					ch[r][12] = "#111";
+				}
+				// Back
+				for (let r = 0; r < 7; r++) for (let c = 4; c < 12; c++) ch[r][c] = "#1a1a1a";
+				for (let r = 0; r < 7; r++) {
+					ch[r][4] = "#111";
+					ch[r][11] = "#111";
+				}
+				// Legs/wheels
+				ch[10][4] = "#222";
+				ch[10][11] = "#222";
+				ch[11][3] = "#222";
+				ch[11][12] = "#222";
+				ch[12][3] = "#1a1a1a";
+				ch[12][12] = "#1a1a1a";
+				ch[13][2] = "#222";
+				ch[13][13] = "#222";
+				ch[14][2] = "#1a1a1a";
+				ch[14][13] = "#1a1a1a";
+				// Center pole
+				ch[10][7] = "#222";
+				ch[10][8] = "#222";
+				ch[11][7] = "#222";
+				ch[11][8] = "#222";
+				ch[12][7] = "#222";
+				ch[12][8] = "#222";
+				return ch;
+			})();
+
+			// Pizza box (16x16)
+			const SPRITE_PIZZA = (() => {
+				const p = Array.from({ length: 16 }, () => Array(16).fill(""));
+				// Box
+				for (let r = 4; r < 13; r++) for (let c = 2; c < 14; c++) p[r][c] = "#8B6914";
+				for (let r = 4; r < 13; r++) {
+					p[r][2] = "#6B4F0A";
+					p[r][13] = "#6B4F0A";
+				}
+				for (let c = 2; c < 14; c++) {
+					p[4][c] = "#9B7924";
+					p[12][c] = "#6B4F0A";
+				}
+				// Lid line
+				for (let c = 3; c < 13; c++) p[7][c] = "#6B4F0A";
+				// Grease stain
+				p[9][6] = "#7B5910";
+				p[9][7] = "#7B5910";
+				p[10][6] = "#7B5910";
+				// Open lid showing pizza
+				p[5][5] = "#CC3333";
+				p[5][6] = "#FFCC00";
+				p[5][7] = "#CC3333";
+				p[5][8] = "#FFCC00";
+				p[6][5] = "#FFCC00";
+				p[6][6] = "#CC3333";
+				p[6][7] = "#FFCC00";
+				p[6][8] = "#CC3333";
+				return p;
+			})();
+
+			// Server rack (16x32)
+			const SPRITE_SERVER = (() => {
+				const s = Array.from({ length: 32 }, () => Array(16).fill(""));
+				// Rack body
+				for (let r = 0; r < 30; r++) for (let c = 1; c < 15; c++) s[r][c] = "#111";
+				for (let r = 0; r < 30; r++) {
+					s[r][0] = "#0a0a0a";
+					s[r][15] = "#0a0a0a";
+				}
+				for (let c = 0; c < 16; c++) {
+					s[0][c] = "#0a0a0a";
+					s[30][c] = "#0a0a0a";
+				}
+				// Server units with blinking LEDs
+				for (let u = 0; u < 5; u++) {
+					const ry = 2 + u * 6;
+					for (let c = 2; c < 14; c++) s[ry][c] = "#1a1a1a";
+					for (let c = 2; c < 14; c++) s[ry + 1][c] = "#151515";
+					for (let c = 2; c < 14; c++) s[ry + 2][c] = "#1a1a1a";
+					for (let c = 2; c < 14; c++) s[ry + 3][c] = "#151515";
+					// LEDs
+					s[ry][3] = "#00ff41";
+					s[ry][5] = "#00ff41";
+					s[ry + 2][3] = "#00aa2a";
+					s[ry + 2][5] = "#ff3333";
+					// Ventilation holes
+					for (let c = 8; c < 13; c++) s[ry + 1][c] = "#0d0d0d";
+				}
+				// Base/feet
+				for (let c = 1; c < 15; c++) s[31][c] = "#0a0a0a";
+				return s;
+			})();
+
+			// Plant (dead/neglected, green-ish) 16x24
+			const SPRITE_PLANT = (() => {
+				const p = Array.from({ length: 24 }, () => Array(16).fill(""));
+				// Pot
+				for (let r = 16; r < 23; r++) for (let c = 4; c < 12; c++) p[r][c] = "#1a1a1a";
+				for (let r = 16; r < 23; r++) {
+					p[r][4] = "#111";
+					p[r][11] = "#111";
+				}
+				for (let c = 5; c < 11; c++) p[23][c] = "#111";
+				// Dirt
+				for (let c = 5; c < 11; c++) p[16][c] = "#2a1a0a";
+				// Scraggly plant
+				p[15][7] = "#1a4a1a";
+				p[15][8] = "#1a4a1a";
+				p[14][6] = "#1a4a1a";
+				p[14][7] = "#224a22";
+				p[14][8] = "#224a22";
+				p[14][9] = "#1a4a1a";
+				p[13][7] = "#224a22";
+				p[13][8] = "#224a22";
+				p[12][5] = "#1a4a1a";
+				p[12][8] = "#224a22";
+				p[12][10] = "#1a4a1a";
+				p[11][6] = "#224a22";
+				p[11][9] = "#224a22";
+				p[10][7] = "#1a4a1a";
+				p[10][8] = "#1a4a1a";
+				p[9][6] = "#224a22";
+				p[9][9] = "#224a22";
+				return p;
+			})();
+
+			// Energy drink can (16x16)
+			const SPRITE_ENERGYDRINK = (() => {
+				const e = Array.from({ length: 16 }, () => Array(16).fill(""));
+				for (let r = 4; r < 15; r++) {
+					e[r][6] = "#222";
+					e[r][7] = "#333";
+					e[r][8] = "#333";
+					e[r][9] = "#222";
+				}
+				for (let c = 6; c < 10; c++) e[4][c] = "#2a2a2a";
+				for (let c = 6; c < 10; c++) e[15][c] = "#1a1a1a";
+				// Label
+				e[7][7] = "#00ff41";
+				e[7][8] = "#00ff41";
+				e[8][7] = "#00aa2a";
+				e[8][8] = "#00aa2a";
+				e[9][7] = "#00ff41";
+				e[9][8] = "#00ff41";
+				// Pull tab
+				e[3][7] = "#444";
+				e[3][8] = "#444";
+				return e;
+			})();
+
+			// Whiteboard / hack board (32x32)
+			const SPRITE_HACKBOARD = (() => {
+				const b = Array.from({ length: 32 }, () => Array(32).fill(""));
+				// Board frame
+				for (let r = 0; r < 24; r++) for (let c = 0; c < 32; c++) b[r][c] = "#111";
+				for (let r = 1; r < 23; r++) for (let c = 1; c < 31; c++) b[r][c] = "#1a1a1a";
+				// Green scribbles (network diagrams, code)
+				for (let c = 3; c < 12; c++) b[3][c] = "#00ff41";
+				for (let c = 3; c < 8; c++) b[5][c] = "#00aa2a";
+				for (let c = 14; c < 28; c++) b[4][c] = "#005510";
+				for (let c = 3; c < 20; c++) b[7][c] = "#00ff41";
+				for (let c = 3; c < 15; c++) b[9][c] = "#00aa2a";
+				for (let c = 18; c < 28; c++) b[9][c] = "#00ff41";
+				// Box diagram
+				for (let r = 12; r < 18; r++) {
+					b[r][4] = "#00ff41";
+					b[r][12] = "#00ff41";
+				}
+				for (let c = 4; c < 13; c++) {
+					b[12][c] = "#00ff41";
+					b[17][c] = "#00ff41";
+				}
+				// Arrow
+				for (let c = 13; c < 20; c++) b[14][c] = "#00aa2a";
+				b[13][19] = "#00aa2a";
+				b[15][19] = "#00aa2a";
+				// Another box
+				for (let r = 12; r < 18; r++) {
+					b[r][20] = "#00ff41";
+					b[r][28] = "#00ff41";
+				}
+				for (let c = 20; c < 29; c++) {
+					b[12][c] = "#00ff41";
+					b[17][c] = "#00ff41";
+				}
+				// text lines bottom
+				for (let c = 3; c < 25; c++) b[20][c] = "#005510";
+				// Stand posts
+				for (let r = 24; r < 32; r++) {
+					b[r][5] = "#111";
+					b[r][6] = "#111";
+					b[r][25] = "#111";
+					b[r][26] = "#111";
+				}
+				return b;
+			})();
+
+			// ── Character Sprites (16x24, hoodie-wearing hackers) ──
+			function makeHacker(hoodieColor, skinColor, hairColor) {
+				const s = Array.from({ length: 24 }, () => Array(16).fill(""));
+				const hc = hoodieColor,
+					sk = skinColor,
+					hr = hairColor;
+				const hd = shadeColor(hoodieColor, -30);
+				// Hair/head top
+				s[0][6] = hr;
+				s[0][7] = hr;
+				s[0][8] = hr;
+				s[0][9] = hr;
+				s[1][5] = hr;
+				s[1][6] = hr;
+				s[1][7] = hr;
+				s[1][8] = hr;
+				s[1][9] = hr;
+				s[1][10] = hr;
+				// Face
+				s[2][5] = hr;
+				s[2][6] = sk;
+				s[2][7] = sk;
+				s[2][8] = sk;
+				s[2][9] = sk;
+				s[2][10] = hr;
+				s[3][5] = sk;
+				s[3][6] = sk;
+				s[3][7] = sk;
+				s[3][8] = sk;
+				s[3][9] = sk;
+				s[3][10] = sk;
+				// Eyes (green glow from screens)
+				s[3][6] = "#00ff41";
+				s[3][9] = "#00ff41";
+				s[4][5] = sk;
+				s[4][6] = sk;
+				s[4][7] = sk;
+				s[4][8] = sk;
+				s[4][9] = sk;
+				s[4][10] = sk;
+				// Neck
+				s[5][7] = sk;
+				s[5][8] = sk;
+				// Hoodie
+				s[6][4] = hc;
+				s[6][5] = hc;
+				s[6][6] = hc;
+				s[6][7] = hc;
+				s[6][8] = hc;
+				s[6][9] = hc;
+				s[6][10] = hc;
+				s[6][11] = hc;
+				s[7][3] = hc;
+				s[7][4] = hc;
+				s[7][5] = hc;
+				s[7][6] = hc;
+				s[7][7] = hc;
+				s[7][8] = hc;
+				s[7][9] = hc;
+				s[7][10] = hc;
+				s[7][11] = hc;
+				s[7][12] = hc;
+				// Hood drawstrings
+				s[7][7] = hd;
+				s[7][8] = hd;
+				s[8][3] = hc;
+				s[8][4] = hc;
+				s[8][5] = hc;
+				s[8][6] = hc;
+				s[8][7] = hc;
+				s[8][8] = hc;
+				s[8][9] = hc;
+				s[8][10] = hc;
+				s[8][11] = hc;
+				s[8][12] = hc;
+				s[9][3] = hc;
+				s[9][4] = hc;
+				s[9][5] = hc;
+				s[9][6] = hc;
+				s[9][7] = hc;
+				s[9][8] = hc;
+				s[9][9] = hc;
+				s[9][10] = hc;
+				s[9][11] = hc;
+				s[9][12] = hc;
+				s[10][3] = hd;
+				s[10][4] = hc;
+				s[10][5] = hc;
+				s[10][6] = hc;
+				s[10][7] = hc;
+				s[10][8] = hc;
+				s[10][9] = hc;
+				s[10][10] = hc;
+				s[10][11] = hc;
+				s[10][12] = hd;
+				// Hoodie pocket
+				s[9][6] = hd;
+				s[9][7] = hd;
+				s[9][8] = hd;
+				s[9][9] = hd;
+				// Arms
+				s[7][2] = hc;
+				s[8][2] = hc;
+				s[9][2] = sk;
+				s[7][13] = hc;
+				s[8][13] = hc;
+				s[9][13] = sk;
+				// Lower body (dark pants)
+				s[11][5] = "#111";
+				s[11][6] = "#111";
+				s[11][7] = "#111";
+				s[11][8] = "#111";
+				s[11][9] = "#111";
+				s[11][10] = "#111";
+				s[12][5] = "#111";
+				s[12][6] = "#111";
+				s[12][7] = "#111";
+				s[12][8] = "#111";
+				s[12][9] = "#111";
+				s[12][10] = "#111";
+				s[13][5] = "#0d0d0d";
+				s[13][6] = "#111";
+				s[13][7] = "#111";
+				s[13][8] = "#111";
+				s[13][9] = "#111";
+				s[13][10] = "#0d0d0d";
+				// Legs
+				s[14][5] = "#111";
+				s[14][6] = "#111";
+				s[14][9] = "#111";
+				s[14][10] = "#111";
+				s[15][5] = "#111";
+				s[15][6] = "#111";
+				s[15][9] = "#111";
+				s[15][10] = "#111";
+				s[16][5] = "#0d0d0d";
+				s[16][6] = "#0d0d0d";
+				s[16][9] = "#0d0d0d";
+				s[16][10] = "#0d0d0d";
+				// Shoes
+				s[17][4] = "#1a1a1a";
+				s[17][5] = "#1a1a1a";
+				s[17][6] = "#1a1a1a";
+				s[17][9] = "#1a1a1a";
+				s[17][10] = "#1a1a1a";
+				s[17][11] = "#1a1a1a";
+				return s;
+			}
+
+			// Walking frames — shift legs
+			function makeWalkFrame(base, frame) {
+				const s = JSON.parse(JSON.stringify(base));
+				if (frame === 1 || frame === 3) {
+					// Legs apart
+					s[15][5] = "";
+					s[15][10] = "";
+					s[16][4] = "#111";
+					s[16][11] = "#111";
+					s[17][3] = "#1a1a1a";
+					s[17][4] = "#1a1a1a";
+					s[17][5] = "#1a1a1a";
+					s[17][10] = "#1a1a1a";
+					s[17][11] = "#1a1a1a";
+					s[17][12] = "#1a1a1a";
+				}
+				if (frame === 2) {
+					// Other leg forward
+					s[16][5] = "#111";
+					s[16][6] = "";
+					s[16][9] = "";
+					s[16][10] = "#111";
+					s[17][5] = "#1a1a1a";
+					s[17][6] = "";
+					s[17][9] = "";
+					s[17][10] = "#1a1a1a";
+				}
+				return s;
+			}
+
+			// Typing frames — arms move
+			function makeTypeFrame(base, frame) {
+				const s = JSON.parse(JSON.stringify(base));
+				if (frame === 0) {
+					s[9][2] = "";
+					s[9][13] = "";
+					s[8][1] = s[7][2];
+					s[8][14] = s[7][13];
+					s[9][1] = base[4][5]; // skin at lower pos
+				} else {
+					s[9][2] = "";
+					s[9][13] = "";
+					s[9][1] = s[7][2];
+					s[9][14] = s[7][13];
+				}
+				return s;
+			}
+
+			function shadeColor(hex, amt) {
+				let r = parseInt(hex.slice(1, 3), 16) + amt;
+				let g = parseInt(hex.slice(3, 5), 16) + amt;
+				let b = parseInt(hex.slice(5, 7), 16) + amt;
+				r = Math.max(0, Math.min(255, r));
+				g = Math.max(0, Math.min(255, g));
+				b = Math.max(0, Math.min(255, b));
+				return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+			}
+
+			// Create 6 hacker variants
+			const HACKER_PALETTES = [
+				{ hoodie: "#1a1a2e", skin: "#c4956a", hair: "#2a2a2a" }, // dark blue hoodie
+				{ hoodie: "#0d2b0d", skin: "#e0b088", hair: "#1a1a1a" }, // dark green hoodie
+				{ hoodie: "#2a0a2a", skin: "#c49060", hair: "#3a3a3a" }, // purple hoodie
+				{ hoodie: "#1a1a1a", skin: "#d4a070", hair: "#4a2a1a" }, // black hoodie
+				{ hoodie: "#0a1a2a", skin: "#8b6040", hair: "#111" }, // navy hoodie
+				{ hoodie: "#2a1a0a", skin: "#e8c098", hair: "#5a3a1a" }, // brown hoodie
+			];
+
+			const HACKER_SPRITES = HACKER_PALETTES.map((p) => {
+				const idle = makeHacker(p.hoodie, p.skin, p.hair);
+				return {
+					idle,
+					walk: [idle, makeWalkFrame(idle, 1), makeWalkFrame(idle, 2), makeWalkFrame(idle, 3)],
+					type: [makeTypeFrame(idle, 0), makeTypeFrame(idle, 1)],
+				};
+			});
+
+			// ── Furniture Layout ──
+			// {type, x, y, sprite, zY} — x,y in tiles
+			const furniture = [
+				// Left room desks (messy hacker stations, 2 monitors each)
+				{ type: "desk", x: 2, y: 2, sprite: SPRITE_DESK, w: 32, h: 32 },
+				{ type: "monitor", x: 2, y: 1, sprite: SPRITE_MONITOR, w: 16, h: 16 },
+				{ type: "monitor", x: 3, y: 1, sprite: SPRITE_MONITOR2, w: 16, h: 16 },
+				{ type: "chair", x: 2, y: 4, sprite: SPRITE_CHAIR, w: 16, h: 16 },
+
+				{ type: "desk", x: 5, y: 2, sprite: SPRITE_DESK, w: 32, h: 32 },
+				{ type: "monitor", x: 5, y: 1, sprite: SPRITE_MONITOR2, w: 16, h: 16 },
+				{ type: "monitor", x: 6, y: 1, sprite: SPRITE_MONITOR, w: 16, h: 16 },
+				{ type: "chair", x: 5, y: 4, sprite: SPRITE_CHAIR, w: 16, h: 16 },
+				{ type: "pizza", x: 6, y: 2, sprite: SPRITE_PIZZA, w: 16, h: 16 }, // Pizza on desk!
+
+				{ type: "desk", x: 2, y: 7, sprite: SPRITE_DESK, w: 32, h: 32 },
+				{ type: "monitor", x: 2, y: 6, sprite: SPRITE_MONITOR, w: 16, h: 16 },
+				{ type: "monitor", x: 3, y: 6, sprite: SPRITE_MONITOR2, w: 16, h: 16 },
+				{ type: "chair", x: 2, y: 9, sprite: SPRITE_CHAIR, w: 16, h: 16 },
+
+				{ type: "desk", x: 5, y: 7, sprite: SPRITE_DESK, w: 32, h: 32 },
+				{ type: "monitor", x: 5, y: 6, sprite: SPRITE_MONITOR, w: 16, h: 16 },
+				{ type: "monitor", x: 6, y: 6, sprite: SPRITE_MONITOR2, w: 16, h: 16 },
+				{ type: "energydrink", x: 7, y: 7, sprite: SPRITE_ENERGYDRINK, w: 16, h: 16 },
+				{ type: "chair", x: 5, y: 9, sprite: SPRITE_CHAIR, w: 16, h: 16 },
+
+				// Right room — manager area with orange desk
+				{ type: "desk", x: 14, y: 3, sprite: SPRITE_DESK_MANAGER, w: 32, h: 32 },
+				{ type: "monitor", x: 14, y: 2, sprite: SPRITE_MONITOR, w: 16, h: 16 },
+				{ type: "monitor", x: 15, y: 2, sprite: SPRITE_MONITOR2, w: 16, h: 16 },
+				{
+					type: "monitor",
+					x: 14,
+					y: 3,
+					sprite: SPRITE_MONITOR,
+					w: 16,
+					h: 16,
+					offsetX: 8,
+					offsetY: -4,
+				}, // triple monitor
+				{ type: "chair", x: 14, y: 5, sprite: SPRITE_CHAIR, w: 16, h: 16 },
+
+				// More hacker desks right room
+				{ type: "desk", x: 17, y: 3, sprite: SPRITE_DESK, w: 32, h: 32 },
+				{ type: "monitor", x: 17, y: 2, sprite: SPRITE_MONITOR2, w: 16, h: 16 },
+				{ type: "monitor", x: 18, y: 2, sprite: SPRITE_MONITOR, w: 16, h: 16 },
+				{ type: "chair", x: 17, y: 5, sprite: SPRITE_CHAIR, w: 16, h: 16 },
+
+				{ type: "desk", x: 14, y: 8, sprite: SPRITE_DESK, w: 32, h: 32 },
+				{ type: "monitor", x: 14, y: 7, sprite: SPRITE_MONITOR, w: 16, h: 16 },
+				{ type: "monitor", x: 15, y: 7, sprite: SPRITE_MONITOR2, w: 16, h: 16 },
+				{ type: "chair", x: 14, y: 10, sprite: SPRITE_CHAIR, w: 16, h: 16 },
+
+				{ type: "desk", x: 17, y: 8, sprite: SPRITE_DESK, w: 32, h: 32 },
+				{ type: "monitor", x: 17, y: 7, sprite: SPRITE_MONITOR2, w: 16, h: 16 },
+				{ type: "monitor", x: 18, y: 7, sprite: SPRITE_MONITOR, w: 16, h: 16 },
+				{ type: "chair", x: 17, y: 10, sprite: SPRITE_CHAIR, w: 16, h: 16 },
+				{ type: "pizza", x: 18, y: 8, sprite: SPRITE_PIZZA, w: 16, h: 16 },
+
+				// Server racks along walls
+				{ type: "server", x: 8, y: 1, sprite: SPRITE_SERVER, w: 16, h: 32 },
+				{ type: "server", x: 9, y: 1, sprite: SPRITE_SERVER, w: 16, h: 32 },
+
+				{ type: "server", x: 11, y: 1, sprite: SPRITE_SERVER, w: 16, h: 32 },
+				{ type: "server", x: 12, y: 1, sprite: SPRITE_SERVER, w: 16, h: 32 },
+
+				// Hack board
+				{ type: "hackboard", x: 11, y: 10, sprite: SPRITE_HACKBOARD, w: 32, h: 32 },
+
+				// Plants
+				{ type: "plant", x: 1, y: 1, sprite: SPRITE_PLANT, w: 16, h: 24 },
+				{ type: "plant", x: 20, y: 1, sprite: SPRITE_PLANT, w: 16, h: 24 },
+				{ type: "plant", x: 1, y: 12, sprite: SPRITE_PLANT, w: 16, h: 24 },
+				{ type: "plant", x: 20, y: 12, sprite: SPRITE_PLANT, w: 16, h: 24 },
+
+				// Cables on floor
+				{ type: "cable", x: 4, y: 5, sprite: SPRITE_CABLE_H, w: 16, h: 16 },
+				{ type: "cable", x: 7, y: 3, sprite: SPRITE_CABLE_V, w: 16, h: 16 },
+				{ type: "cable", x: 7, y: 4, sprite: SPRITE_CABLE_V, w: 16, h: 16 },
+				{ type: "cable", x: 8, y: 5, sprite: SPRITE_CABLE_H, w: 16, h: 16 },
+				{ type: "cable", x: 13, y: 6, sprite: SPRITE_CABLE_V, w: 16, h: 16 },
+				{ type: "cable", x: 13, y: 7, sprite: SPRITE_CABLE_V, w: 16, h: 16 },
+				{ type: "cable", x: 16, y: 6, sprite: SPRITE_CABLE_H, w: 16, h: 16 },
+				{ type: "cable", x: 8, y: 10, sprite: SPRITE_CABLE_H, w: 16, h: 16 },
+				{ type: "cable", x: 9, y: 10, sprite: SPRITE_CABLE_H, w: 16, h: 16 },
+				{ type: "cable", x: 9, y: 9, sprite: SPRITE_CABLE_V, w: 16, h: 16 },
+			];
+
+			// Compute zY for furniture
+			furniture.forEach((f) => {
+				f.zY = f.y * T + f.h;
+				f.offsetX = f.offsetX || 0;
+				f.offsetY = f.offsetY || 0;
+			});
+
+			// ── Desk/Seat positions for characters ──
+			const SEATS = [
+				{ deskX: 2, deskY: 2, seatX: 3, seatY: 4 }, // left room
+				{ deskX: 5, deskY: 2, seatX: 6, seatY: 4 },
+				{ deskX: 2, deskY: 7, seatX: 3, seatY: 9 },
+				{ deskX: 5, deskY: 7, seatX: 6, seatY: 9 },
+				{ deskX: 14, deskY: 3, seatX: 15, seatY: 5 }, // right room (manager seat)
+				{ deskX: 17, deskY: 3, seatX: 18, seatY: 5 },
+				{ deskX: 14, deskY: 8, seatX: 15, seatY: 10 },
+				{ deskX: 17, deskY: 8, seatX: 18, seatY: 10 },
+			];
+
+			// ── Characters ──
+			const NAMES = ["r00t", "z3r0", "n3m0", "gh0st", "cyph3r", "v0id", "n1nja", "gl1tch"];
+
+			// States: 'idle', 'walk', 'type', 'spawn', 'despawn'
+			const characters = [];
+			for (let i = 0; i < 6; i++) {
+				const seat = SEATS[i];
+				const pal = HACKER_SPRITES[i % HACKER_SPRITES.length];
+				characters.push({
+					id: i,
+					name: NAMES[i],
+					x: seat.seatX * T + T / 2,
+					y: seat.seatY * T + T / 2,
+					tx: seat.seatX,
+					ty: seat.seatY,
+					seatIdx: i,
+					state: "type",
+					dir: "up",
+					spriteSet: pal,
+					animFrame: 0,
+					animTimer: 0,
+					stateTimer: Math.random() * 120 + 60, // time before wandering
+					path: [],
+					pathIdx: 0,
+					moveProgress: 0,
+					spawnProgress: 0,
+					wanderReturn: false,
+					zY: seat.seatY * T + T / 2 + T,
+				});
+			}
+
+			// ── BFS Pathfinding ──
+			function bfs(sx, sy, ex, ey) {
+				if (sx === ex && sy === ey) return [];
+				const visited = new Set();
+				const queue = [{ x: sx, y: sy, path: [] }];
+				visited.add(sy * MAP_W + sx);
+				while (queue.length > 0) {
+					const cur = queue.shift();
+					const dirs = [
+						[0, -1],
+						[0, 1],
+						[-1, 0],
+						[1, 0],
+					];
+					for (const [dx, dy] of dirs) {
+						const nx = cur.x + dx,
+							ny = cur.y + dy;
+						const key = ny * MAP_W + nx;
+						if (!visited.has(key) && isWalkable(nx, ny)) {
+							const np = [...cur.path, { x: nx, y: ny }];
+							if (nx === ex && ny === ey) return np;
+							visited.add(key);
+							queue.push({ x: nx, y: ny, path: np });
+						}
+					}
+				}
+				return [];
+			}
+
+			// ── Matrix Rain Effect ──
+			function renderMatrixRain(ctx, ch, ox, oy, z, progress, isSpawn) {
+				const sprite = ch.spriteSet.idle;
+				const h = sprite.length,
+					w = sprite[0].length;
+				const colStagger = [];
+				// Generate deterministic stagger per character
+				for (let c = 0; c < w; c++) {
+					colStagger.push((((ch.id * 7 + c * 13) % 100) / 100) * 0.3);
+				}
+				for (let c = 0; c < w; c++) {
+					const colProg = Math.max(0, Math.min(1, (progress - colStagger[c]) / 0.7));
+					const headY = Math.floor(colProg * (h + 4));
+					for (let r = 0; r < h; r++) {
+						const px = ox + c * z;
+						const py = oy + r * z;
+						const distFromHead = headY - r;
+						if (distFromHead >= 0 && distFromHead < 6) {
+							// Matrix rain trail
+							const hash = (ch.id * 31 + c * 17 + r * 7 + Math.floor(progress * 10)) % 10;
+							if (hash < 7) {
+								let color;
+								if (distFromHead === 0) color = "#ccffcc";
+								else if (distFromHead === 1) color = "#00ff41";
+								else if (distFromHead === 2) color = "#00cc33";
+								else if (distFromHead === 3) color = "#009922";
+								else color = "#005510";
+								ctx.fillStyle = color;
+								ctx.fillRect(px, py, z, z);
+							}
+						}
+						// Show character pixel if rain has passed
+						if (isSpawn && distFromHead > 3) {
+							const col = sprite[r][c];
+							if (col && col !== "") {
+								ctx.fillStyle = col;
+								ctx.fillRect(px, py, z, z);
+							}
+						}
+						if (!isSpawn && distFromHead < 0) {
+							const col = sprite[r][c];
+							if (col && col !== "") {
+								ctx.fillStyle = col;
+								ctx.fillRect(px, py, z, z);
+							}
+						}
+					}
+				}
+			}
+
+			// ── Screen Flicker State ──
+			let flickerTimer = 0;
+			let flickerActive = false;
+			let flickerIntensity = 0;
+
+			// ── Scrolling green text data ──
+			const terminalLines = [
+				"$ nmap -sV 192.168.1.0/24",
+				"PORT   STATE SERVICE VERSION",
+				"22/tcp open  ssh     OpenSSH",
+				"80/tcp open  http    nginx",
+				"$ sqlmap --dbs -u target",
+				"fetching database names...",
+				"[*] information_schema",
+				"[*] mysql",
+				"[*] target_db",
+				"$ hydra -l admin -P pass.txt",
+				"STATUS: 1024/14344 attempts",
+				"[22][ssh] host: 10.0.0.1",
+				"$ python3 exploit.py",
+				">>> payload = shellcode",
+				">>> send(payload)",
+				"[+] shell obtained!",
+				"$ cat /etc/shadow",
+				"root:$6$xyz...truncated",
+				"$ gcc -o rootkit rootkit.c",
+				"$ ./rootkit --install",
+			];
+			let scrollOffset = 0;
+
+			// ── Update ──
+			let lastTime = 0;
+			const WALK_SPEED = 48; // px/sec
+			const WALK_FRAME_DUR = 0.15;
+			const TYPE_FRAME_DUR = 0.3;
+			const SPAWN_DUR = 0.6;
+
+			function update(dt) {
+				scrollOffset += dt * 12;
+				if (scrollOffset > terminalLines.length * 10) scrollOffset = 0;
+
+				// Screen flicker
+				flickerTimer += dt;
+				if (!flickerActive && Math.random() < 0.003) {
+					flickerActive = true;
+					flickerIntensity = 0.1 + Math.random() * 0.2;
+					flickerTimer = 0;
+				}
+				if (flickerActive && flickerTimer > 0.05 + Math.random() * 0.1) {
+					flickerActive = false;
+				}
+
+				for (const ch of characters) {
+					ch.animTimer += dt;
+
+					switch (ch.state) {
+						case "spawn":
+							ch.spawnProgress += dt / SPAWN_DUR;
+							if (ch.spawnProgress >= 1) {
+								ch.spawnProgress = 1;
+								ch.state = "type";
+								ch.stateTimer = 60 + Math.random() * 120;
+							}
+							break;
+
+						case "despawn":
+							ch.spawnProgress += dt / SPAWN_DUR;
+							if (ch.spawnProgress >= 1) {
+								ch.state = "idle";
+								ch.spawnProgress = 0;
+							}
+							break;
+
+						case "type":
+							if (ch.animTimer >= TYPE_FRAME_DUR) {
+								ch.animTimer = 0;
+								ch.animFrame = (ch.animFrame + 1) % 2;
+							}
+							ch.stateTimer -= dt;
+							if (ch.stateTimer <= 0) {
+								// Wander
+								const wx = ch.tx + Math.floor(Math.random() * 7) - 3;
+								const wy = ch.ty + Math.floor(Math.random() * 5) - 2;
+								if (isWalkable(wx, wy)) {
+									const path = bfs(ch.tx, ch.ty, wx, wy);
+									if (path.length > 0) {
+										ch.state = "walk";
+										ch.path = path;
+										ch.pathIdx = 0;
+										ch.moveProgress = 0;
+										ch.wanderReturn = false;
+									} else {
+										ch.stateTimer = 30 + Math.random() * 60;
+									}
+								} else {
+									ch.stateTimer = 30 + Math.random() * 60;
+								}
+							}
+							break;
+
+						case "idle":
+							ch.stateTimer -= dt;
+							if (ch.stateTimer <= 0) {
+								// Return to seat
+								const seat = SEATS[ch.seatIdx];
+								const path = bfs(ch.tx, ch.ty, seat.seatX, seat.seatY);
+								if (path.length > 0) {
+									ch.state = "walk";
+									ch.path = path;
+									ch.pathIdx = 0;
+									ch.moveProgress = 0;
+									ch.wanderReturn = true;
+								} else {
+									ch.state = "type";
+									ch.stateTimer = 60 + Math.random() * 120;
+									ch.tx = seat.seatX;
+									ch.ty = seat.seatY;
+									ch.x = seat.seatX * T + T / 2;
+									ch.y = seat.seatY * T + T / 2;
+								}
+							}
+							break;
+
+						case "walk":
+							if (ch.pathIdx < ch.path.length) {
+								const target = ch.path[ch.pathIdx];
+								const startX = ch.pathIdx === 0 ? ch.tx : ch.path[ch.pathIdx - 1].x;
+								const startY = ch.pathIdx === 0 ? ch.ty : ch.path[ch.pathIdx - 1].y;
+
+								ch.moveProgress += (WALK_SPEED * dt) / T;
+
+								// Direction
+								const ddx = target.x - startX;
+								const ddy = target.y - startY;
+								if (Math.abs(ddx) > Math.abs(ddy)) ch.dir = ddx > 0 ? "right" : "left";
+								else ch.dir = ddy > 0 ? "down" : "up";
+
+								if (ch.moveProgress >= 1) {
+									ch.moveProgress = 0;
+									ch.tx = target.x;
+									ch.ty = target.y;
+									ch.x = target.x * T + T / 2;
+									ch.y = target.y * T + T / 2;
+									ch.pathIdx++;
+								} else {
+									ch.x = (startX + (target.x - startX) * ch.moveProgress) * T + T / 2;
+									ch.y = (startY + (target.y - startY) * ch.moveProgress) * T + T / 2;
+								}
+
+								// Walk animation
+								if (ch.animTimer >= WALK_FRAME_DUR) {
+									ch.animTimer = 0;
+									ch.animFrame = (ch.animFrame + 1) % 4;
+								}
+							} else {
+								// Path complete
+								if (ch.wanderReturn) {
+									ch.state = "type";
+									ch.dir = "up";
+									ch.stateTimer = 60 + Math.random() * 120;
+								} else {
+									ch.state = "idle";
+									ch.stateTimer = 3 + Math.random() * 5;
+								}
+								ch.animFrame = 0;
+							}
+							break;
+					}
+
+					ch.zY = ch.y + T / 2 + 0.5;
+				}
+			}
+
+			// ── Render ──
+			function render() {
+				const dpr = window.devicePixelRatio || 1;
+				const cw = canvas.clientWidth;
+				const ch = canvas.clientHeight;
+				canvas.width = cw * dpr;
+				canvas.height = ch * dpr;
+
+				ctx.imageSmoothingEnabled = false;
+
+				const mapPxW = MAP_W * T * zoom;
+				const mapPxH = MAP_H * T * zoom;
+				const offsetX = Math.floor((cw * dpr - mapPxW) / 2 + panX * dpr);
+				const offsetY = Math.floor((ch * dpr - mapPxH) / 2 + panY * dpr);
+
+				// Clear
+				ctx.fillStyle = "#000";
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+				// ── Draw Tiles ──
+				for (let ty = 0; ty < MAP_H; ty++) {
+					for (let tx = 0; tx < MAP_W; tx++) {
+						const tile = tileMap[ty][tx];
+						const px = offsetX + tx * T * zoom;
+						const py = offsetY + ty * T * zoom;
+						const sz = T * zoom;
+
+						if (tile === 3) {
+							ctx.fillStyle = C_WALL;
+							ctx.fillRect(px, py, sz, sz);
+							// Wall detail — subtle line
+							if (ty === 0 || ty === MAP_H - 1) {
+								ctx.fillStyle = "#0a0a0a";
+								ctx.fillRect(px, py + sz - zoom, sz, zoom);
+							}
+							if (tx === 0 || tx === MAP_W - 1) {
+								ctx.fillStyle = "#0a0a0a";
+								ctx.fillRect(px + sz - zoom, py, zoom, sz);
+							}
+						} else if (tile === 1) {
+							ctx.fillStyle = C_FLOOR1;
+							ctx.fillRect(px, py, sz, sz);
+							// Concrete texture
+							ctx.fillStyle = "#1d1d1d";
+							ctx.fillRect(px + zoom * 3, py + zoom * 7, zoom, zoom);
+							ctx.fillRect(px + zoom * 11, py + zoom * 2, zoom, zoom);
+						} else if (tile === 2) {
+							ctx.fillStyle = C_FLOOR2;
+							ctx.fillRect(px, py, sz, sz);
+							ctx.fillStyle = "#1e1e1e";
+							ctx.fillRect(px + zoom * 5, py + zoom * 9, zoom, zoom);
+						}
+						// Tile grid lines
+						if (tile === 1 || tile === 2) {
+							ctx.fillStyle = "#141414";
+							ctx.fillRect(px, py, sz, zoom * 0.5);
+							ctx.fillRect(px, py, zoom * 0.5, sz);
+						}
+					}
+				}
+
+				// ── Divider wall in middle ──
+				// The wall at x=10 between rooms (rows 1-3 and 11-12)
+				for (let ty = 1; ty <= 3; ty++) {
+					const px = offsetX + 10 * T * zoom;
+					const py = offsetY + ty * T * zoom;
+					ctx.fillStyle = C_WALL;
+					ctx.fillRect(px, py, T * zoom, T * zoom);
+				}
+				for (let ty = 11; ty <= 12; ty++) {
+					const px = offsetX + 10 * T * zoom;
+					const py = offsetY + ty * T * zoom;
+					ctx.fillStyle = C_WALL;
+					ctx.fillRect(px, py, T * zoom, T * zoom);
+				}
+
+				// ── Collect all drawables ──
+				const drawables = [];
+
+				// Furniture
+				for (const f of furniture) {
+					drawables.push({
+						type: "furniture",
+						data: f,
+						zY: f.zY,
+					});
+				}
+
+				// Characters
+				for (const c of characters) {
+					drawables.push({
+						type: "character",
+						data: c,
+						zY: c.zY,
+					});
+				}
+
+				// Sort by zY
+				drawables.sort((a, b) => a.zY - b.zY);
+
+				// ── Draw all ──
+				const now = performance.now() / 1000;
+				for (const d of drawables) {
+					if (d.type === "furniture") {
+						const f = d.data;
+						const px = offsetX + f.x * T * zoom + (f.offsetX || 0) * zoom;
+						const py = offsetY + f.y * T * zoom + (f.offsetY || 0) * zoom;
+
+						// Screen flicker for monitors
+						if (f.type === "monitor" && flickerActive) {
+							// Draw slightly offset/brightened
+							const sc = getSpriteCanvas("monitor_flicker_" + f.x + "_" + f.y, f.sprite, zoom);
+							ctx.globalAlpha = 1 - flickerIntensity;
+							ctx.drawImage(sc, px, py);
+							ctx.globalAlpha = flickerIntensity;
+							ctx.drawImage(sc, px + zoom, py);
+							ctx.globalAlpha = 1;
+						} else {
+							const key = f.type + "_" + f.x + "_" + f.y;
+							const sc = getSpriteCanvas(key, f.sprite, zoom);
+							ctx.drawImage(sc, px, py);
+						}
+
+						// Scrolling green text on monitors
+						if (f.type === "monitor") {
+							const screenX = px + 3 * zoom;
+							const screenY = py + 1 * zoom;
+							const screenW = 10 * zoom;
+							const screenH = 10 * zoom;
+
+							ctx.save();
+							ctx.beginPath();
+							ctx.rect(screenX, screenY, screenW, screenH);
+							ctx.clip();
+
+							const lineH = 2 * zoom;
+							const baseY = screenY - ((scrollOffset * zoom) % (terminalLines.length * lineH));
+							ctx.font = `${Math.max(zoom, 1)}px monospace`;
+
+							for (let i = 0; i < terminalLines.length * 2; i++) {
+								const li = i % terminalLines.length;
+								const ly = baseY + i * lineH;
+								if (ly > screenY - lineH && ly < screenY + screenH) {
+									const brightness = Math.sin(now * 2 + i * 0.5) * 0.3 + 0.7;
+									const g = Math.floor(brightness * 255);
+									ctx.fillStyle = `rgb(0,${g},${Math.floor(g * 0.25)})`;
+									// Draw pixel text representation
+									const line = terminalLines[li];
+									for (let ci = 0; ci < Math.min(line.length, 10); ci++) {
+										if (line[ci] !== " ") {
+											ctx.fillRect(screenX + ci * zoom, ly, zoom * 0.8, zoom * 0.8);
+										}
+									}
+								}
+							}
+							ctx.restore();
+
+							// CRT scanline effect
+							ctx.fillStyle = "rgba(0,0,0,0.15)";
+							for (let sy = screenY; sy < screenY + screenH; sy += zoom * 2) {
+								ctx.fillRect(screenX, sy, screenW, zoom * 0.5);
+							}
+
+							// Screen glow
+							ctx.fillStyle = "rgba(0,255,65,0.03)";
+							ctx.fillRect(screenX - zoom, screenY - zoom, screenW + zoom * 2, screenH + zoom * 2);
+						}
+					} else if (d.type === "character") {
+						const c = d.data;
+						const spriteH = 24;
+						const spriteW = 16;
+						const px = offsetX + Math.floor(c.x * zoom) - (spriteW / 2) * zoom;
+						const py = offsetY + Math.floor(c.y * zoom) - (spriteH - T / 2) * zoom;
+
+						if (c.state === "spawn") {
+							renderMatrixRain(ctx, c, px, py, zoom, c.spawnProgress, true);
+						} else if (c.state === "despawn") {
+							renderMatrixRain(ctx, c, px, py, zoom, c.spawnProgress, false);
+						} else {
+							let sprite;
+							if (c.state === "walk") {
+								sprite = c.spriteSet.walk[c.animFrame % 4];
+							} else if (c.state === "type") {
+								sprite = c.spriteSet.type[c.animFrame % 2];
+							} else {
+								sprite = c.spriteSet.idle;
+							}
+							const key = "char_" + c.id + "_" + c.state + "_" + c.animFrame;
+							const sc = getSpriteCanvas(key, sprite, zoom);
+							ctx.drawImage(sc, px, py);
+						}
+
+						// Name label
+						const labelY = py - 6 * zoom;
+						const labelX = px + (spriteW / 2) * zoom;
+						ctx.fillStyle = "rgba(0,0,0,0.7)";
+						const nameW = c.name.length * 4 * zoom + 4 * zoom;
+						ctx.fillRect(labelX - nameW / 2, labelY - 4 * zoom, nameW, 6 * zoom);
+
+						// Status dot
+						const dotColor = c.state === "type" ? C_GREEN : c.state === "walk" ? "#FFCB00" : "#555";
+						ctx.fillStyle = dotColor;
+						ctx.fillRect(labelX - nameW / 2 + zoom, labelY - 3 * zoom, 2 * zoom, 2 * zoom);
+
+						// Name text (pixel-style)
+						ctx.fillStyle = C_GREEN;
+						const fontSize = Math.max(zoom * 3, 6);
+						ctx.font = `${fontSize}px "Press Start 2P", monospace`;
+						ctx.textAlign = "center";
+						ctx.fillText(c.name, labelX, labelY);
+						ctx.textAlign = "start";
+					}
+				}
+
+				// ── Ambient green glow from monitors ──
+				ctx.fillStyle = "rgba(0,255,65,0.02)";
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+				// ── CRT overlay scanlines (subtle) ──
+				ctx.fillStyle = "rgba(0,0,0,0.05)";
+				for (let sy = 0; sy < canvas.height; sy += 4) {
+					ctx.fillRect(0, sy, canvas.width, 1);
+				}
+
+				// ── Vignette ──
+				const grd = ctx.createRadialGradient(
+					canvas.width / 2,
+					canvas.height / 2,
+					canvas.width * 0.3,
+					canvas.width / 2,
+					canvas.height / 2,
+					canvas.width * 0.7,
+				);
+				grd.addColorStop(0, "rgba(0,0,0,0)");
+				grd.addColorStop(1, "rgba(0,0,0,0.4)");
+				ctx.fillStyle = grd;
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+			}
+
+			// ── Game Loop ──
+			function gameLoop(timestamp) {
+				const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+				lastTime = timestamp;
+				update(dt);
+				render();
+				requestAnimationFrame(gameLoop);
+			}
+
+			// ── Input Handling ──
+			canvas.addEventListener(
+				"wheel",
+				(e) => {
+					e.preventDefault();
+					const oldZoom = zoom;
+					if (e.deltaY < 0) zoom = Math.min(zoom + 1, 10);
+					else zoom = Math.max(zoom - 1, 1);
+					if (zoom !== oldZoom) {
+						clearSpriteCache();
+						// Adjust pan to zoom towards mouse
+						const rect = canvas.getBoundingClientRect();
+						const mx = e.clientX - rect.left;
+						const my = e.clientY - rect.top;
+						panX = mx - (mx - panX) * (zoom / oldZoom);
+						panY = my - (my - panY) * (zoom / oldZoom);
+					}
+				},
+				{ passive: false },
+			);
+
+			canvas.addEventListener("mousedown", (e) => {
+				if (e.button === 1 || e.button === 0) {
+					isDragging = true;
+					dragStartX = e.clientX;
+					dragStartY = e.clientY;
+					panStartX = panX;
+					panStartY = panY;
+				}
+			});
+
+			canvas.addEventListener("mousemove", (e) => {
+				if (isDragging) {
+					panX = panStartX + (e.clientX - dragStartX);
+					panY = panStartY + (e.clientY - dragStartY);
+				}
+			});
+
+			canvas.addEventListener("mouseup", () => {
+				isDragging = false;
+			});
+			canvas.addEventListener("mouseleave", () => {
+				isDragging = false;
+			});
+
+			// Touch support
+			canvas.addEventListener(
+				"touchstart",
+				(e) => {
+					const t = e.touches[0];
+					isDragging = true;
+					dragStartX = t.clientX;
+					dragStartY = t.clientY;
+					panStartX = panX;
+					panStartY = panY;
+				},
+				{ passive: true },
+			);
+
+			canvas.addEventListener(
+				"touchmove",
+				(e) => {
+					if (isDragging && e.touches.length === 1) {
+						const t = e.touches[0];
+						panX = panStartX + (t.clientX - dragStartX);
+						panY = panStartY + (t.clientY - dragStartY);
+					}
+				},
+				{ passive: true },
+			);
+
+			canvas.addEventListener("touchend", () => {
+				isDragging = false;
+			});
+
+			// Handle resize
+			window.addEventListener("resize", () => {
+				clearSpriteCache();
+			});
+
+			// ── Trigger initial spawns with matrix effect ──
+			function initSpawns() {
+				characters.forEach((ch, i) => {
+					ch.state = "spawn";
+					ch.spawnProgress = -i * 0.3; // stagger
+				});
+			}
+
+			// ── Bottom bar terminal animation ──
+			const statusEl = document.querySelector("#bottom-bar .status");
+			const statusTexts = [
+				"NODES:6 | UPLINK:OK | TOR:ACTIVE",
+				"NODES:6 | UPLINK:OK | PROXY:SOCKS5",
+				"NODES:7 | UPLINK:OK | VPN:WIREGUARD",
+				"NODES:6 | UPLINK:!! | TOR:ACTIVE",
+				"NODES:6 | UPLINK:OK | TUNNEL:SSH",
+			];
+			let statusIdx = 0;
+			setInterval(() => {
+				statusIdx = (statusIdx + 1) % statusTexts.length;
+				statusEl.textContent = statusTexts[statusIdx];
+			}, 4000);
+
+			// ── Start ──
+			initSpawns();
+			requestAnimationFrame(gameLoop);
+		</script>
+	</body>
 </html>

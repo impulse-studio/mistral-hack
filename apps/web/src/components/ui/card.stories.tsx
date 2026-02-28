@@ -1,6 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button } from "./button";
-import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./card";
+import {
+	Card,
+	CardAction,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "./card";
 
 const meta = {
 	title: "ui/Card",
@@ -59,7 +67,9 @@ export const WithAction: Story = {
 					<CardTitle>Card Title</CardTitle>
 					<CardDescription>Card with a header action.</CardDescription>
 					<CardAction>
-						<Button variant="outline" size="sm">Edit</Button>
+						<Button variant="outline" size="sm">
+							Edit
+						</Button>
 					</CardAction>
 				</CardHeader>
 				<CardContent>

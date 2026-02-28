@@ -1,1147 +1,1411 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cyberpunk AI Office</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#0a0a1a;font-family:'Press Start 2P',monospace}
-canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;cursor:grab}
-canvas:active{cursor:grabbing}
-#bottomBar{position:fixed;bottom:0;left:0;right:0;height:48px;background:rgba(10,10,26,0.92);
-border-top:2px solid #FF7000;display:flex;align-items:center;padding:0 16px;z-index:10;
-box-shadow:0 -4px 20px rgba(255,112,0,0.15)}
-#bottomBar .prompt{color:#00f0ff;font-size:10px;font-family:'Press Start 2P',monospace;white-space:nowrap;overflow:hidden}
-#bottomBar .cursor{display:inline-block;width:8px;height:14px;background:#FF7000;margin-left:4px;
-animation:blink 0.6s step-end infinite;vertical-align:middle}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-#bottomBar .stats{margin-left:auto;color:#00f0ff;font-size:8px;font-family:'Press Start 2P',monospace;
-display:flex;gap:16px;align-items:center}
-#bottomBar .stats .dot{display:inline-block;width:6px;height:6px;background:#5ac88c;
-box-shadow:0 0 6px #5ac88c;margin-right:4px}
-</style>
-</head>
-<body>
-<canvas id="c"></canvas>
-<div id="bottomBar">
-<div class="prompt">root@cyberoffice:~$ <span id="termText"></span><span class="cursor"></span></div>
-<div class="stats">
-<span><span class="dot"></span>6 AGENTS</span>
-<span>CPU: 42%</span>
-<span>NET: OK</span>
-</div>
-</div>
-<script>
-"use strict";
-// ===== CONSTANTS =====
-const TILE = 16, ZOOM = 4, MAP_W = 22, MAP_H = 16;
-const BG = '#0a0a1a', NEON_ORANGE = '#FF7000', NEON_CYAN = '#00f0ff', NEON_GREEN = '#5ac88c';
-const MATRIX_GREEN = '#33ff33', MATRIX_ORANGE = '#FF7000';
-
-// ===== CANVAS SETUP =====
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-let W, H, dpr;
-let panX = 0, panY = 0, zoom = ZOOM;
-let isPanning = false, panStartX = 0, panStartY = 0, panOriginX = 0, panOriginY = 0;
-
-function resize() {
-  dpr = window.devicePixelRatio || 1;
-  W = window.innerWidth; H = window.innerHeight;
-  canvas.width = W * dpr; canvas.height = H * dpr;
-  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-}
-window.addEventListener('resize', resize);
-resize();
-
-// ===== PAN & ZOOM =====
-canvas.addEventListener('mousedown', e => {
-  if (e.button === 1 || e.button === 0 && e.shiftKey) {
-    isPanning = true; panStartX = e.clientX; panStartY = e.clientY;
-    panOriginX = panX; panOriginY = panY;
-  }
-});
-canvas.addEventListener('mousemove', e => {
-  if (isPanning) { panX = panOriginX + (e.clientX - panStartX); panY = panOriginY + (e.clientY - panStartY); }
-});
-canvas.addEventListener('mouseup', () => isPanning = false);
-canvas.addEventListener('mouseleave', () => isPanning = false);
-canvas.addEventListener('wheel', e => {
-  e.preventDefault();
-  const old = zoom;
-  zoom = Math.max(2, Math.min(8, zoom + (e.deltaY > 0 ? -1 : 1)));
-  if (zoom !== old) { spriteCache.clear(); }
-}, { passive: false });
-
-// ===== SPRITE CACHE =====
-const spriteCache = new Map();
-function drawSprite(ctx2, data, x, y, z) {
-  const key = data._id + '_' + z;
-  let cached = spriteCache.get(key);
-  if (!cached) {
-    const sw = data[0].length, sh = data.length;
-    const oc = document.createElement('canvas');
-    oc.width = sw * z; oc.height = sh * z;
-    const octx = oc.getContext('2d');
-    for (let r = 0; r < sh; r++) {
-      for (let c = 0; c < sw; c++) {
-        const col = data[r][c];
-        if (col && col !== '') { octx.fillStyle = col; octx.fillRect(c * z, r * z, z, z); }
-      }
-    }
-    cached = oc;
-    spriteCache.set(key, cached);
-  }
-  ctx2.drawImage(cached, Math.floor(x), Math.floor(y));
-}
-
-let spriteIdCounter = 0;
-function S(data) { data._id = spriteIdCounter++; return data; }
-
-// ===== FLOOR TILE DATA =====
-const floorTile = S((() => {
-  const t = [];
-  const colors = ['#0d0d22','#0e0e24','#0c0c20','#0f0f26','#0d0e23','#0e0d21'];
-  for (let r = 0; r < 16; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      if (r === 0 || c === 0) row.push('#1a1a35');
-      else row.push(colors[(r * 7 + c * 3) % colors.length]);
-    }
-    t.push(row);
-  }
-  return t;
-})());
-
-const wallTile = S((() => {
-  const t = [];
-  for (let r = 0; r < 16; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      if (r < 2) row.push('#FF7000');
-      else if (r < 4) row.push('#1a1030');
-      else row.push('#0f0a20');
-    }
-    t.push(row);
-  }
-  return t;
-})());
-
-// ===== TILE MAP =====
-// 0=void, 1=floor, 2=wall
-const tileMap = [];
-for (let r = 0; r < MAP_H; r++) {
-  const row = [];
-  for (let c = 0; c < MAP_W; c++) {
-    if (r === 0 || r === 1) row.push(2);
-    else if (r >= 2 && r < MAP_H - 1 && c >= 1 && c < MAP_W - 1) row.push(1);
-    else if (r === MAP_H - 1) row.push(2);
-    else row.push(0);
-  }
-  tileMap.push(row);
-}
-
-// ===== FURNITURE SPRITES =====
-const deskSprite = S((() => {
-  const d = [];
-  for (let r = 0; r < 32; r++) {
-    const row = [];
-    for (let c = 0; c < 32; c++) {
-      if (r < 2) {
-        row.push(c < 2 || c >= 30 ? '#2a1a3a' : '#3d2050');
-      } else if (r < 4) {
-        row.push(c < 1 || c >= 31 ? '#2a1a3a' : '#4a2860');
-      } else if (r < 14) {
-        if (c < 1 || c >= 31) row.push('#2a1a3a');
-        else if (c < 3 || c >= 29) row.push('#3d2050');
-        else row.push('#4a2860');
-      } else if (r < 16) {
-        row.push(c >= 2 && c < 30 ? '#3d2050' : '#2a1a3a');
-      } else if (r < 18) {
-        if (c >= 3 && c < 5) row.push('#2a1a3a');
-        else if (c >= 27 && c < 29) row.push('#2a1a3a');
-        else row.push('');
-      } else if (r < 28) {
-        if (c >= 3 && c < 5) row.push('#221030');
-        else if (c >= 27 && c < 29) row.push('#221030');
-        else row.push('');
-      } else if (r < 32) {
-        if (c >= 2 && c < 6) row.push('#2a1a3a');
-        else if (c >= 26 && c < 30) row.push('#2a1a3a');
-        else row.push('');
-      } else row.push('');
-    }
-    d.push(row);
-  }
-  return d;
-})());
-
-// Monitor with glow (on desk) — cyberpunk style
-function makeMonitor(screenColor, glowColor) {
-  const m = [];
-  for (let r = 0; r < 16; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      // Stand
-      if (r >= 13 && r < 15 && c >= 6 && c < 10) { row.push('#1a1a2e'); continue; }
-      if (r === 15 && c >= 4 && c < 12) { row.push('#1a1a2e'); continue; }
-      // Frame
-      if (r >= 1 && r <= 12 && c >= 2 && c <= 13) {
-        if (r === 1 || r === 12 || c === 2 || c === 13) { row.push('#1a1a2e'); continue; }
-        if (r === 2 || r === 11 || c === 3 || c === 12) { row.push('#222240'); continue; }
-        // Screen content — scanline effect baked in
-        if (r % 2 === 0) row.push(screenColor);
-        else row.push(glowColor);
-        continue;
-      }
-      row.push('');
-    }
-    m.push(row);
-  }
-  return S(m);
-}
-
-const monitorCyan = makeMonitor('#003844', '#005566');
-const monitorOrange = makeMonitor('#3a1800', '#552800');
-const monitorGreen = makeMonitor('#003818', '#005528');
-
-// Chair sprite
-const chairSprite = S((() => {
-  const ch = [];
-  for (let r = 0; r < 16; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      // Seat
-      if (r >= 4 && r < 10 && c >= 3 && c < 13) {
-        if (r === 4 || r === 9 || c === 3 || c === 12) row.push('#1a1030');
-        else row.push('#2a1845');
-      }
-      // Back
-      else if (r >= 0 && r < 4 && c >= 4 && c < 12) {
-        row.push('#2a1845');
-      }
-      // Legs
-      else if (r >= 10 && r < 14) {
-        if (c === 4 || c === 11) row.push('#151525');
-        else row.push('');
-      }
-      // Wheels
-      else if (r === 14) {
-        if (c === 3 || c === 5 || c === 10 || c === 12) row.push('#222');
-        else row.push('');
-      }
-      else row.push('');
-    }
-    ch.push(row);
-  }
-  return ch;
-})());
-
-// Plant sprite
-const plantSprite = S((() => {
-  const p = [];
-  for (let r = 0; r < 24; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      // Leaves
-      if (r >= 0 && r < 12) {
-        const cx = 8, cy = 6;
-        const dx = c - cx, dy = r - cy;
-        if (dx*dx + dy*dy < 30 && ((c + r) % 3 !== 0)) {
-          if ((c + r) % 5 === 0) row.push('#00cc66');
-          else if ((c + r) % 4 === 0) row.push('#00ff88');
-          else row.push('#00aa55');
-        } else row.push('');
-      }
-      // Pot
-      else if (r >= 14 && r < 22) {
-        const taper = Math.floor((r - 14) * 0.3);
-        if (c >= 4 + taper && c < 12 - taper) {
-          if (r === 14) row.push('#FF7000');
-          else row.push('#cc5500');
-        } else row.push('');
-      }
-      else row.push('');
-    }
-    p.push(row);
-  }
-  return p;
-})());
-
-// Bookshelf
-const bookshelfSprite = S((() => {
-  const b = [];
-  const bookColors = ['#FF7000','#00f0ff','#ff0066','#33ff33','#ffcc00','#ff44aa','#44aaff','#aa44ff'];
-  for (let r = 0; r < 32; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      if (c === 0 || c === 15) { row.push('#1a1030'); continue; }
-      if (r === 0 || r === 31) { row.push('#2a1845'); continue; }
-      // Shelves
-      if (r === 8 || r === 16 || r === 24) { row.push('#2a1845'); continue; }
-      // Books
-      if (c >= 2 && c <= 13) {
-        const section = r < 8 ? 0 : r < 16 ? 1 : r < 24 ? 2 : 3;
-        const bookIdx = (c + section * 3) % bookColors.length;
-        if ((r - 1) % 8 < 6) row.push(bookColors[bookIdx]);
-        else row.push('#1a1030');
-      } else row.push('#1a1030');
-    }
-    b.push(row);
-  }
-  return b;
-})());
-
-// Water cooler
-const coolerSprite = S((() => {
-  const w = [];
-  for (let r = 0; r < 24; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      // Water jug top
-      if (r >= 0 && r < 8 && c >= 5 && c < 11) {
-        if (c === 5 || c === 10 || r === 0) row.push('#4488aa');
-        else row.push('#00bbdd');
-      }
-      // Body
-      else if (r >= 8 && r < 20 && c >= 4 && c < 12) {
-        if (c === 4 || c === 11 || r === 8 || r === 19) row.push('#2a2a4a');
-        else row.push('#3a3a5a');
-      }
-      // Legs
-      else if (r >= 20 && r < 24) {
-        if (c === 5 || c === 10) row.push('#1a1a2e');
-        else row.push('');
-      }
-      else row.push('');
-    }
-    w.push(row);
-  }
-  return w;
-})());
-
-// Server rack
-const serverSprite = S((() => {
-  const s = [];
-  for (let r = 0; r < 32; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      if (c === 0 || c === 15 || r === 0 || r === 31) { row.push('#1a1a2e'); continue; }
-      if (r % 8 === 0) { row.push('#2a2a4a'); continue; }
-      if (c >= 2 && c <= 4 && r % 4 === 2) {
-        row.push(r % 8 < 4 ? '#00f0ff' : '#FF7000');
-        continue;
-      }
-      if (c >= 6 && c <= 13) {
-        if (r % 2 === 0) row.push('#222238');
-        else row.push('#1a1a30');
-        continue;
-      }
-      row.push('#1a1a30');
-    }
-    s.push(row);
-  }
-  return s;
-})());
-
-// ===== CHARACTER SPRITES =====
-const skinTones = ['#f0c8a0','#d4a574','#8d5524','#c68642','#e0ac69','#ffdbac'];
-const hairColors = ['#1a1a2e','#ff4488','#00f0ff','#FF7000','#33ff33','#ffcc00'];
-const shirtColors = ['#2244aa','#aa2244','#22aa44','#8844cc','#cc8800','#00aacc'];
-const glowColors = ['#00f0ff','#FF7000','#33ff33','#ff44aa','#ffcc00','#44aaff'];
-
-function makeCharSprite(skinIdx, dirOffset) {
-  const skin = skinTones[skinIdx % skinTones.length];
-  const hair = hairColors[skinIdx % hairColors.length];
-  const shirt = shirtColors[skinIdx % shirtColors.length];
-  const pants = '#1a1a3a';
-  const shoe = '#111122';
-
-  const d = [];
-  for (let r = 0; r < 24; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      // Hair (top of head)
-      if (r >= 0 && r < 4 && c >= 5 && c < 11) {
-        row.push(hair);
-      }
-      // Face
-      else if (r >= 4 && r < 8 && c >= 5 && c < 11) {
-        if (r === 5 && (c === 6 || c === 9)) row.push('#111');  // eyes
-        else if (r === 4 && (c === 5 || c === 10)) row.push(hair); // side hair
-        else row.push(skin);
-      }
-      // Neck
-      else if (r === 8 && c >= 7 && c < 9) { row.push(skin); }
-      // Shoulders + shirt
-      else if (r >= 9 && r < 16 && c >= 3 && c < 13) {
-        if (r === 9 && (c < 5 || c > 10)) row.push('');
-        else if (c === 3 || c === 12) row.push(shirt);
-        else if (r === 9) row.push(shirt);
-        else row.push(shirt);
-      }
-      // Arms
-      else if (r >= 10 && r < 15 && (c === 2 || c === 13)) {
-        row.push(skin);
-      }
-      // Pants
-      else if (r >= 16 && r < 20 && c >= 5 && c < 11) {
-        row.push(pants);
-      }
-      // Legs gap
-      else if (r >= 20 && r < 22 && (( c >= 5 && c < 7) || (c >= 9 && c < 11))) {
-        row.push(pants);
-      }
-      // Shoes
-      else if (r >= 22 && r < 24 && ((c >= 4 && c < 7) || (c >= 9 && c < 12))) {
-        row.push(shoe);
-      }
-      else row.push('');
-    }
-    d.push(row);
-  }
-  return S(d);
-}
-
-// Typing frame (arms forward)
-function makeCharTyping(skinIdx) {
-  const skin = skinTones[skinIdx % skinTones.length];
-  const hair = hairColors[skinIdx % hairColors.length];
-  const shirt = shirtColors[skinIdx % shirtColors.length];
-  const pants = '#1a1a3a';
-  const shoe = '#111122';
-
-  const d = [];
-  for (let r = 0; r < 24; r++) {
-    const row = [];
-    for (let c = 0; c < 16; c++) {
-      if (r >= 0 && r < 4 && c >= 5 && c < 11) row.push(hair);
-      else if (r >= 4 && r < 8 && c >= 5 && c < 11) {
-        if (r === 5 && (c === 6 || c === 9)) row.push('#111');
-        else if (r === 4 && (c === 5 || c === 10)) row.push(hair);
-        else row.push(skin);
-      }
-      else if (r === 8 && c >= 7 && c < 9) row.push(skin);
-      else if (r >= 9 && r < 16 && c >= 3 && c < 13) {
-        if (r === 9 && (c < 5 || c > 10)) row.push('');
-        else row.push(shirt);
-      }
-      // Arms extended forward/down for typing
-      else if (r >= 14 && r < 16 && (c === 2 || c === 13)) row.push(skin);
-      else if (r >= 16 && r < 20 && c >= 5 && c < 11) row.push(pants);
-      else if (r >= 20 && r < 22 && ((c >= 5 && c < 7) || (c >= 9 && c < 11))) row.push(pants);
-      else if (r >= 22 && r < 24 && ((c >= 4 && c < 7) || (c >= 9 && c < 12))) row.push(shoe);
-      else row.push('');
-    }
-    d.push(row);
-  }
-  return S(d);
-}
-
-// Walk frames
-function makeCharWalk(skinIdx, frame) {
-  const base = makeCharSprite(skinIdx, 0);
-  // Modify leg positions for walk animation
-  const d = base.map(row => [...row]);
-  // Swap leg pixels based on frame
-  if (frame === 0 || frame === 2) {
-    // Left leg forward
-    if (d[20]) { d[20][5] = '#1a1a3a'; d[20][6] = '#1a1a3a'; d[20][9] = ''; d[20][10] = ''; }
-    if (d[21]) { d[21][4] = '#1a1a3a'; d[21][5] = '#1a1a3a'; d[21][9] = ''; d[21][10] = ''; }
-  } else {
-    // Right leg forward
-    if (d[20]) { d[20][5] = ''; d[20][6] = ''; d[20][9] = '#1a1a3a'; d[20][10] = '#1a1a3a'; }
-    if (d[21]) { d[21][9] = '#1a1a3a'; d[21][10] = '#1a1a3a'; d[21][5] = ''; d[21][6] = ''; }
-  }
-  d._id = spriteIdCounter++;
-  return d;
-}
-
-// Pre-generate character sprites
-const charSprites = [];
-const charTypingSprites = [];
-const charWalkSprites = [];
-for (let i = 0; i < 6; i++) {
-  charSprites.push(makeCharSprite(i, 0));
-  charTypingSprites.push(makeCharTyping(i));
-  charWalkSprites.push([makeCharWalk(i, 0), makeCharWalk(i, 1), makeCharWalk(i, 2), makeCharWalk(i, 3)]);
-}
-
-// ===== HEXAGONAL DESK LAYOUT =====
-// 6 desks in a hex pattern around center
-const centerX = 11, centerY = 8;
-const hexRadius = 3.5;
-const deskPositions = [];
-for (let i = 0; i < 6; i++) {
-  const angle = (i * 60 - 90) * Math.PI / 180;
-  const dx = Math.round(centerX + Math.cos(angle) * hexRadius);
-  const dy = Math.round(centerY + Math.sin(angle) * hexRadius);
-  deskPositions.push({ x: dx, y: dy, angle: i });
-}
-
-// Chair offsets relative to desk (facing desk)
-const chairOffsets = [
-  { dx: 0, dy: 2 },   // top desk → chair below
-  { dx: 2, dy: 1 },   // upper-right → chair right
-  { dx: 2, dy: 1 },   // lower-right → chair right
-  { dx: 0, dy: 2 },   // bottom → chair below
-  { dx: -1, dy: 1 },  // lower-left → chair left
-  { dx: -1, dy: 1 },  // upper-left → chair left
-];
-
-// ===== FURNITURE LIST =====
-const furniture = [];
-
-// Desks + chairs + monitors
-deskPositions.forEach((pos, i) => {
-  furniture.push({ type: 'desk', x: pos.x, y: pos.y, sprite: deskSprite, zY: (pos.y + 2) * TILE });
-  const co = chairOffsets[i];
-  furniture.push({ type: 'chair', x: pos.x + co.dx, y: pos.y + co.dy, sprite: chairSprite, zY: (pos.y + co.dy + 1) * TILE });
-  const monitors = [monitorCyan, monitorOrange, monitorGreen];
-  furniture.push({ type: 'monitor', x: pos.x, y: pos.y - 1, sprite: monitors[i % 3], zY: pos.y * TILE, deskIdx: i });
-  furniture.push({ type: 'monitor', x: pos.x + 1, y: pos.y - 1, sprite: monitors[(i + 1) % 3], zY: pos.y * TILE, deskIdx: i });
-});
-
-// Decorations around edges
-furniture.push({ type: 'bookshelf', x: 1, y: 2, sprite: bookshelfSprite, zY: 4 * TILE });
-furniture.push({ type: 'bookshelf', x: 2, y: 2, sprite: bookshelfSprite, zY: 4 * TILE });
-furniture.push({ type: 'bookshelf', x: 19, y: 2, sprite: bookshelfSprite, zY: 4 * TILE });
-furniture.push({ type: 'bookshelf', x: 20, y: 2, sprite: bookshelfSprite, zY: 4 * TILE });
-
-furniture.push({ type: 'plant', x: 1, y: 5, sprite: plantSprite, zY: 6.5 * TILE });
-furniture.push({ type: 'plant', x: 20, y: 5, sprite: plantSprite, zY: 6.5 * TILE });
-furniture.push({ type: 'plant', x: 1, y: 12, sprite: plantSprite, zY: 13.5 * TILE });
-furniture.push({ type: 'plant', x: 20, y: 12, sprite: plantSprite, zY: 13.5 * TILE });
-
-furniture.push({ type: 'server', x: 19, y: 6, sprite: serverSprite, zY: 8 * TILE });
-furniture.push({ type: 'server', x: 20, y: 6, sprite: serverSprite, zY: 8 * TILE });
-
-furniture.push({ type: 'cooler', x: 1, y: 9, sprite: coolerSprite, zY: 10.5 * TILE });
-
-// ===== CHARACTER STATE MACHINE =====
-// States: IDLE, WALK, TYPE, SPAWN, DESPAWN
-const agents = [];
-const agentNames = ['NEO-7','CIPHER','GHOST','PRISM','NEXUS','WRAITH'];
-
-// BFS pathfinding
-function bfs(sx, sy, ex, ey) {
-  if (sx === ex && sy === ey) return [];
-  const visited = new Set();
-  const queue = [{ x: sx, y: sy, path: [] }];
-  visited.add(sx + ',' + sy);
-  while (queue.length > 0) {
-    const cur = queue.shift();
-    const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
-    for (const [dx, dy] of dirs) {
-      const nx = cur.x + dx, ny = cur.y + dy;
-      const key = nx + ',' + ny;
-      if (visited.has(key)) continue;
-      if (nx < 1 || nx >= MAP_W - 1 || ny < 2 || ny >= MAP_H - 1) continue;
-      if (tileMap[ny] && tileMap[ny][nx] !== 1) continue;
-      // Check furniture collisions (desks only)
-      let blocked = false;
-      for (const f of furniture) {
-        if (f.type === 'desk') {
-          if (nx >= f.x && nx < f.x + 2 && ny >= f.y && ny < f.y + 2) { blocked = true; break; }
-        }
-        if (f.type === 'server' || f.type === 'bookshelf') {
-          const sw = f.sprite[0].length / 16, sh = f.sprite.length / 16;
-          if (nx >= f.x && nx < f.x + sw && ny >= f.y && ny < f.y + Math.ceil(sh)) { blocked = true; break; }
-        }
-      }
-      if (blocked) continue;
-      const newPath = [...cur.path, { x: nx, y: ny }];
-      if (nx === ex && ny === ey) return newPath;
-      visited.add(key);
-      queue.push({ x: nx, y: ny, path: newPath });
-    }
-  }
-  return null;
-}
-
-for (let i = 0; i < 6; i++) {
-  const desk = deskPositions[i];
-  const co = chairOffsets[i];
-  const seatX = desk.x + co.dx;
-  const seatY = desk.y + co.dy;
-  agents.push({
-    id: i,
-    name: agentNames[i],
-    skinIdx: i,
-    x: seatX * TILE,
-    y: seatY * TILE,
-    tileX: seatX,
-    tileY: seatY,
-    seatX: seatX,
-    seatY: seatY,
-    state: 'SPAWN',
-    stateTimer: 0,
-    spawnProgress: 0,
-    walkPath: [],
-    walkIdx: 0,
-    walkT: 0,
-    walkFrame: 0,
-    walkFrameTimer: 0,
-    typeFrame: 0,
-    typeTimer: 0,
-    idleTimer: 3 + Math.random() * 5,
-    wanderTimer: 0,
-    glowColor: glowColors[i % glowColors.length],
-    spawnDelay: i * 0.4,
-    spawned: false,
-    matrixColumns: [],
-    statusText: ['compiling...','debugging...','deploying...','analyzing...','refactoring...','testing...'][i]
-  });
-
-  // Init matrix rain columns for spawn effect
-  const cols = [];
-  for (let c = 0; c < 16; c++) {
-    cols.push({ offset: Math.random() * 0.3, head: -1, speed: 0.8 + Math.random() * 0.4 });
-  }
-  agents[i].matrixColumns = cols;
-}
-
-// ===== MATRIX RAIN BACKGROUND =====
-const matrixDrops = [];
-for (let i = 0; i < 60; i++) {
-  matrixDrops.push({
-    x: Math.random() * MAP_W * TILE,
-    y: Math.random() * MAP_H * TILE,
-    speed: 20 + Math.random() * 40,
-    char: String.fromCharCode(0x30A0 + Math.floor(Math.random() * 96)),
-    alpha: 0.1 + Math.random() * 0.3,
-    color: Math.random() > 0.5 ? MATRIX_GREEN : MATRIX_ORANGE,
-    timer: Math.random() * 2
-  });
-}
-
-// ===== SCANLINE + CRT EFFECTS =====
-let scanlineCanvas = null;
-function ensureScanlines(w, h) {
-  if (scanlineCanvas && scanlineCanvas.width === w && scanlineCanvas.height === h) return;
-  scanlineCanvas = document.createElement('canvas');
-  scanlineCanvas.width = w; scanlineCanvas.height = h;
-  const sctx = scanlineCanvas.getContext('2d');
-  sctx.fillStyle = 'rgba(0,0,0,0.12)';
-  for (let y = 0; y < h; y += 3) {
-    sctx.fillRect(0, y, w, 1);
-  }
-}
-
-function drawCRTVignette(ctx2, w, h) {
-  const grd = ctx2.createRadialGradient(w/2, h/2, w * 0.25, w/2, h/2, w * 0.75);
-  grd.addColorStop(0, 'rgba(0,0,0,0)');
-  grd.addColorStop(0.7, 'rgba(0,0,0,0.15)');
-  grd.addColorStop(1, 'rgba(0,0,0,0.6)');
-  ctx2.fillStyle = grd;
-  ctx2.fillRect(0, 0, w, h);
-}
-
-// ===== TERMINAL TEXT ANIMATION =====
-const terminalLines = [
-  'initializing neural network...',
-  'loading cyberpunk_office.exe...',
-  'connecting to mainframe...',
-  'deploying agents...',
-  'scanning for vulnerabilities...',
-  'compiling quantum bytecode...',
-  'syncing neural mesh...',
-  'activating holographic displays...',
-  'patching firewall v4.2...',
-  'uploading consciousness backup...',
-];
-let termLineIdx = 0, termCharIdx = 0, termTimer = 0, termPause = 0;
-
-function updateTerminal(dt) {
-  if (termPause > 0) { termPause -= dt; return; }
-  termTimer += dt;
-  if (termTimer > 0.04) {
-    termTimer = 0;
-    termCharIdx++;
-    const line = terminalLines[termLineIdx];
-    if (termCharIdx > line.length) {
-      termPause = 1.5;
-      termCharIdx = 0;
-      termLineIdx = (termLineIdx + 1) % terminalLines.length;
-    }
-    const el = document.getElementById('termText');
-    if (el) el.textContent = terminalLines[termLineIdx].substring(0, termCharIdx);
-  }
-}
-
-// ===== SPEECH BUBBLES =====
-const bubbles = [];
-function addBubble(agentIdx, text, duration) {
-  bubbles.push({ agentIdx, text, timer: duration || 3, alpha: 1 });
-}
-
-// Periodically add bubbles
-let bubbleTimer = 2;
-const bubbleTexts = [
-  'push to main?', 'LGTM', 'fixing bug...', 'need coffee',
-  'deploying...', 'code review?', 'tests pass!', 'rebasing...',
-  'ship it!', 'merge conflict', 'hotfix incoming', 'optimizing...'
-];
-
-// ===== MONITOR GLOW ANIMATION =====
-let monitorGlowPhase = 0;
-
-// ===== UPDATE =====
-let globalTime = 0;
-
-function update(dt) {
-  globalTime += dt;
-  monitorGlowPhase += dt * 2;
-
-  // Update terminal
-  updateTerminal(dt);
-
-  // Update matrix rain
-  for (const drop of matrixDrops) {
-    drop.y += drop.speed * dt;
-    drop.timer -= dt;
-    if (drop.timer <= 0) {
-      drop.char = String.fromCharCode(0x30A0 + Math.floor(Math.random() * 96));
-      drop.timer = 0.1 + Math.random() * 0.3;
-    }
-    if (drop.y > MAP_H * TILE) {
-      drop.y = -10;
-      drop.x = Math.random() * MAP_W * TILE;
-    }
-  }
-
-  // Update bubbles
-  bubbleTimer -= dt;
-  if (bubbleTimer <= 0) {
-    bubbleTimer = 4 + Math.random() * 6;
-    const ai = Math.floor(Math.random() * 6);
-    if (agents[ai].state === 'TYPE' || agents[ai].state === 'IDLE') {
-      addBubble(ai, bubbleTexts[Math.floor(Math.random() * bubbleTexts.length)], 3);
-    }
-  }
-  for (let i = bubbles.length - 1; i >= 0; i--) {
-    bubbles[i].timer -= dt;
-    if (bubbles[i].timer < 0.5) bubbles[i].alpha = Math.max(0, bubbles[i].timer / 0.5);
-    if (bubbles[i].timer <= 0) bubbles.splice(i, 1);
-  }
-
-  // Update agents
-  for (const agent of agents) {
-    // Spawn delay
-    if (!agent.spawned) {
-      agent.spawnDelay -= dt;
-      if (agent.spawnDelay > 0) continue;
-      agent.spawned = true;
-      agent.state = 'SPAWN';
-      agent.spawnProgress = 0;
-    }
-
-    switch (agent.state) {
-      case 'SPAWN': {
-        agent.spawnProgress += dt / 0.8;
-        if (agent.spawnProgress >= 1) {
-          agent.spawnProgress = 1;
-          agent.state = 'TYPE';
-          agent.typeTimer = 0;
-          agent.stateTimer = 0;
-        }
-        // Update matrix column heads
-        for (const col of agent.matrixColumns) {
-          col.head = (agent.spawnProgress - col.offset) * 28;
-        }
-        break;
-      }
-
-      case 'TYPE': {
-        agent.typeTimer += dt;
-        if (agent.typeTimer > 0.3) {
-          agent.typeTimer = 0;
-          agent.typeFrame = 1 - agent.typeFrame;
-        }
-        agent.stateTimer += dt;
-        // After a while, maybe wander
-        if (agent.stateTimer > 8 + Math.random() * 15) {
-          agent.stateTimer = 0;
-          if (Math.random() > 0.4) {
-            // Start wandering
-            const wx = Math.max(2, Math.min(MAP_W - 3, agent.seatX + Math.floor(Math.random() * 7) - 3));
-            const wy = Math.max(3, Math.min(MAP_H - 3, agent.seatY + Math.floor(Math.random() * 5) - 2));
-            const path = bfs(agent.tileX, agent.tileY, wx, wy);
-            if (path && path.length > 0) {
-              agent.walkPath = path;
-              agent.walkIdx = 0;
-              agent.walkT = 0;
-              agent.state = 'WALK';
-              agent.walkFrame = 0;
-              agent.walkFrameTimer = 0;
-              agent.wanderTimer = 2 + Math.random() * 3;
-            }
-          }
-        }
-        break;
-      }
-
-      case 'IDLE': {
-        agent.idleTimer -= dt;
-        if (agent.idleTimer <= 0) {
-          // Walk back to seat
-          const path = bfs(agent.tileX, agent.tileY, agent.seatX, agent.seatY);
-          if (path && path.length > 0) {
-            agent.walkPath = path;
-            agent.walkIdx = 0;
-            agent.walkT = 0;
-            agent.state = 'WALK';
-            agent.walkFrame = 0;
-            agent.walkFrameTimer = 0;
-            agent.wanderTimer = 0;
-          } else {
-            // Can't path, just teleport
-            agent.tileX = agent.seatX;
-            agent.tileY = agent.seatY;
-            agent.x = agent.seatX * TILE;
-            agent.y = agent.seatY * TILE;
-            agent.state = 'TYPE';
-            agent.stateTimer = 0;
-          }
-        }
-        break;
-      }
-
-      case 'WALK': {
-        const speed = 48; // px/sec
-        agent.walkT += (speed * dt) / TILE;
-        agent.walkFrameTimer += dt;
-        if (agent.walkFrameTimer > 0.15) {
-          agent.walkFrameTimer = 0;
-          agent.walkFrame = (agent.walkFrame + 1) % 4;
-        }
-
-        if (agent.walkT >= 1) {
-          agent.walkT = 0;
-          agent.tileX = agent.walkPath[agent.walkIdx].x;
-          agent.tileY = agent.walkPath[agent.walkIdx].y;
-          agent.x = agent.tileX * TILE;
-          agent.y = agent.tileY * TILE;
-          agent.walkIdx++;
-          if (agent.walkIdx >= agent.walkPath.length) {
-            agent.walkPath = [];
-            if (agent.wanderTimer > 0) {
-              agent.state = 'IDLE';
-              agent.idleTimer = agent.wanderTimer;
-            } else {
-              agent.state = 'TYPE';
-              agent.stateTimer = 0;
-            }
-          }
-        } else if (agent.walkPath.length > 0 && agent.walkIdx < agent.walkPath.length) {
-          const target = agent.walkPath[agent.walkIdx];
-          agent.x = agent.tileX * TILE + (target.x - agent.tileX) * TILE * agent.walkT;
-          agent.y = agent.tileY * TILE + (target.y - agent.tileY) * TILE * agent.walkT;
-        }
-        break;
-      }
-    }
-  }
-}
-
-// ===== RENDER =====
-function render() {
-  const cw = canvas.width, ch = canvas.height;
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, cw, ch);
-  ctx.fillStyle = BG;
-  ctx.fillRect(0, 0, cw, ch);
-
-  const z = zoom;
-  const mapPxW = MAP_W * TILE * z;
-  const mapPxH = MAP_H * TILE * z;
-  const ox = Math.floor((cw - mapPxW) / 2 + panX * dpr);
-  const oy = Math.floor((ch - mapPxH) / 2 + panY * dpr - 24 * dpr);
-
-  ctx.imageSmoothingEnabled = false;
-
-  // Draw floor tiles
-  for (let r = 0; r < MAP_H; r++) {
-    for (let c = 0; c < MAP_W; c++) {
-      const t = tileMap[r][c];
-      if (t === 0) continue;
-      const tx = ox + c * TILE * z;
-      const ty = oy + r * TILE * z;
-      if (t === 1) drawSprite(ctx, floorTile, tx, ty, z);
-      else if (t === 2) drawSprite(ctx, wallTile, tx, ty, z);
-    }
-  }
-
-  // Draw neon grid lines on floor (subtle)
-  ctx.globalAlpha = 0.04 + Math.sin(globalTime * 0.5) * 0.01;
-  ctx.strokeStyle = NEON_CYAN;
-  ctx.lineWidth = 1;
-  for (let r = 2; r < MAP_H; r++) {
-    const y = oy + r * TILE * z;
-    ctx.beginPath(); ctx.moveTo(ox + TILE * z, y); ctx.lineTo(ox + (MAP_W - 1) * TILE * z, y); ctx.stroke();
-  }
-  for (let c = 1; c < MAP_W; c++) {
-    const x = ox + c * TILE * z;
-    ctx.beginPath(); ctx.moveTo(x, oy + 2 * TILE * z); ctx.lineTo(x, oy + (MAP_H - 1) * TILE * z); ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-
-  // Matrix rain in background (behind furniture)
-  ctx.save();
-  ctx.rect(ox, oy, mapPxW, mapPxH);
-  ctx.clip();
-  for (const drop of matrixDrops) {
-    const dx = ox + drop.x * z;
-    const dy = oy + drop.y * z;
-    ctx.globalAlpha = drop.alpha;
-    ctx.fillStyle = drop.color;
-    ctx.font = `${Math.floor(8 * z / 4)}px monospace`;
-    ctx.fillText(drop.char, dx, dy);
-  }
-  ctx.globalAlpha = 1;
-  ctx.restore();
-
-  // Collect drawables (furniture + characters)
-  const drawables = [];
-
-  for (const f of furniture) {
-    drawables.push({
-      type: 'furniture',
-      data: f,
-      zY: f.zY
-    });
-  }
-
-  for (const agent of agents) {
-    if (!agent.spawned) continue;
-    drawables.push({
-      type: 'character',
-      data: agent,
-      zY: agent.y + TILE / 2 + 0.5
-    });
-  }
-
-  drawables.sort((a, b) => a.zY - b.zY);
-
-  // Draw all drawables
-  for (const d of drawables) {
-    if (d.type === 'furniture') {
-      const f = d.data;
-      const fx = ox + f.x * TILE * z;
-      const fy = oy + f.y * TILE * z;
-
-      // Monitor glow
-      if (f.type === 'monitor') {
-        const glowAlpha = 0.15 + Math.sin(monitorGlowPhase + f.x * 0.5) * 0.08;
-        const monColors = ['#00f0ff', '#FF7000', '#33ff33'];
-        const gc = monColors[f.deskIdx !== undefined ? f.deskIdx % 3 : 0];
-        ctx.shadowColor = gc;
-        ctx.shadowBlur = 12 * z / 4;
-        drawSprite(ctx, f.sprite, fx, fy, z);
-        ctx.shadowBlur = 0;
-
-        // Animated scanlines on monitor screens
-        ctx.globalAlpha = 0.15;
-        const scanY = ((globalTime * 30) % 16) | 0;
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(fx + 4 * z, fy + (3 + scanY % 8) * z, 10 * z, z);
-        ctx.globalAlpha = 1;
-      } else {
-        drawSprite(ctx, f.sprite, fx, fy, z);
-      }
-    } else {
-      // Character
-      const agent = d.data;
-      const ax = ox + Math.floor(agent.x * z);
-      const ay = oy + Math.floor(agent.y * z) - 8 * z; // offset for 24px tall sprite anchored at bottom
-
-      if (agent.state === 'SPAWN' && agent.spawnProgress < 1) {
-        // Matrix spawn effect
-        const sprite = charSprites[agent.skinIdx];
-        const sw = 16, sh = 24;
-        for (let c = 0; c < sw; c++) {
-          const col = agent.matrixColumns[c];
-          for (let r = 0; r < sh; r++) {
-            const pixel = sprite[r] && sprite[r][c];
-            const revealed = r < col.head - 3;
-            const isHead = Math.abs(r - col.head) < 1;
-            const isTrail = r >= col.head - 3 && r <= col.head;
-            const px = ax + c * z;
-            const py = ay + r * z;
-            if (isHead) {
-              ctx.fillStyle = '#ccffcc';
-              ctx.fillRect(px, py, z, z);
-            } else if (isTrail) {
-              const trailAlpha = 1 - (col.head - r) / 4;
-              ctx.globalAlpha = trailAlpha * 0.8;
-              ctx.fillStyle = MATRIX_GREEN;
-              ctx.fillRect(px, py, z, z);
-              ctx.globalAlpha = 1;
-            } else if (revealed && pixel && pixel !== '') {
-              // Flicker effect
-              const hash = ((c * 7 + r * 13 + (globalTime * 10 | 0)) * 2654435761) & 0xFFFFFFFF;
-              if ((hash & 0xFF) > 50) {
-                ctx.fillStyle = pixel;
-                ctx.fillRect(px, py, z, z);
-              }
-            }
-          }
-        }
-      } else {
-        // Normal character draw
-        let sprite;
-        if (agent.state === 'WALK') {
-          sprite = charWalkSprites[agent.skinIdx][agent.walkFrame];
-        } else if (agent.state === 'TYPE') {
-          sprite = agent.typeFrame === 0 ? charSprites[agent.skinIdx] : charTypingSprites[agent.skinIdx];
-        } else {
-          sprite = charSprites[agent.skinIdx];
-        }
-
-        // Glow outline
-        ctx.shadowColor = agent.glowColor;
-        ctx.shadowBlur = 6 * z / 4;
-        drawSprite(ctx, sprite, ax, ay, z);
-        ctx.shadowBlur = 0;
-
-        // Pulsing glow outline (draw larger and masked)
-        const glowAlpha = 0.2 + Math.sin(globalTime * 3 + agent.id) * 0.1;
-        ctx.globalAlpha = glowAlpha;
-        ctx.shadowColor = agent.glowColor;
-        ctx.shadowBlur = 10 * z / 4;
-        drawSprite(ctx, sprite, ax, ay, z);
-        ctx.shadowBlur = 0;
-        ctx.globalAlpha = 1;
-      }
-
-      // Agent label
-      if (agent.state !== 'SPAWN' || agent.spawnProgress >= 1) {
-        const labelX = ax + 8 * z;
-        const labelY = ay - 6 * z;
-        const fontSize = Math.max(8, Math.floor(8 * z / 4));
-        ctx.font = `${fontSize}px 'Press Start 2P', monospace`;
-        const text = agent.name;
-        const tw = ctx.measureText(text).width;
-
-        ctx.fillStyle = 'rgba(10,10,26,0.8)';
-        ctx.fillRect(labelX - tw / 2 - 4, labelY - fontSize - 2, tw + 8, fontSize + 6);
-        ctx.strokeStyle = agent.glowColor;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(labelX - tw / 2 - 4, labelY - fontSize - 2, tw + 8, fontSize + 6);
-
-        // Status dot
-        ctx.fillStyle = agent.state === 'TYPE' ? '#00f0ff' : agent.state === 'WALK' ? '#ffcc00' : '#5ac88c';
-        ctx.fillRect(labelX - tw / 2 - 1, labelY - fontSize + 2, 4, 4);
-        ctx.shadowColor = ctx.fillStyle;
-        ctx.shadowBlur = 4;
-        ctx.fillRect(labelX - tw / 2 - 1, labelY - fontSize + 2, 4, 4);
-        ctx.shadowBlur = 0;
-
-        ctx.fillStyle = agent.glowColor;
-        ctx.textAlign = 'center';
-        ctx.fillText(text, labelX, labelY);
-        ctx.textAlign = 'start';
-      }
-    }
-  }
-
-  // Speech bubbles
-  for (const b of bubbles) {
-    const agent = agents[b.agentIdx];
-    if (!agent || !agent.spawned) continue;
-    const bx = ox + Math.floor(agent.x * z) + 8 * z;
-    const by = oy + Math.floor(agent.y * z) - 8 * z - 18 * z;
-
-    const fontSize = Math.max(7, Math.floor(7 * z / 4));
-    ctx.font = `${fontSize}px 'Press Start 2P', monospace`;
-    const tw = ctx.measureText(b.text).width;
-
-    ctx.globalAlpha = b.alpha;
-
-    // Bubble bg
-    ctx.fillStyle = 'rgba(10,10,26,0.9)';
-    ctx.fillRect(bx - tw / 2 - 6, by - fontSize - 6, tw + 12, fontSize + 12);
-    ctx.strokeStyle = NEON_CYAN;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(bx - tw / 2 - 6, by - fontSize - 6, tw + 12, fontSize + 12);
-
-    // Pointer triangle
-    ctx.fillStyle = 'rgba(10,10,26,0.9)';
-    ctx.beginPath();
-    ctx.moveTo(bx - 3, by + 6);
-    ctx.lineTo(bx + 3, by + 6);
-    ctx.lineTo(bx, by + 12);
-    ctx.fill();
-
-    // Text
-    ctx.fillStyle = NEON_CYAN;
-    ctx.textAlign = 'center';
-    ctx.fillText(b.text, bx, by);
-    ctx.textAlign = 'start';
-    ctx.globalAlpha = 1;
-  }
-
-  // Status text below agents at their desks
-  for (const agent of agents) {
-    if (!agent.spawned || agent.state !== 'TYPE') continue;
-    const sx = ox + Math.floor(agent.x * z) + 8 * z;
-    const sy = oy + Math.floor(agent.y * z) + 12 * z;
-
-    const fontSize = Math.max(6, Math.floor(6 * z / 4));
-    ctx.font = `${fontSize}px 'Press Start 2P', monospace`;
-    ctx.globalAlpha = 0.5 + Math.sin(globalTime * 2 + agent.id * 1.5) * 0.2;
-    ctx.fillStyle = '#FF7000';
-    ctx.textAlign = 'center';
-    ctx.fillText(agent.statusText, sx, sy);
-    ctx.textAlign = 'start';
-    ctx.globalAlpha = 1;
-  }
-
-  // Neon border glow on walls (top)
-  const wallGlow = ctx.createLinearGradient(ox, oy, ox, oy + 3 * TILE * z);
-  wallGlow.addColorStop(0, 'rgba(255,112,0,0.3)');
-  wallGlow.addColorStop(1, 'rgba(255,112,0,0)');
-  ctx.fillStyle = wallGlow;
-  ctx.fillRect(ox, oy, mapPxW, 3 * TILE * z);
-
-  // Scanlines (full screen CRT)
-  ensureScanlines(cw, ch);
-  ctx.globalAlpha = 0.5;
-  ctx.drawImage(scanlineCanvas, 0, 0);
-  ctx.globalAlpha = 1;
-
-  // CRT vignette
-  drawCRTVignette(ctx, cw, ch);
-
-  // Slight chromatic aberration hint (top/bottom edges)
-  ctx.globalAlpha = 0.03;
-  ctx.fillStyle = '#ff0000';
-  ctx.fillRect(0, 0, cw, 2);
-  ctx.fillStyle = '#00ffff';
-  ctx.fillRect(0, ch - 2, cw, 2);
-  ctx.globalAlpha = 1;
-
-  // Flicker
-  if (Math.random() > 0.99) {
-    ctx.globalAlpha = 0.02 + Math.random() * 0.03;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, cw, ch);
-    ctx.globalAlpha = 1;
-  }
-}
-
-// ===== GAME LOOP =====
-let lastTime = 0;
-function gameLoop(timestamp) {
-  const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
-  lastTime = timestamp;
-  update(dt);
-  render();
-  requestAnimationFrame(gameLoop);
-}
-requestAnimationFrame(gameLoop);
-</script>
-</body>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Cyberpunk AI Office</title>
+		<style>
+			@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+			html,
+			body {
+				width: 100%;
+				height: 100%;
+				overflow: hidden;
+				background: #0a0a1a;
+				font-family: "Press Start 2P", monospace;
+			}
+			canvas {
+				display: block;
+				width: 100%;
+				height: 100%;
+				image-rendering: pixelated;
+				image-rendering: crisp-edges;
+				cursor: grab;
+			}
+			canvas:active {
+				cursor: grabbing;
+			}
+			#bottomBar {
+				position: fixed;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				height: 48px;
+				background: rgba(10, 10, 26, 0.92);
+				border-top: 2px solid #ff7000;
+				display: flex;
+				align-items: center;
+				padding: 0 16px;
+				z-index: 10;
+				box-shadow: 0 -4px 20px rgba(255, 112, 0, 0.15);
+			}
+			#bottomBar .prompt {
+				color: #00f0ff;
+				font-size: 10px;
+				font-family: "Press Start 2P", monospace;
+				white-space: nowrap;
+				overflow: hidden;
+			}
+			#bottomBar .cursor {
+				display: inline-block;
+				width: 8px;
+				height: 14px;
+				background: #ff7000;
+				margin-left: 4px;
+				animation: blink 0.6s step-end infinite;
+				vertical-align: middle;
+			}
+			@keyframes blink {
+				0%,
+				100% {
+					opacity: 1;
+				}
+				50% {
+					opacity: 0;
+				}
+			}
+			#bottomBar .stats {
+				margin-left: auto;
+				color: #00f0ff;
+				font-size: 8px;
+				font-family: "Press Start 2P", monospace;
+				display: flex;
+				gap: 16px;
+				align-items: center;
+			}
+			#bottomBar .stats .dot {
+				display: inline-block;
+				width: 6px;
+				height: 6px;
+				background: #5ac88c;
+				box-shadow: 0 0 6px #5ac88c;
+				margin-right: 4px;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="c"></canvas>
+		<div id="bottomBar">
+			<div class="prompt">
+				root@cyberoffice:~$ <span id="termText"></span><span class="cursor"></span>
+			</div>
+			<div class="stats">
+				<span><span class="dot"></span>6 AGENTS</span>
+				<span>CPU: 42%</span>
+				<span>NET: OK</span>
+			</div>
+		</div>
+		<script>
+			"use strict";
+			// ===== CONSTANTS =====
+			const TILE = 16,
+				ZOOM = 4,
+				MAP_W = 22,
+				MAP_H = 16;
+			const BG = "#0a0a1a",
+				NEON_ORANGE = "#FF7000",
+				NEON_CYAN = "#00f0ff",
+				NEON_GREEN = "#5ac88c";
+			const MATRIX_GREEN = "#33ff33",
+				MATRIX_ORANGE = "#FF7000";
+
+			// ===== CANVAS SETUP =====
+			const canvas = document.getElementById("c");
+			const ctx = canvas.getContext("2d");
+			let W, H, dpr;
+			let panX = 0,
+				panY = 0,
+				zoom = ZOOM;
+			let isPanning = false,
+				panStartX = 0,
+				panStartY = 0,
+				panOriginX = 0,
+				panOriginY = 0;
+
+			function resize() {
+				dpr = window.devicePixelRatio || 1;
+				W = window.innerWidth;
+				H = window.innerHeight;
+				canvas.width = W * dpr;
+				canvas.height = H * dpr;
+				canvas.style.width = W + "px";
+				canvas.style.height = H + "px";
+			}
+			window.addEventListener("resize", resize);
+			resize();
+
+			// ===== PAN & ZOOM =====
+			canvas.addEventListener("mousedown", (e) => {
+				if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
+					isPanning = true;
+					panStartX = e.clientX;
+					panStartY = e.clientY;
+					panOriginX = panX;
+					panOriginY = panY;
+				}
+			});
+			canvas.addEventListener("mousemove", (e) => {
+				if (isPanning) {
+					panX = panOriginX + (e.clientX - panStartX);
+					panY = panOriginY + (e.clientY - panStartY);
+				}
+			});
+			canvas.addEventListener("mouseup", () => (isPanning = false));
+			canvas.addEventListener("mouseleave", () => (isPanning = false));
+			canvas.addEventListener(
+				"wheel",
+				(e) => {
+					e.preventDefault();
+					const old = zoom;
+					zoom = Math.max(2, Math.min(8, zoom + (e.deltaY > 0 ? -1 : 1)));
+					if (zoom !== old) {
+						spriteCache.clear();
+					}
+				},
+				{ passive: false },
+			);
+
+			// ===== SPRITE CACHE =====
+			const spriteCache = new Map();
+			function drawSprite(ctx2, data, x, y, z) {
+				const key = data._id + "_" + z;
+				let cached = spriteCache.get(key);
+				if (!cached) {
+					const sw = data[0].length,
+						sh = data.length;
+					const oc = document.createElement("canvas");
+					oc.width = sw * z;
+					oc.height = sh * z;
+					const octx = oc.getContext("2d");
+					for (let r = 0; r < sh; r++) {
+						for (let c = 0; c < sw; c++) {
+							const col = data[r][c];
+							if (col && col !== "") {
+								octx.fillStyle = col;
+								octx.fillRect(c * z, r * z, z, z);
+							}
+						}
+					}
+					cached = oc;
+					spriteCache.set(key, cached);
+				}
+				ctx2.drawImage(cached, Math.floor(x), Math.floor(y));
+			}
+
+			let spriteIdCounter = 0;
+			function S(data) {
+				data._id = spriteIdCounter++;
+				return data;
+			}
+
+			// ===== FLOOR TILE DATA =====
+			const floorTile = S(
+				(() => {
+					const t = [];
+					const colors = ["#0d0d22", "#0e0e24", "#0c0c20", "#0f0f26", "#0d0e23", "#0e0d21"];
+					for (let r = 0; r < 16; r++) {
+						const row = [];
+						for (let c = 0; c < 16; c++) {
+							if (r === 0 || c === 0) row.push("#1a1a35");
+							else row.push(colors[(r * 7 + c * 3) % colors.length]);
+						}
+						t.push(row);
+					}
+					return t;
+				})(),
+			);
+
+			const wallTile = S(
+				(() => {
+					const t = [];
+					for (let r = 0; r < 16; r++) {
+						const row = [];
+						for (let c = 0; c < 16; c++) {
+							if (r < 2) row.push("#FF7000");
+							else if (r < 4) row.push("#1a1030");
+							else row.push("#0f0a20");
+						}
+						t.push(row);
+					}
+					return t;
+				})(),
+			);
+
+			// ===== TILE MAP =====
+			// 0=void, 1=floor, 2=wall
+			const tileMap = [];
+			for (let r = 0; r < MAP_H; r++) {
+				const row = [];
+				for (let c = 0; c < MAP_W; c++) {
+					if (r === 0 || r === 1) row.push(2);
+					else if (r >= 2 && r < MAP_H - 1 && c >= 1 && c < MAP_W - 1) row.push(1);
+					else if (r === MAP_H - 1) row.push(2);
+					else row.push(0);
+				}
+				tileMap.push(row);
+			}
+
+			// ===== FURNITURE SPRITES =====
+			const deskSprite = S(
+				(() => {
+					const d = [];
+					for (let r = 0; r < 32; r++) {
+						const row = [];
+						for (let c = 0; c < 32; c++) {
+							if (r < 2) {
+								row.push(c < 2 || c >= 30 ? "#2a1a3a" : "#3d2050");
+							} else if (r < 4) {
+								row.push(c < 1 || c >= 31 ? "#2a1a3a" : "#4a2860");
+							} else if (r < 14) {
+								if (c < 1 || c >= 31) row.push("#2a1a3a");
+								else if (c < 3 || c >= 29) row.push("#3d2050");
+								else row.push("#4a2860");
+							} else if (r < 16) {
+								row.push(c >= 2 && c < 30 ? "#3d2050" : "#2a1a3a");
+							} else if (r < 18) {
+								if (c >= 3 && c < 5) row.push("#2a1a3a");
+								else if (c >= 27 && c < 29) row.push("#2a1a3a");
+								else row.push("");
+							} else if (r < 28) {
+								if (c >= 3 && c < 5) row.push("#221030");
+								else if (c >= 27 && c < 29) row.push("#221030");
+								else row.push("");
+							} else if (r < 32) {
+								if (c >= 2 && c < 6) row.push("#2a1a3a");
+								else if (c >= 26 && c < 30) row.push("#2a1a3a");
+								else row.push("");
+							} else row.push("");
+						}
+						d.push(row);
+					}
+					return d;
+				})(),
+			);
+
+			// Monitor with glow (on desk) — cyberpunk style
+			function makeMonitor(screenColor, glowColor) {
+				const m = [];
+				for (let r = 0; r < 16; r++) {
+					const row = [];
+					for (let c = 0; c < 16; c++) {
+						// Stand
+						if (r >= 13 && r < 15 && c >= 6 && c < 10) {
+							row.push("#1a1a2e");
+							continue;
+						}
+						if (r === 15 && c >= 4 && c < 12) {
+							row.push("#1a1a2e");
+							continue;
+						}
+						// Frame
+						if (r >= 1 && r <= 12 && c >= 2 && c <= 13) {
+							if (r === 1 || r === 12 || c === 2 || c === 13) {
+								row.push("#1a1a2e");
+								continue;
+							}
+							if (r === 2 || r === 11 || c === 3 || c === 12) {
+								row.push("#222240");
+								continue;
+							}
+							// Screen content — scanline effect baked in
+							if (r % 2 === 0) row.push(screenColor);
+							else row.push(glowColor);
+							continue;
+						}
+						row.push("");
+					}
+					m.push(row);
+				}
+				return S(m);
+			}
+
+			const monitorCyan = makeMonitor("#003844", "#005566");
+			const monitorOrange = makeMonitor("#3a1800", "#552800");
+			const monitorGreen = makeMonitor("#003818", "#005528");
+
+			// Chair sprite
+			const chairSprite = S(
+				(() => {
+					const ch = [];
+					for (let r = 0; r < 16; r++) {
+						const row = [];
+						for (let c = 0; c < 16; c++) {
+							// Seat
+							if (r >= 4 && r < 10 && c >= 3 && c < 13) {
+								if (r === 4 || r === 9 || c === 3 || c === 12) row.push("#1a1030");
+								else row.push("#2a1845");
+							}
+							// Back
+							else if (r >= 0 && r < 4 && c >= 4 && c < 12) {
+								row.push("#2a1845");
+							}
+							// Legs
+							else if (r >= 10 && r < 14) {
+								if (c === 4 || c === 11) row.push("#151525");
+								else row.push("");
+							}
+							// Wheels
+							else if (r === 14) {
+								if (c === 3 || c === 5 || c === 10 || c === 12) row.push("#222");
+								else row.push("");
+							} else row.push("");
+						}
+						ch.push(row);
+					}
+					return ch;
+				})(),
+			);
+
+			// Plant sprite
+			const plantSprite = S(
+				(() => {
+					const p = [];
+					for (let r = 0; r < 24; r++) {
+						const row = [];
+						for (let c = 0; c < 16; c++) {
+							// Leaves
+							if (r >= 0 && r < 12) {
+								const cx = 8,
+									cy = 6;
+								const dx = c - cx,
+									dy = r - cy;
+								if (dx * dx + dy * dy < 30 && (c + r) % 3 !== 0) {
+									if ((c + r) % 5 === 0) row.push("#00cc66");
+									else if ((c + r) % 4 === 0) row.push("#00ff88");
+									else row.push("#00aa55");
+								} else row.push("");
+							}
+							// Pot
+							else if (r >= 14 && r < 22) {
+								const taper = Math.floor((r - 14) * 0.3);
+								if (c >= 4 + taper && c < 12 - taper) {
+									if (r === 14) row.push("#FF7000");
+									else row.push("#cc5500");
+								} else row.push("");
+							} else row.push("");
+						}
+						p.push(row);
+					}
+					return p;
+				})(),
+			);
+
+			// Bookshelf
+			const bookshelfSprite = S(
+				(() => {
+					const b = [];
+					const bookColors = [
+						"#FF7000",
+						"#00f0ff",
+						"#ff0066",
+						"#33ff33",
+						"#ffcc00",
+						"#ff44aa",
+						"#44aaff",
+						"#aa44ff",
+					];
+					for (let r = 0; r < 32; r++) {
+						const row = [];
+						for (let c = 0; c < 16; c++) {
+							if (c === 0 || c === 15) {
+								row.push("#1a1030");
+								continue;
+							}
+							if (r === 0 || r === 31) {
+								row.push("#2a1845");
+								continue;
+							}
+							// Shelves
+							if (r === 8 || r === 16 || r === 24) {
+								row.push("#2a1845");
+								continue;
+							}
+							// Books
+							if (c >= 2 && c <= 13) {
+								const section = r < 8 ? 0 : r < 16 ? 1 : r < 24 ? 2 : 3;
+								const bookIdx = (c + section * 3) % bookColors.length;
+								if ((r - 1) % 8 < 6) row.push(bookColors[bookIdx]);
+								else row.push("#1a1030");
+							} else row.push("#1a1030");
+						}
+						b.push(row);
+					}
+					return b;
+				})(),
+			);
+
+			// Water cooler
+			const coolerSprite = S(
+				(() => {
+					const w = [];
+					for (let r = 0; r < 24; r++) {
+						const row = [];
+						for (let c = 0; c < 16; c++) {
+							// Water jug top
+							if (r >= 0 && r < 8 && c >= 5 && c < 11) {
+								if (c === 5 || c === 10 || r === 0) row.push("#4488aa");
+								else row.push("#00bbdd");
+							}
+							// Body
+							else if (r >= 8 && r < 20 && c >= 4 && c < 12) {
+								if (c === 4 || c === 11 || r === 8 || r === 19) row.push("#2a2a4a");
+								else row.push("#3a3a5a");
+							}
+							// Legs
+							else if (r >= 20 && r < 24) {
+								if (c === 5 || c === 10) row.push("#1a1a2e");
+								else row.push("");
+							} else row.push("");
+						}
+						w.push(row);
+					}
+					return w;
+				})(),
+			);
+
+			// Server rack
+			const serverSprite = S(
+				(() => {
+					const s = [];
+					for (let r = 0; r < 32; r++) {
+						const row = [];
+						for (let c = 0; c < 16; c++) {
+							if (c === 0 || c === 15 || r === 0 || r === 31) {
+								row.push("#1a1a2e");
+								continue;
+							}
+							if (r % 8 === 0) {
+								row.push("#2a2a4a");
+								continue;
+							}
+							if (c >= 2 && c <= 4 && r % 4 === 2) {
+								row.push(r % 8 < 4 ? "#00f0ff" : "#FF7000");
+								continue;
+							}
+							if (c >= 6 && c <= 13) {
+								if (r % 2 === 0) row.push("#222238");
+								else row.push("#1a1a30");
+								continue;
+							}
+							row.push("#1a1a30");
+						}
+						s.push(row);
+					}
+					return s;
+				})(),
+			);
+
+			// ===== CHARACTER SPRITES =====
+			const skinTones = ["#f0c8a0", "#d4a574", "#8d5524", "#c68642", "#e0ac69", "#ffdbac"];
+			const hairColors = ["#1a1a2e", "#ff4488", "#00f0ff", "#FF7000", "#33ff33", "#ffcc00"];
+			const shirtColors = ["#2244aa", "#aa2244", "#22aa44", "#8844cc", "#cc8800", "#00aacc"];
+			const glowColors = ["#00f0ff", "#FF7000", "#33ff33", "#ff44aa", "#ffcc00", "#44aaff"];
+
+			function makeCharSprite(skinIdx, dirOffset) {
+				const skin = skinTones[skinIdx % skinTones.length];
+				const hair = hairColors[skinIdx % hairColors.length];
+				const shirt = shirtColors[skinIdx % shirtColors.length];
+				const pants = "#1a1a3a";
+				const shoe = "#111122";
+
+				const d = [];
+				for (let r = 0; r < 24; r++) {
+					const row = [];
+					for (let c = 0; c < 16; c++) {
+						// Hair (top of head)
+						if (r >= 0 && r < 4 && c >= 5 && c < 11) {
+							row.push(hair);
+						}
+						// Face
+						else if (r >= 4 && r < 8 && c >= 5 && c < 11) {
+							if (r === 5 && (c === 6 || c === 9))
+								row.push("#111"); // eyes
+							else if (r === 4 && (c === 5 || c === 10))
+								row.push(hair); // side hair
+							else row.push(skin);
+						}
+						// Neck
+						else if (r === 8 && c >= 7 && c < 9) {
+							row.push(skin);
+						}
+						// Shoulders + shirt
+						else if (r >= 9 && r < 16 && c >= 3 && c < 13) {
+							if (r === 9 && (c < 5 || c > 10)) row.push("");
+							else if (c === 3 || c === 12) row.push(shirt);
+							else if (r === 9) row.push(shirt);
+							else row.push(shirt);
+						}
+						// Arms
+						else if (r >= 10 && r < 15 && (c === 2 || c === 13)) {
+							row.push(skin);
+						}
+						// Pants
+						else if (r >= 16 && r < 20 && c >= 5 && c < 11) {
+							row.push(pants);
+						}
+						// Legs gap
+						else if (r >= 20 && r < 22 && ((c >= 5 && c < 7) || (c >= 9 && c < 11))) {
+							row.push(pants);
+						}
+						// Shoes
+						else if (r >= 22 && r < 24 && ((c >= 4 && c < 7) || (c >= 9 && c < 12))) {
+							row.push(shoe);
+						} else row.push("");
+					}
+					d.push(row);
+				}
+				return S(d);
+			}
+
+			// Typing frame (arms forward)
+			function makeCharTyping(skinIdx) {
+				const skin = skinTones[skinIdx % skinTones.length];
+				const hair = hairColors[skinIdx % hairColors.length];
+				const shirt = shirtColors[skinIdx % shirtColors.length];
+				const pants = "#1a1a3a";
+				const shoe = "#111122";
+
+				const d = [];
+				for (let r = 0; r < 24; r++) {
+					const row = [];
+					for (let c = 0; c < 16; c++) {
+						if (r >= 0 && r < 4 && c >= 5 && c < 11) row.push(hair);
+						else if (r >= 4 && r < 8 && c >= 5 && c < 11) {
+							if (r === 5 && (c === 6 || c === 9)) row.push("#111");
+							else if (r === 4 && (c === 5 || c === 10)) row.push(hair);
+							else row.push(skin);
+						} else if (r === 8 && c >= 7 && c < 9) row.push(skin);
+						else if (r >= 9 && r < 16 && c >= 3 && c < 13) {
+							if (r === 9 && (c < 5 || c > 10)) row.push("");
+							else row.push(shirt);
+						}
+						// Arms extended forward/down for typing
+						else if (r >= 14 && r < 16 && (c === 2 || c === 13)) row.push(skin);
+						else if (r >= 16 && r < 20 && c >= 5 && c < 11) row.push(pants);
+						else if (r >= 20 && r < 22 && ((c >= 5 && c < 7) || (c >= 9 && c < 11)))
+							row.push(pants);
+						else if (r >= 22 && r < 24 && ((c >= 4 && c < 7) || (c >= 9 && c < 12))) row.push(shoe);
+						else row.push("");
+					}
+					d.push(row);
+				}
+				return S(d);
+			}
+
+			// Walk frames
+			function makeCharWalk(skinIdx, frame) {
+				const base = makeCharSprite(skinIdx, 0);
+				// Modify leg positions for walk animation
+				const d = base.map((row) => [...row]);
+				// Swap leg pixels based on frame
+				if (frame === 0 || frame === 2) {
+					// Left leg forward
+					if (d[20]) {
+						d[20][5] = "#1a1a3a";
+						d[20][6] = "#1a1a3a";
+						d[20][9] = "";
+						d[20][10] = "";
+					}
+					if (d[21]) {
+						d[21][4] = "#1a1a3a";
+						d[21][5] = "#1a1a3a";
+						d[21][9] = "";
+						d[21][10] = "";
+					}
+				} else {
+					// Right leg forward
+					if (d[20]) {
+						d[20][5] = "";
+						d[20][6] = "";
+						d[20][9] = "#1a1a3a";
+						d[20][10] = "#1a1a3a";
+					}
+					if (d[21]) {
+						d[21][9] = "#1a1a3a";
+						d[21][10] = "#1a1a3a";
+						d[21][5] = "";
+						d[21][6] = "";
+					}
+				}
+				d._id = spriteIdCounter++;
+				return d;
+			}
+
+			// Pre-generate character sprites
+			const charSprites = [];
+			const charTypingSprites = [];
+			const charWalkSprites = [];
+			for (let i = 0; i < 6; i++) {
+				charSprites.push(makeCharSprite(i, 0));
+				charTypingSprites.push(makeCharTyping(i));
+				charWalkSprites.push([
+					makeCharWalk(i, 0),
+					makeCharWalk(i, 1),
+					makeCharWalk(i, 2),
+					makeCharWalk(i, 3),
+				]);
+			}
+
+			// ===== HEXAGONAL DESK LAYOUT =====
+			// 6 desks in a hex pattern around center
+			const centerX = 11,
+				centerY = 8;
+			const hexRadius = 3.5;
+			const deskPositions = [];
+			for (let i = 0; i < 6; i++) {
+				const angle = ((i * 60 - 90) * Math.PI) / 180;
+				const dx = Math.round(centerX + Math.cos(angle) * hexRadius);
+				const dy = Math.round(centerY + Math.sin(angle) * hexRadius);
+				deskPositions.push({ x: dx, y: dy, angle: i });
+			}
+
+			// Chair offsets relative to desk (facing desk)
+			const chairOffsets = [
+				{ dx: 0, dy: 2 }, // top desk → chair below
+				{ dx: 2, dy: 1 }, // upper-right → chair right
+				{ dx: 2, dy: 1 }, // lower-right → chair right
+				{ dx: 0, dy: 2 }, // bottom → chair below
+				{ dx: -1, dy: 1 }, // lower-left → chair left
+				{ dx: -1, dy: 1 }, // upper-left → chair left
+			];
+
+			// ===== FURNITURE LIST =====
+			const furniture = [];
+
+			// Desks + chairs + monitors
+			deskPositions.forEach((pos, i) => {
+				furniture.push({
+					type: "desk",
+					x: pos.x,
+					y: pos.y,
+					sprite: deskSprite,
+					zY: (pos.y + 2) * TILE,
+				});
+				const co = chairOffsets[i];
+				furniture.push({
+					type: "chair",
+					x: pos.x + co.dx,
+					y: pos.y + co.dy,
+					sprite: chairSprite,
+					zY: (pos.y + co.dy + 1) * TILE,
+				});
+				const monitors = [monitorCyan, monitorOrange, monitorGreen];
+				furniture.push({
+					type: "monitor",
+					x: pos.x,
+					y: pos.y - 1,
+					sprite: monitors[i % 3],
+					zY: pos.y * TILE,
+					deskIdx: i,
+				});
+				furniture.push({
+					type: "monitor",
+					x: pos.x + 1,
+					y: pos.y - 1,
+					sprite: monitors[(i + 1) % 3],
+					zY: pos.y * TILE,
+					deskIdx: i,
+				});
+			});
+
+			// Decorations around edges
+			furniture.push({ type: "bookshelf", x: 1, y: 2, sprite: bookshelfSprite, zY: 4 * TILE });
+			furniture.push({ type: "bookshelf", x: 2, y: 2, sprite: bookshelfSprite, zY: 4 * TILE });
+			furniture.push({ type: "bookshelf", x: 19, y: 2, sprite: bookshelfSprite, zY: 4 * TILE });
+			furniture.push({ type: "bookshelf", x: 20, y: 2, sprite: bookshelfSprite, zY: 4 * TILE });
+
+			furniture.push({ type: "plant", x: 1, y: 5, sprite: plantSprite, zY: 6.5 * TILE });
+			furniture.push({ type: "plant", x: 20, y: 5, sprite: plantSprite, zY: 6.5 * TILE });
+			furniture.push({ type: "plant", x: 1, y: 12, sprite: plantSprite, zY: 13.5 * TILE });
+			furniture.push({ type: "plant", x: 20, y: 12, sprite: plantSprite, zY: 13.5 * TILE });
+
+			furniture.push({ type: "server", x: 19, y: 6, sprite: serverSprite, zY: 8 * TILE });
+			furniture.push({ type: "server", x: 20, y: 6, sprite: serverSprite, zY: 8 * TILE });
+
+			furniture.push({ type: "cooler", x: 1, y: 9, sprite: coolerSprite, zY: 10.5 * TILE });
+
+			// ===== CHARACTER STATE MACHINE =====
+			// States: IDLE, WALK, TYPE, SPAWN, DESPAWN
+			const agents = [];
+			const agentNames = ["NEO-7", "CIPHER", "GHOST", "PRISM", "NEXUS", "WRAITH"];
+
+			// BFS pathfinding
+			function bfs(sx, sy, ex, ey) {
+				if (sx === ex && sy === ey) return [];
+				const visited = new Set();
+				const queue = [{ x: sx, y: sy, path: [] }];
+				visited.add(sx + "," + sy);
+				while (queue.length > 0) {
+					const cur = queue.shift();
+					const dirs = [
+						[0, -1],
+						[0, 1],
+						[-1, 0],
+						[1, 0],
+					];
+					for (const [dx, dy] of dirs) {
+						const nx = cur.x + dx,
+							ny = cur.y + dy;
+						const key = nx + "," + ny;
+						if (visited.has(key)) continue;
+						if (nx < 1 || nx >= MAP_W - 1 || ny < 2 || ny >= MAP_H - 1) continue;
+						if (tileMap[ny] && tileMap[ny][nx] !== 1) continue;
+						// Check furniture collisions (desks only)
+						let blocked = false;
+						for (const f of furniture) {
+							if (f.type === "desk") {
+								if (nx >= f.x && nx < f.x + 2 && ny >= f.y && ny < f.y + 2) {
+									blocked = true;
+									break;
+								}
+							}
+							if (f.type === "server" || f.type === "bookshelf") {
+								const sw = f.sprite[0].length / 16,
+									sh = f.sprite.length / 16;
+								if (nx >= f.x && nx < f.x + sw && ny >= f.y && ny < f.y + Math.ceil(sh)) {
+									blocked = true;
+									break;
+								}
+							}
+						}
+						if (blocked) continue;
+						const newPath = [...cur.path, { x: nx, y: ny }];
+						if (nx === ex && ny === ey) return newPath;
+						visited.add(key);
+						queue.push({ x: nx, y: ny, path: newPath });
+					}
+				}
+				return null;
+			}
+
+			for (let i = 0; i < 6; i++) {
+				const desk = deskPositions[i];
+				const co = chairOffsets[i];
+				const seatX = desk.x + co.dx;
+				const seatY = desk.y + co.dy;
+				agents.push({
+					id: i,
+					name: agentNames[i],
+					skinIdx: i,
+					x: seatX * TILE,
+					y: seatY * TILE,
+					tileX: seatX,
+					tileY: seatY,
+					seatX: seatX,
+					seatY: seatY,
+					state: "SPAWN",
+					stateTimer: 0,
+					spawnProgress: 0,
+					walkPath: [],
+					walkIdx: 0,
+					walkT: 0,
+					walkFrame: 0,
+					walkFrameTimer: 0,
+					typeFrame: 0,
+					typeTimer: 0,
+					idleTimer: 3 + Math.random() * 5,
+					wanderTimer: 0,
+					glowColor: glowColors[i % glowColors.length],
+					spawnDelay: i * 0.4,
+					spawned: false,
+					matrixColumns: [],
+					statusText: [
+						"compiling...",
+						"debugging...",
+						"deploying...",
+						"analyzing...",
+						"refactoring...",
+						"testing...",
+					][i],
+				});
+
+				// Init matrix rain columns for spawn effect
+				const cols = [];
+				for (let c = 0; c < 16; c++) {
+					cols.push({ offset: Math.random() * 0.3, head: -1, speed: 0.8 + Math.random() * 0.4 });
+				}
+				agents[i].matrixColumns = cols;
+			}
+
+			// ===== MATRIX RAIN BACKGROUND =====
+			const matrixDrops = [];
+			for (let i = 0; i < 60; i++) {
+				matrixDrops.push({
+					x: Math.random() * MAP_W * TILE,
+					y: Math.random() * MAP_H * TILE,
+					speed: 20 + Math.random() * 40,
+					char: String.fromCharCode(0x30a0 + Math.floor(Math.random() * 96)),
+					alpha: 0.1 + Math.random() * 0.3,
+					color: Math.random() > 0.5 ? MATRIX_GREEN : MATRIX_ORANGE,
+					timer: Math.random() * 2,
+				});
+			}
+
+			// ===== SCANLINE + CRT EFFECTS =====
+			let scanlineCanvas = null;
+			function ensureScanlines(w, h) {
+				if (scanlineCanvas && scanlineCanvas.width === w && scanlineCanvas.height === h) return;
+				scanlineCanvas = document.createElement("canvas");
+				scanlineCanvas.width = w;
+				scanlineCanvas.height = h;
+				const sctx = scanlineCanvas.getContext("2d");
+				sctx.fillStyle = "rgba(0,0,0,0.12)";
+				for (let y = 0; y < h; y += 3) {
+					sctx.fillRect(0, y, w, 1);
+				}
+			}
+
+			function drawCRTVignette(ctx2, w, h) {
+				const grd = ctx2.createRadialGradient(w / 2, h / 2, w * 0.25, w / 2, h / 2, w * 0.75);
+				grd.addColorStop(0, "rgba(0,0,0,0)");
+				grd.addColorStop(0.7, "rgba(0,0,0,0.15)");
+				grd.addColorStop(1, "rgba(0,0,0,0.6)");
+				ctx2.fillStyle = grd;
+				ctx2.fillRect(0, 0, w, h);
+			}
+
+			// ===== TERMINAL TEXT ANIMATION =====
+			const terminalLines = [
+				"initializing neural network...",
+				"loading cyberpunk_office.exe...",
+				"connecting to mainframe...",
+				"deploying agents...",
+				"scanning for vulnerabilities...",
+				"compiling quantum bytecode...",
+				"syncing neural mesh...",
+				"activating holographic displays...",
+				"patching firewall v4.2...",
+				"uploading consciousness backup...",
+			];
+			let termLineIdx = 0,
+				termCharIdx = 0,
+				termTimer = 0,
+				termPause = 0;
+
+			function updateTerminal(dt) {
+				if (termPause > 0) {
+					termPause -= dt;
+					return;
+				}
+				termTimer += dt;
+				if (termTimer > 0.04) {
+					termTimer = 0;
+					termCharIdx++;
+					const line = terminalLines[termLineIdx];
+					if (termCharIdx > line.length) {
+						termPause = 1.5;
+						termCharIdx = 0;
+						termLineIdx = (termLineIdx + 1) % terminalLines.length;
+					}
+					const el = document.getElementById("termText");
+					if (el) el.textContent = terminalLines[termLineIdx].substring(0, termCharIdx);
+				}
+			}
+
+			// ===== SPEECH BUBBLES =====
+			const bubbles = [];
+			function addBubble(agentIdx, text, duration) {
+				bubbles.push({ agentIdx, text, timer: duration || 3, alpha: 1 });
+			}
+
+			// Periodically add bubbles
+			let bubbleTimer = 2;
+			const bubbleTexts = [
+				"push to main?",
+				"LGTM",
+				"fixing bug...",
+				"need coffee",
+				"deploying...",
+				"code review?",
+				"tests pass!",
+				"rebasing...",
+				"ship it!",
+				"merge conflict",
+				"hotfix incoming",
+				"optimizing...",
+			];
+
+			// ===== MONITOR GLOW ANIMATION =====
+			let monitorGlowPhase = 0;
+
+			// ===== UPDATE =====
+			let globalTime = 0;
+
+			function update(dt) {
+				globalTime += dt;
+				monitorGlowPhase += dt * 2;
+
+				// Update terminal
+				updateTerminal(dt);
+
+				// Update matrix rain
+				for (const drop of matrixDrops) {
+					drop.y += drop.speed * dt;
+					drop.timer -= dt;
+					if (drop.timer <= 0) {
+						drop.char = String.fromCharCode(0x30a0 + Math.floor(Math.random() * 96));
+						drop.timer = 0.1 + Math.random() * 0.3;
+					}
+					if (drop.y > MAP_H * TILE) {
+						drop.y = -10;
+						drop.x = Math.random() * MAP_W * TILE;
+					}
+				}
+
+				// Update bubbles
+				bubbleTimer -= dt;
+				if (bubbleTimer <= 0) {
+					bubbleTimer = 4 + Math.random() * 6;
+					const ai = Math.floor(Math.random() * 6);
+					if (agents[ai].state === "TYPE" || agents[ai].state === "IDLE") {
+						addBubble(ai, bubbleTexts[Math.floor(Math.random() * bubbleTexts.length)], 3);
+					}
+				}
+				for (let i = bubbles.length - 1; i >= 0; i--) {
+					bubbles[i].timer -= dt;
+					if (bubbles[i].timer < 0.5) bubbles[i].alpha = Math.max(0, bubbles[i].timer / 0.5);
+					if (bubbles[i].timer <= 0) bubbles.splice(i, 1);
+				}
+
+				// Update agents
+				for (const agent of agents) {
+					// Spawn delay
+					if (!agent.spawned) {
+						agent.spawnDelay -= dt;
+						if (agent.spawnDelay > 0) continue;
+						agent.spawned = true;
+						agent.state = "SPAWN";
+						agent.spawnProgress = 0;
+					}
+
+					switch (agent.state) {
+						case "SPAWN": {
+							agent.spawnProgress += dt / 0.8;
+							if (agent.spawnProgress >= 1) {
+								agent.spawnProgress = 1;
+								agent.state = "TYPE";
+								agent.typeTimer = 0;
+								agent.stateTimer = 0;
+							}
+							// Update matrix column heads
+							for (const col of agent.matrixColumns) {
+								col.head = (agent.spawnProgress - col.offset) * 28;
+							}
+							break;
+						}
+
+						case "TYPE": {
+							agent.typeTimer += dt;
+							if (agent.typeTimer > 0.3) {
+								agent.typeTimer = 0;
+								agent.typeFrame = 1 - agent.typeFrame;
+							}
+							agent.stateTimer += dt;
+							// After a while, maybe wander
+							if (agent.stateTimer > 8 + Math.random() * 15) {
+								agent.stateTimer = 0;
+								if (Math.random() > 0.4) {
+									// Start wandering
+									const wx = Math.max(
+										2,
+										Math.min(MAP_W - 3, agent.seatX + Math.floor(Math.random() * 7) - 3),
+									);
+									const wy = Math.max(
+										3,
+										Math.min(MAP_H - 3, agent.seatY + Math.floor(Math.random() * 5) - 2),
+									);
+									const path = bfs(agent.tileX, agent.tileY, wx, wy);
+									if (path && path.length > 0) {
+										agent.walkPath = path;
+										agent.walkIdx = 0;
+										agent.walkT = 0;
+										agent.state = "WALK";
+										agent.walkFrame = 0;
+										agent.walkFrameTimer = 0;
+										agent.wanderTimer = 2 + Math.random() * 3;
+									}
+								}
+							}
+							break;
+						}
+
+						case "IDLE": {
+							agent.idleTimer -= dt;
+							if (agent.idleTimer <= 0) {
+								// Walk back to seat
+								const path = bfs(agent.tileX, agent.tileY, agent.seatX, agent.seatY);
+								if (path && path.length > 0) {
+									agent.walkPath = path;
+									agent.walkIdx = 0;
+									agent.walkT = 0;
+									agent.state = "WALK";
+									agent.walkFrame = 0;
+									agent.walkFrameTimer = 0;
+									agent.wanderTimer = 0;
+								} else {
+									// Can't path, just teleport
+									agent.tileX = agent.seatX;
+									agent.tileY = agent.seatY;
+									agent.x = agent.seatX * TILE;
+									agent.y = agent.seatY * TILE;
+									agent.state = "TYPE";
+									agent.stateTimer = 0;
+								}
+							}
+							break;
+						}
+
+						case "WALK": {
+							const speed = 48; // px/sec
+							agent.walkT += (speed * dt) / TILE;
+							agent.walkFrameTimer += dt;
+							if (agent.walkFrameTimer > 0.15) {
+								agent.walkFrameTimer = 0;
+								agent.walkFrame = (agent.walkFrame + 1) % 4;
+							}
+
+							if (agent.walkT >= 1) {
+								agent.walkT = 0;
+								agent.tileX = agent.walkPath[agent.walkIdx].x;
+								agent.tileY = agent.walkPath[agent.walkIdx].y;
+								agent.x = agent.tileX * TILE;
+								agent.y = agent.tileY * TILE;
+								agent.walkIdx++;
+								if (agent.walkIdx >= agent.walkPath.length) {
+									agent.walkPath = [];
+									if (agent.wanderTimer > 0) {
+										agent.state = "IDLE";
+										agent.idleTimer = agent.wanderTimer;
+									} else {
+										agent.state = "TYPE";
+										agent.stateTimer = 0;
+									}
+								}
+							} else if (agent.walkPath.length > 0 && agent.walkIdx < agent.walkPath.length) {
+								const target = agent.walkPath[agent.walkIdx];
+								agent.x = agent.tileX * TILE + (target.x - agent.tileX) * TILE * agent.walkT;
+								agent.y = agent.tileY * TILE + (target.y - agent.tileY) * TILE * agent.walkT;
+							}
+							break;
+						}
+					}
+				}
+			}
+
+			// ===== RENDER =====
+			function render() {
+				const cw = canvas.width,
+					ch = canvas.height;
+				ctx.setTransform(1, 0, 0, 1, 0, 0);
+				ctx.clearRect(0, 0, cw, ch);
+				ctx.fillStyle = BG;
+				ctx.fillRect(0, 0, cw, ch);
+
+				const z = zoom;
+				const mapPxW = MAP_W * TILE * z;
+				const mapPxH = MAP_H * TILE * z;
+				const ox = Math.floor((cw - mapPxW) / 2 + panX * dpr);
+				const oy = Math.floor((ch - mapPxH) / 2 + panY * dpr - 24 * dpr);
+
+				ctx.imageSmoothingEnabled = false;
+
+				// Draw floor tiles
+				for (let r = 0; r < MAP_H; r++) {
+					for (let c = 0; c < MAP_W; c++) {
+						const t = tileMap[r][c];
+						if (t === 0) continue;
+						const tx = ox + c * TILE * z;
+						const ty = oy + r * TILE * z;
+						if (t === 1) drawSprite(ctx, floorTile, tx, ty, z);
+						else if (t === 2) drawSprite(ctx, wallTile, tx, ty, z);
+					}
+				}
+
+				// Draw neon grid lines on floor (subtle)
+				ctx.globalAlpha = 0.04 + Math.sin(globalTime * 0.5) * 0.01;
+				ctx.strokeStyle = NEON_CYAN;
+				ctx.lineWidth = 1;
+				for (let r = 2; r < MAP_H; r++) {
+					const y = oy + r * TILE * z;
+					ctx.beginPath();
+					ctx.moveTo(ox + TILE * z, y);
+					ctx.lineTo(ox + (MAP_W - 1) * TILE * z, y);
+					ctx.stroke();
+				}
+				for (let c = 1; c < MAP_W; c++) {
+					const x = ox + c * TILE * z;
+					ctx.beginPath();
+					ctx.moveTo(x, oy + 2 * TILE * z);
+					ctx.lineTo(x, oy + (MAP_H - 1) * TILE * z);
+					ctx.stroke();
+				}
+				ctx.globalAlpha = 1;
+
+				// Matrix rain in background (behind furniture)
+				ctx.save();
+				ctx.rect(ox, oy, mapPxW, mapPxH);
+				ctx.clip();
+				for (const drop of matrixDrops) {
+					const dx = ox + drop.x * z;
+					const dy = oy + drop.y * z;
+					ctx.globalAlpha = drop.alpha;
+					ctx.fillStyle = drop.color;
+					ctx.font = `${Math.floor((8 * z) / 4)}px monospace`;
+					ctx.fillText(drop.char, dx, dy);
+				}
+				ctx.globalAlpha = 1;
+				ctx.restore();
+
+				// Collect drawables (furniture + characters)
+				const drawables = [];
+
+				for (const f of furniture) {
+					drawables.push({
+						type: "furniture",
+						data: f,
+						zY: f.zY,
+					});
+				}
+
+				for (const agent of agents) {
+					if (!agent.spawned) continue;
+					drawables.push({
+						type: "character",
+						data: agent,
+						zY: agent.y + TILE / 2 + 0.5,
+					});
+				}
+
+				drawables.sort((a, b) => a.zY - b.zY);
+
+				// Draw all drawables
+				for (const d of drawables) {
+					if (d.type === "furniture") {
+						const f = d.data;
+						const fx = ox + f.x * TILE * z;
+						const fy = oy + f.y * TILE * z;
+
+						// Monitor glow
+						if (f.type === "monitor") {
+							const glowAlpha = 0.15 + Math.sin(monitorGlowPhase + f.x * 0.5) * 0.08;
+							const monColors = ["#00f0ff", "#FF7000", "#33ff33"];
+							const gc = monColors[f.deskIdx !== undefined ? f.deskIdx % 3 : 0];
+							ctx.shadowColor = gc;
+							ctx.shadowBlur = (12 * z) / 4;
+							drawSprite(ctx, f.sprite, fx, fy, z);
+							ctx.shadowBlur = 0;
+
+							// Animated scanlines on monitor screens
+							ctx.globalAlpha = 0.15;
+							const scanY = ((globalTime * 30) % 16) | 0;
+							ctx.fillStyle = "#fff";
+							ctx.fillRect(fx + 4 * z, fy + (3 + (scanY % 8)) * z, 10 * z, z);
+							ctx.globalAlpha = 1;
+						} else {
+							drawSprite(ctx, f.sprite, fx, fy, z);
+						}
+					} else {
+						// Character
+						const agent = d.data;
+						const ax = ox + Math.floor(agent.x * z);
+						const ay = oy + Math.floor(agent.y * z) - 8 * z; // offset for 24px tall sprite anchored at bottom
+
+						if (agent.state === "SPAWN" && agent.spawnProgress < 1) {
+							// Matrix spawn effect
+							const sprite = charSprites[agent.skinIdx];
+							const sw = 16,
+								sh = 24;
+							for (let c = 0; c < sw; c++) {
+								const col = agent.matrixColumns[c];
+								for (let r = 0; r < sh; r++) {
+									const pixel = sprite[r] && sprite[r][c];
+									const revealed = r < col.head - 3;
+									const isHead = Math.abs(r - col.head) < 1;
+									const isTrail = r >= col.head - 3 && r <= col.head;
+									const px = ax + c * z;
+									const py = ay + r * z;
+									if (isHead) {
+										ctx.fillStyle = "#ccffcc";
+										ctx.fillRect(px, py, z, z);
+									} else if (isTrail) {
+										const trailAlpha = 1 - (col.head - r) / 4;
+										ctx.globalAlpha = trailAlpha * 0.8;
+										ctx.fillStyle = MATRIX_GREEN;
+										ctx.fillRect(px, py, z, z);
+										ctx.globalAlpha = 1;
+									} else if (revealed && pixel && pixel !== "") {
+										// Flicker effect
+										const hash =
+											((c * 7 + r * 13 + ((globalTime * 10) | 0)) * 2654435761) & 0xffffffff;
+										if ((hash & 0xff) > 50) {
+											ctx.fillStyle = pixel;
+											ctx.fillRect(px, py, z, z);
+										}
+									}
+								}
+							}
+						} else {
+							// Normal character draw
+							let sprite;
+							if (agent.state === "WALK") {
+								sprite = charWalkSprites[agent.skinIdx][agent.walkFrame];
+							} else if (agent.state === "TYPE") {
+								sprite =
+									agent.typeFrame === 0
+										? charSprites[agent.skinIdx]
+										: charTypingSprites[agent.skinIdx];
+							} else {
+								sprite = charSprites[agent.skinIdx];
+							}
+
+							// Glow outline
+							ctx.shadowColor = agent.glowColor;
+							ctx.shadowBlur = (6 * z) / 4;
+							drawSprite(ctx, sprite, ax, ay, z);
+							ctx.shadowBlur = 0;
+
+							// Pulsing glow outline (draw larger and masked)
+							const glowAlpha = 0.2 + Math.sin(globalTime * 3 + agent.id) * 0.1;
+							ctx.globalAlpha = glowAlpha;
+							ctx.shadowColor = agent.glowColor;
+							ctx.shadowBlur = (10 * z) / 4;
+							drawSprite(ctx, sprite, ax, ay, z);
+							ctx.shadowBlur = 0;
+							ctx.globalAlpha = 1;
+						}
+
+						// Agent label
+						if (agent.state !== "SPAWN" || agent.spawnProgress >= 1) {
+							const labelX = ax + 8 * z;
+							const labelY = ay - 6 * z;
+							const fontSize = Math.max(8, Math.floor((8 * z) / 4));
+							ctx.font = `${fontSize}px 'Press Start 2P', monospace`;
+							const text = agent.name;
+							const tw = ctx.measureText(text).width;
+
+							ctx.fillStyle = "rgba(10,10,26,0.8)";
+							ctx.fillRect(labelX - tw / 2 - 4, labelY - fontSize - 2, tw + 8, fontSize + 6);
+							ctx.strokeStyle = agent.glowColor;
+							ctx.lineWidth = 1;
+							ctx.strokeRect(labelX - tw / 2 - 4, labelY - fontSize - 2, tw + 8, fontSize + 6);
+
+							// Status dot
+							ctx.fillStyle =
+								agent.state === "TYPE" ? "#00f0ff" : agent.state === "WALK" ? "#ffcc00" : "#5ac88c";
+							ctx.fillRect(labelX - tw / 2 - 1, labelY - fontSize + 2, 4, 4);
+							ctx.shadowColor = ctx.fillStyle;
+							ctx.shadowBlur = 4;
+							ctx.fillRect(labelX - tw / 2 - 1, labelY - fontSize + 2, 4, 4);
+							ctx.shadowBlur = 0;
+
+							ctx.fillStyle = agent.glowColor;
+							ctx.textAlign = "center";
+							ctx.fillText(text, labelX, labelY);
+							ctx.textAlign = "start";
+						}
+					}
+				}
+
+				// Speech bubbles
+				for (const b of bubbles) {
+					const agent = agents[b.agentIdx];
+					if (!agent || !agent.spawned) continue;
+					const bx = ox + Math.floor(agent.x * z) + 8 * z;
+					const by = oy + Math.floor(agent.y * z) - 8 * z - 18 * z;
+
+					const fontSize = Math.max(7, Math.floor((7 * z) / 4));
+					ctx.font = `${fontSize}px 'Press Start 2P', monospace`;
+					const tw = ctx.measureText(b.text).width;
+
+					ctx.globalAlpha = b.alpha;
+
+					// Bubble bg
+					ctx.fillStyle = "rgba(10,10,26,0.9)";
+					ctx.fillRect(bx - tw / 2 - 6, by - fontSize - 6, tw + 12, fontSize + 12);
+					ctx.strokeStyle = NEON_CYAN;
+					ctx.lineWidth = 1;
+					ctx.strokeRect(bx - tw / 2 - 6, by - fontSize - 6, tw + 12, fontSize + 12);
+
+					// Pointer triangle
+					ctx.fillStyle = "rgba(10,10,26,0.9)";
+					ctx.beginPath();
+					ctx.moveTo(bx - 3, by + 6);
+					ctx.lineTo(bx + 3, by + 6);
+					ctx.lineTo(bx, by + 12);
+					ctx.fill();
+
+					// Text
+					ctx.fillStyle = NEON_CYAN;
+					ctx.textAlign = "center";
+					ctx.fillText(b.text, bx, by);
+					ctx.textAlign = "start";
+					ctx.globalAlpha = 1;
+				}
+
+				// Status text below agents at their desks
+				for (const agent of agents) {
+					if (!agent.spawned || agent.state !== "TYPE") continue;
+					const sx = ox + Math.floor(agent.x * z) + 8 * z;
+					const sy = oy + Math.floor(agent.y * z) + 12 * z;
+
+					const fontSize = Math.max(6, Math.floor((6 * z) / 4));
+					ctx.font = `${fontSize}px 'Press Start 2P', monospace`;
+					ctx.globalAlpha = 0.5 + Math.sin(globalTime * 2 + agent.id * 1.5) * 0.2;
+					ctx.fillStyle = "#FF7000";
+					ctx.textAlign = "center";
+					ctx.fillText(agent.statusText, sx, sy);
+					ctx.textAlign = "start";
+					ctx.globalAlpha = 1;
+				}
+
+				// Neon border glow on walls (top)
+				const wallGlow = ctx.createLinearGradient(ox, oy, ox, oy + 3 * TILE * z);
+				wallGlow.addColorStop(0, "rgba(255,112,0,0.3)");
+				wallGlow.addColorStop(1, "rgba(255,112,0,0)");
+				ctx.fillStyle = wallGlow;
+				ctx.fillRect(ox, oy, mapPxW, 3 * TILE * z);
+
+				// Scanlines (full screen CRT)
+				ensureScanlines(cw, ch);
+				ctx.globalAlpha = 0.5;
+				ctx.drawImage(scanlineCanvas, 0, 0);
+				ctx.globalAlpha = 1;
+
+				// CRT vignette
+				drawCRTVignette(ctx, cw, ch);
+
+				// Slight chromatic aberration hint (top/bottom edges)
+				ctx.globalAlpha = 0.03;
+				ctx.fillStyle = "#ff0000";
+				ctx.fillRect(0, 0, cw, 2);
+				ctx.fillStyle = "#00ffff";
+				ctx.fillRect(0, ch - 2, cw, 2);
+				ctx.globalAlpha = 1;
+
+				// Flicker
+				if (Math.random() > 0.99) {
+					ctx.globalAlpha = 0.02 + Math.random() * 0.03;
+					ctx.fillStyle = "#ffffff";
+					ctx.fillRect(0, 0, cw, ch);
+					ctx.globalAlpha = 1;
+				}
+			}
+
+			// ===== GAME LOOP =====
+			let lastTime = 0;
+			function gameLoop(timestamp) {
+				const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+				lastTime = timestamp;
+				update(dt);
+				render();
+				requestAnimationFrame(gameLoop);
+			}
+			requestAnimationFrame(gameLoop);
+		</script>
+	</body>
 </html>

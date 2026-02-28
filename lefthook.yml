@@ -1,0 +1,36 @@
+# Git hooks managed by Lefthook
+# https://github.com/evilmartians/lefthook
+
+# Pre-commit: auto-format staged files (never blocks commit)
+pre-commit:
+  parallel: true
+  commands:
+    oxfmt:
+      glob: "*.{ts,tsx,js,jsx,json,jsonc,css,html}"
+      exclude: ".claude/**"
+      run: bunx oxfmt --write {staged_files}
+      stage_fixed: true
+    oxlint:
+      glob: "*.{ts,tsx,js,jsx}"
+      run: bunx oxlint -c .oxlintrc.json {staged_files}
+
+# Pre-push: full lint check (blocks push on failure)
+pre-push:
+  parallel: true
+  commands:
+    oxlint:
+      glob: "*.{ts,tsx,js,jsx}"
+      run: bunx oxlint -c .oxlintrc.json {push_files}
+    check-types:
+      run: bun check-types
+
+# ============================================================================
+# IMPORTANT: If this hook fails and you need to bypass it:
+#
+#   DO NOT use `git push --no-verify` without asking first!
+#
+#   If you're working with Claude Code, use the AskUserQuestion tool
+#   to get explicit permission before skipping hooks.
+#
+#   Hooks exist to catch issues early - bypassing should be rare and intentional.
+# ============================================================================

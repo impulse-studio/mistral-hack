@@ -1,721 +1,1006 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pixel Cozy AI Office</title>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a14; font-family: 'Press Start 2P', monospace; }
-#game-canvas { display: block; margin: 0 auto; image-rendering: pixelated; image-rendering: crisp-edges; cursor: default; }
-#manager-bar {
-  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
-  width: 600px; background: #1e1e2e; border: 2px solid #4a4a6a;
-  box-shadow: 2px 2px 0px #0a0a14; padding: 10px 14px;
-  display: flex; align-items: center; gap: 10px; z-index: 100;
-}
-#manager-left { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-#manager-left .robot { font-size: 16px; line-height: 1; }
-#manager-left .label { color: #c0c0d0; font-size: 7px; letter-spacing: 1px; }
-#manager-center { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-#task-input {
-  width: 100%; background: #2a2a3d; border: 2px solid #4a4a6a; color: #e0e0f0;
-  font-family: 'Press Start 2P', monospace; font-size: 7px; padding: 7px 8px;
-  outline: none; caret-color: #5ac28c;
-}
-#task-input::placeholder { color: #5a5a7a; }
-#task-input:focus { border-color: #5ac28c; }
-#thinking-text { font-size: 6px; color: #5ac28c; height: 10px; line-height: 10px; }
-#manager-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.badge {
-  background: rgba(255,255,255,0.08); border: 1px solid #4a4a6a; padding: 4px 7px;
-  font-size: 6px; color: #a0a0c0; white-space: nowrap;
-}
-.sandbox-dot { display: flex; align-items: center; gap: 4px; font-size: 6px; color: #5ac28c; white-space: nowrap; }
-.sandbox-dot::before { content: ''; display: inline-block; width: 6px; height: 6px; background: #5ac28c; flex-shrink: 0; }
-</style>
-</head>
-<body>
-<canvas id="game-canvas"></canvas>
-<div id="manager-bar">
-  <div id="manager-left">
-    <span class="robot">🤖</span>
-    <span class="label">Manager</span>
-  </div>
-  <div id="manager-center">
-    <input type="text" id="task-input" placeholder="Give the manager a task...">
-    <div id="thinking-text"></div>
-  </div>
-  <div id="manager-right">
-    <span class="badge">Tasks: 3/5</span>
-    <span class="sandbox-dot">Sandbox</span>
-  </div>
-</div>
-<script>
-// ── CONSTANTS ──
-const T = 16, ZOOM = 4, COLS = 20, ROWS = 11;
-const PW = COLS * T, PH = ROWS * T;
-const canvas = document.getElementById('game-canvas');
-const ctx = canvas.getContext('2d');
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Pixel Cozy AI Office</title>
+		<link
+			href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+			rel="stylesheet"
+		/>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+			html,
+			body {
+				width: 100%;
+				height: 100%;
+				overflow: hidden;
+				background: #0a0a14;
+				font-family: "Press Start 2P", monospace;
+			}
+			#game-canvas {
+				display: block;
+				margin: 0 auto;
+				image-rendering: pixelated;
+				image-rendering: crisp-edges;
+				cursor: default;
+			}
+			#manager-bar {
+				position: fixed;
+				bottom: 18px;
+				left: 50%;
+				transform: translateX(-50%);
+				width: 600px;
+				background: #1e1e2e;
+				border: 2px solid #4a4a6a;
+				box-shadow: 2px 2px 0px #0a0a14;
+				padding: 10px 14px;
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				z-index: 100;
+			}
+			#manager-left {
+				display: flex;
+				align-items: center;
+				gap: 6px;
+				flex-shrink: 0;
+			}
+			#manager-left .robot {
+				font-size: 16px;
+				line-height: 1;
+			}
+			#manager-left .label {
+				color: #c0c0d0;
+				font-size: 7px;
+				letter-spacing: 1px;
+			}
+			#manager-center {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+			}
+			#task-input {
+				width: 100%;
+				background: #2a2a3d;
+				border: 2px solid #4a4a6a;
+				color: #e0e0f0;
+				font-family: "Press Start 2P", monospace;
+				font-size: 7px;
+				padding: 7px 8px;
+				outline: none;
+				caret-color: #5ac28c;
+			}
+			#task-input::placeholder {
+				color: #5a5a7a;
+			}
+			#task-input:focus {
+				border-color: #5ac28c;
+			}
+			#thinking-text {
+				font-size: 6px;
+				color: #5ac28c;
+				height: 10px;
+				line-height: 10px;
+			}
+			#manager-right {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				flex-shrink: 0;
+			}
+			.badge {
+				background: rgba(255, 255, 255, 0.08);
+				border: 1px solid #4a4a6a;
+				padding: 4px 7px;
+				font-size: 6px;
+				color: #a0a0c0;
+				white-space: nowrap;
+			}
+			.sandbox-dot {
+				display: flex;
+				align-items: center;
+				gap: 4px;
+				font-size: 6px;
+				color: #5ac28c;
+				white-space: nowrap;
+			}
+			.sandbox-dot::before {
+				content: "";
+				display: inline-block;
+				width: 6px;
+				height: 6px;
+				background: #5ac28c;
+				flex-shrink: 0;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="game-canvas"></canvas>
+		<div id="manager-bar">
+			<div id="manager-left">
+				<span class="robot">🤖</span>
+				<span class="label">Manager</span>
+			</div>
+			<div id="manager-center">
+				<input type="text" id="task-input" placeholder="Give the manager a task..." />
+				<div id="thinking-text"></div>
+			</div>
+			<div id="manager-right">
+				<span class="badge">Tasks: 3/5</span>
+				<span class="sandbox-dot">Sandbox</span>
+			</div>
+		</div>
+		<script>
+			// ── CONSTANTS ──
+			const T = 16,
+				ZOOM = 4,
+				COLS = 20,
+				ROWS = 11;
+			const PW = COLS * T,
+				PH = ROWS * T;
+			const canvas = document.getElementById("game-canvas");
+			const ctx = canvas.getContext("2d");
 
-function resize() {
-  const s = Math.min(window.innerWidth / (PW * ZOOM), (window.innerHeight - 80) / (PH * ZOOM));
-  const w = Math.floor(PW * ZOOM * s);
-  const h = Math.floor(PH * ZOOM * s);
-  canvas.style.width = w + 'px';
-  canvas.style.height = h + 'px';
-  canvas.width = PW;
-  canvas.height = PH;
-}
-resize();
-window.addEventListener('resize', resize);
+			function resize() {
+				const s = Math.min(
+					window.innerWidth / (PW * ZOOM),
+					(window.innerHeight - 80) / (PH * ZOOM),
+				);
+				const w = Math.floor(PW * ZOOM * s);
+				const h = Math.floor(PH * ZOOM * s);
+				canvas.style.width = w + "px";
+				canvas.style.height = h + "px";
+				canvas.width = PW;
+				canvas.height = PH;
+			}
+			resize();
+			window.addEventListener("resize", resize);
 
-// ── COLOR PALETTE ──
-const C = {
-  bg: '#1e1e2e', wall: '#2a2a3d',
-  floorA: '#8B6914', floorB: '#A07828', floorC: '#B8922E', floorD: '#6B4E0A',
-  deskA: '#8B6914', deskB: '#A07828', deskC: '#6B4E0A',
-  monFrame: '#555566', monScreen: '#333344', monGlow: '#4a6a8a',
-  bookR: '#CC4444', bookB: '#4477AA', bookG: '#44AA66', bookY: '#CCAA33', bookP: '#9955AA',
-  shelf: '#5a3d1a', shelfDk: '#3d2a10',
-  leafA: '#3D8B37', leafB: '#2D6B27', pot: '#B85C3A', potRim: '#8B4422',
-  chairSeat: '#6B4E0A', chairBack: '#8B6914',
-  labelBg: 'rgba(30,30,46,0.8)',
-};
+			// ── COLOR PALETTE ──
+			const C = {
+				bg: "#1e1e2e",
+				wall: "#2a2a3d",
+				floorA: "#8B6914",
+				floorB: "#A07828",
+				floorC: "#B8922E",
+				floorD: "#6B4E0A",
+				deskA: "#8B6914",
+				deskB: "#A07828",
+				deskC: "#6B4E0A",
+				monFrame: "#555566",
+				monScreen: "#333344",
+				monGlow: "#4a6a8a",
+				bookR: "#CC4444",
+				bookB: "#4477AA",
+				bookG: "#44AA66",
+				bookY: "#CCAA33",
+				bookP: "#9955AA",
+				shelf: "#5a3d1a",
+				shelfDk: "#3d2a10",
+				leafA: "#3D8B37",
+				leafB: "#2D6B27",
+				pot: "#B85C3A",
+				potRim: "#8B4422",
+				chairSeat: "#6B4E0A",
+				chairBack: "#8B6914",
+				labelBg: "rgba(30,30,46,0.8)",
+			};
 
-// ── SPRITE HELPERS ──
-function drawSprite(x, y, data) {
-  for (let r = 0; r < data.length; r++)
-    for (let c = 0; c < data[r].length; c++)
-      if (data[r][c]) { ctx.fillStyle = data[r][c]; ctx.fillRect(x + c, y + r, 1, 1); }
-}
+			// ── SPRITE HELPERS ──
+			function drawSprite(x, y, data) {
+				for (let r = 0; r < data.length; r++)
+					for (let c = 0; c < data[r].length; c++)
+						if (data[r][c]) {
+							ctx.fillStyle = data[r][c];
+							ctx.fillRect(x + c, y + r, 1, 1);
+						}
+			}
 
-// ── 16x16 TILE SPRITES ──
-const SPRITES = {};
+			// ── 16x16 TILE SPRITES ──
+			const SPRITES = {};
 
-// Floor tile
-SPRITES.floor = (() => {
-  const s = Array.from({length:16}, () => Array(16).fill(C.floorB));
-  for (let r = 0; r < 16; r++) { s[r][0] = C.floorA; s[r][15] = C.floorD; }
-  s[0].fill(C.floorA); s[15].fill(C.floorD);
-  for (let r = 2; r < 14; r++) for (let c = 2; c < 14; c++) s[r][c] = C.floorC;
-  return s;
-})();
+			// Floor tile
+			SPRITES.floor = (() => {
+				const s = Array.from({ length: 16 }, () => Array(16).fill(C.floorB));
+				for (let r = 0; r < 16; r++) {
+					s[r][0] = C.floorA;
+					s[r][15] = C.floorD;
+				}
+				s[0].fill(C.floorA);
+				s[15].fill(C.floorD);
+				for (let r = 2; r < 14; r++) for (let c = 2; c < 14; c++) s[r][c] = C.floorC;
+				return s;
+			})();
 
-// Wall tile
-SPRITES.wall = (() => {
-  const s = Array.from({length:16}, () => Array(16).fill(C.wall));
-  s[14].fill('#3a3a4d'); s[15].fill('#4a4a5d');
-  return s;
-})();
+			// Wall tile
+			SPRITES.wall = (() => {
+				const s = Array.from({ length: 16 }, () => Array(16).fill(C.wall));
+				s[14].fill("#3a3a4d");
+				s[15].fill("#4a4a5d");
+				return s;
+			})();
 
-// Desk (32x32 = 2x2 tiles)
-SPRITES.desk = (() => {
-  const s = Array.from({length:32}, () => Array(32).fill(''));
-  // table top
-  for (let r = 0; r < 6; r++) for (let c = 0; c < 32; c++) s[r][c] = C.deskB;
-  for (let r = 0; r < 6; r++) { s[r][0] = C.deskC; s[r][31] = C.deskC; }
-  s[0].fill(C.deskA);
-  // surface highlight
-  for (let r = 1; r < 5; r++) for (let c = 2; c < 30; c++) s[r][c] = C.floorC;
-  // front panel
-  for (let r = 6; r < 18; r++) for (let c = 1; c < 31; c++) s[r][c] = C.deskA;
-  for (let r = 6; r < 18; r++) { s[r][1] = C.deskC; s[r][30] = C.deskC; }
-  // legs
-  for (let r = 18; r < 24; r++) { for (let c = 2; c < 5; c++) s[r][c] = C.deskC; for (let c = 27; c < 30; c++) s[r][c] = C.deskC; }
-  return s;
-})();
+			// Desk (32x32 = 2x2 tiles)
+			SPRITES.desk = (() => {
+				const s = Array.from({ length: 32 }, () => Array(32).fill(""));
+				// table top
+				for (let r = 0; r < 6; r++) for (let c = 0; c < 32; c++) s[r][c] = C.deskB;
+				for (let r = 0; r < 6; r++) {
+					s[r][0] = C.deskC;
+					s[r][31] = C.deskC;
+				}
+				s[0].fill(C.deskA);
+				// surface highlight
+				for (let r = 1; r < 5; r++) for (let c = 2; c < 30; c++) s[r][c] = C.floorC;
+				// front panel
+				for (let r = 6; r < 18; r++) for (let c = 1; c < 31; c++) s[r][c] = C.deskA;
+				for (let r = 6; r < 18; r++) {
+					s[r][1] = C.deskC;
+					s[r][30] = C.deskC;
+				}
+				// legs
+				for (let r = 18; r < 24; r++) {
+					for (let c = 2; c < 5; c++) s[r][c] = C.deskC;
+					for (let c = 27; c < 30; c++) s[r][c] = C.deskC;
+				}
+				return s;
+			})();
 
-// Monitor 16x16
-SPRITES.monitor = (() => {
-  const s = Array.from({length:16}, () => Array(16).fill(''));
-  // frame
-  for (let r = 0; r < 11; r++) for (let c = 2; c < 14; c++) s[r][c] = C.monFrame;
-  // screen
-  for (let r = 1; r < 10; r++) for (let c = 3; c < 13; c++) s[r][c] = C.monScreen;
-  // stand
-  for (let c = 6; c < 10; c++) { s[11][c] = C.monFrame; s[12][c] = C.monFrame; }
-  for (let c = 5; c < 11; c++) s[13][c] = C.monFrame;
-  return s;
-})();
+			// Monitor 16x16
+			SPRITES.monitor = (() => {
+				const s = Array.from({ length: 16 }, () => Array(16).fill(""));
+				// frame
+				for (let r = 0; r < 11; r++) for (let c = 2; c < 14; c++) s[r][c] = C.monFrame;
+				// screen
+				for (let r = 1; r < 10; r++) for (let c = 3; c < 13; c++) s[r][c] = C.monScreen;
+				// stand
+				for (let c = 6; c < 10; c++) {
+					s[11][c] = C.monFrame;
+					s[12][c] = C.monFrame;
+				}
+				for (let c = 5; c < 11; c++) s[13][c] = C.monFrame;
+				return s;
+			})();
 
-// Monitor ON (glowing)
-SPRITES.monitorOn = (() => {
-  const s = JSON.parse(JSON.stringify(SPRITES.monitor));
-  for (let r = 1; r < 10; r++) for (let c = 3; c < 13; c++) s[r][c] = C.monGlow;
-  // code lines
-  for (let c = 4; c < 9; c++) s[3][c] = '#7ab8d4';
-  for (let c = 5; c < 11; c++) s[5][c] = '#5ac28c';
-  for (let c = 4; c < 8; c++) s[7][c] = '#d4a05a';
-  return s;
-})();
+			// Monitor ON (glowing)
+			SPRITES.monitorOn = (() => {
+				const s = JSON.parse(JSON.stringify(SPRITES.monitor));
+				for (let r = 1; r < 10; r++) for (let c = 3; c < 13; c++) s[r][c] = C.monGlow;
+				// code lines
+				for (let c = 4; c < 9; c++) s[3][c] = "#7ab8d4";
+				for (let c = 5; c < 11; c++) s[5][c] = "#5ac28c";
+				for (let c = 4; c < 8; c++) s[7][c] = "#d4a05a";
+				return s;
+			})();
 
-// Keyboard 16x16 (small, on desk)
-SPRITES.keyboard = (() => {
-  const s = Array.from({length:16}, () => Array(16).fill(''));
-  for (let r = 8; r < 13; r++) for (let c = 2; c < 14; c++) s[r][c] = '#444455';
-  for (let r = 9; r < 12; r++) for (let c = 3; c < 13; c++) s[r][c] = '#555566';
-  // keys
-  for (let c = 3; c < 13; c += 2) { s[9][c] = '#666677'; s[11][c] = '#666677'; }
-  return s;
-})();
+			// Keyboard 16x16 (small, on desk)
+			SPRITES.keyboard = (() => {
+				const s = Array.from({ length: 16 }, () => Array(16).fill(""));
+				for (let r = 8; r < 13; r++) for (let c = 2; c < 14; c++) s[r][c] = "#444455";
+				for (let r = 9; r < 12; r++) for (let c = 3; c < 13; c++) s[r][c] = "#555566";
+				// keys
+				for (let c = 3; c < 13; c += 2) {
+					s[9][c] = "#666677";
+					s[11][c] = "#666677";
+				}
+				return s;
+			})();
 
-// Bookshelf 16x32 (1 wide, 2 tall)
-function makeBookshelf(colors) {
-  const s = Array.from({length:32}, () => Array(16).fill(''));
-  // frame
-  for (let r = 0; r < 32; r++) { s[r][0] = C.shelfDk; s[r][1] = C.shelf; s[r][14] = C.shelf; s[r][15] = C.shelfDk; }
-  for (let c = 0; c < 16; c++) { s[0][c] = C.shelfDk; s[31][c] = C.shelfDk; s[15][c] = C.shelf; s[16][c] = C.shelf; }
-  // back
-  for (let r = 1; r < 15; r++) for (let c = 2; c < 14; c++) s[r][c] = '#2a1f10';
-  for (let r = 17; r < 31; r++) for (let c = 2; c < 14; c++) s[r][c] = '#2a1f10';
-  // books top shelf
-  let x = 2;
-  for (let i = 0; i < 4 && x < 13; i++) {
-    const w = 2 + (i % 2);
-    const col = colors[i % colors.length];
-    for (let r = 2; r < 14; r++) for (let c = x; c < x + w && c < 14; c++) s[r][c] = col;
-    x += w + 1;
-  }
-  // books bottom shelf
-  x = 2;
-  for (let i = 0; i < 4 && x < 13; i++) {
-    const w = 2 + ((i + 1) % 2);
-    const col = colors[(i + 2) % colors.length];
-    for (let r = 18; r < 30; r++) for (let c = x; c < x + w && c < 14; c++) s[r][c] = col;
-    x += w + 1;
-  }
-  return s;
-}
+			// Bookshelf 16x32 (1 wide, 2 tall)
+			function makeBookshelf(colors) {
+				const s = Array.from({ length: 32 }, () => Array(16).fill(""));
+				// frame
+				for (let r = 0; r < 32; r++) {
+					s[r][0] = C.shelfDk;
+					s[r][1] = C.shelf;
+					s[r][14] = C.shelf;
+					s[r][15] = C.shelfDk;
+				}
+				for (let c = 0; c < 16; c++) {
+					s[0][c] = C.shelfDk;
+					s[31][c] = C.shelfDk;
+					s[15][c] = C.shelf;
+					s[16][c] = C.shelf;
+				}
+				// back
+				for (let r = 1; r < 15; r++) for (let c = 2; c < 14; c++) s[r][c] = "#2a1f10";
+				for (let r = 17; r < 31; r++) for (let c = 2; c < 14; c++) s[r][c] = "#2a1f10";
+				// books top shelf
+				let x = 2;
+				for (let i = 0; i < 4 && x < 13; i++) {
+					const w = 2 + (i % 2);
+					const col = colors[i % colors.length];
+					for (let r = 2; r < 14; r++) for (let c = x; c < x + w && c < 14; c++) s[r][c] = col;
+					x += w + 1;
+				}
+				// books bottom shelf
+				x = 2;
+				for (let i = 0; i < 4 && x < 13; i++) {
+					const w = 2 + ((i + 1) % 2);
+					const col = colors[(i + 2) % colors.length];
+					for (let r = 18; r < 30; r++) for (let c = x; c < x + w && c < 14; c++) s[r][c] = col;
+					x += w + 1;
+				}
+				return s;
+			}
 
-// Plant 16x24
-SPRITES.plant = (() => {
-  const s = Array.from({length:24}, () => Array(16).fill(''));
-  // leaves
-  const L = C.leafA, D = C.leafB;
-  // top cluster
-  for (let c = 5; c < 11; c++) s[0][c] = D;
-  for (let c = 4; c < 12; c++) s[1][c] = L;
-  for (let c = 3; c < 13; c++) s[2][c] = L;
-  for (let c = 3; c < 13; c++) s[3][c] = L;
-  for (let c = 2; c < 14; c++) s[4][c] = L;
-  for (let c = 2; c < 14; c++) s[5][c] = D;
-  for (let c = 3; c < 13; c++) s[6][c] = L;
-  for (let c = 4; c < 12; c++) s[7][c] = D;
-  // side leaves
-  s[3][1] = L; s[3][14] = L; s[4][0] = D; s[4][15] = D;
-  s[5][1] = L; s[5][14] = L;
-  // droop leaves
-  for (let c = 4; c < 12; c++) s[8][c] = D;
-  for (let c = 5; c < 11; c++) s[9][c] = L;
-  // stem
-  for (let r = 10; r < 15; r++) { s[r][7] = '#5a7a3a'; s[r][8] = '#4a6a2a'; }
-  // pot
-  for (let c = 4; c < 12; c++) s[15][c] = C.potRim;
-  for (let r = 16; r < 22; r++) for (let c = 4; c < 12; c++) s[r][c] = C.pot;
-  for (let r = 16; r < 22; r++) { s[r][4] = C.potRim; s[r][11] = C.potRim; }
-  for (let c = 5; c < 11; c++) s[22][c] = C.potRim;
-  for (let c = 5; c < 11; c++) s[23][c] = C.pot;
-  return s;
-})();
+			// Plant 16x24
+			SPRITES.plant = (() => {
+				const s = Array.from({ length: 24 }, () => Array(16).fill(""));
+				// leaves
+				const L = C.leafA,
+					D = C.leafB;
+				// top cluster
+				for (let c = 5; c < 11; c++) s[0][c] = D;
+				for (let c = 4; c < 12; c++) s[1][c] = L;
+				for (let c = 3; c < 13; c++) s[2][c] = L;
+				for (let c = 3; c < 13; c++) s[3][c] = L;
+				for (let c = 2; c < 14; c++) s[4][c] = L;
+				for (let c = 2; c < 14; c++) s[5][c] = D;
+				for (let c = 3; c < 13; c++) s[6][c] = L;
+				for (let c = 4; c < 12; c++) s[7][c] = D;
+				// side leaves
+				s[3][1] = L;
+				s[3][14] = L;
+				s[4][0] = D;
+				s[4][15] = D;
+				s[5][1] = L;
+				s[5][14] = L;
+				// droop leaves
+				for (let c = 4; c < 12; c++) s[8][c] = D;
+				for (let c = 5; c < 11; c++) s[9][c] = L;
+				// stem
+				for (let r = 10; r < 15; r++) {
+					s[r][7] = "#5a7a3a";
+					s[r][8] = "#4a6a2a";
+				}
+				// pot
+				for (let c = 4; c < 12; c++) s[15][c] = C.potRim;
+				for (let r = 16; r < 22; r++) for (let c = 4; c < 12; c++) s[r][c] = C.pot;
+				for (let r = 16; r < 22; r++) {
+					s[r][4] = C.potRim;
+					s[r][11] = C.potRim;
+				}
+				for (let c = 5; c < 11; c++) s[22][c] = C.potRim;
+				for (let c = 5; c < 11; c++) s[23][c] = C.pot;
+				return s;
+			})();
 
-// Chair 16x16 (top-down view)
-SPRITES.chair = (() => {
-  const s = Array.from({length:16}, () => Array(16).fill(''));
-  // back rest
-  for (let c = 3; c < 13; c++) { s[0][c] = C.chairBack; s[1][c] = C.chairBack; s[2][c] = C.chairBack; }
-  // seat
-  for (let r = 3; r < 12; r++) for (let c = 3; c < 13; c++) s[r][c] = C.chairSeat;
-  for (let r = 3; r < 12; r++) { s[r][3] = C.deskC; s[r][12] = C.deskC; }
-  // front edge
-  for (let c = 4; c < 12; c++) s[12][c] = C.chairBack;
-  return s;
-})();
+			// Chair 16x16 (top-down view)
+			SPRITES.chair = (() => {
+				const s = Array.from({ length: 16 }, () => Array(16).fill(""));
+				// back rest
+				for (let c = 3; c < 13; c++) {
+					s[0][c] = C.chairBack;
+					s[1][c] = C.chairBack;
+					s[2][c] = C.chairBack;
+				}
+				// seat
+				for (let r = 3; r < 12; r++) for (let c = 3; c < 13; c++) s[r][c] = C.chairSeat;
+				for (let r = 3; r < 12; r++) {
+					s[r][3] = C.deskC;
+					s[r][12] = C.deskC;
+				}
+				// front edge
+				for (let c = 4; c < 12; c++) s[12][c] = C.chairBack;
+				return s;
+			})();
 
-// Water cooler 16x24
-SPRITES.waterCooler = (() => {
-  const s = Array.from({length:24}, () => Array(16).fill(''));
-  // bottle top
-  for (let c = 6; c < 10; c++) { s[0][c] = '#aaddff'; s[1][c] = '#88bbdd'; }
-  // bottle body
-  for (let r = 2; r < 8; r++) for (let c = 5; c < 11; c++) s[r][c] = '#99ccee';
-  for (let r = 2; r < 8; r++) { s[r][5] = '#77aacc'; s[r][10] = '#77aacc'; }
-  // body
-  for (let r = 8; r < 20; r++) for (let c = 4; c < 12; c++) s[r][c] = '#ccccdd';
-  for (let r = 8; r < 20; r++) { s[r][4] = '#aaaabb'; s[r][11] = '#aaaabb'; }
-  // tap
-  s[12][12] = '#888899'; s[13][12] = '#888899'; s[13][13] = '#888899';
-  // base/legs
-  for (let r = 20; r < 24; r++) for (let c = 3; c < 13; c++) s[r][c] = '#999aab';
-  for (let c = 3; c < 13; c++) s[20][c] = '#aaaabb';
-  return s;
-})();
+			// Water cooler 16x24
+			SPRITES.waterCooler = (() => {
+				const s = Array.from({ length: 24 }, () => Array(16).fill(""));
+				// bottle top
+				for (let c = 6; c < 10; c++) {
+					s[0][c] = "#aaddff";
+					s[1][c] = "#88bbdd";
+				}
+				// bottle body
+				for (let r = 2; r < 8; r++) for (let c = 5; c < 11; c++) s[r][c] = "#99ccee";
+				for (let r = 2; r < 8; r++) {
+					s[r][5] = "#77aacc";
+					s[r][10] = "#77aacc";
+				}
+				// body
+				for (let r = 8; r < 20; r++) for (let c = 4; c < 12; c++) s[r][c] = "#ccccdd";
+				for (let r = 8; r < 20; r++) {
+					s[r][4] = "#aaaabb";
+					s[r][11] = "#aaaabb";
+				}
+				// tap
+				s[12][12] = "#888899";
+				s[13][12] = "#888899";
+				s[13][13] = "#888899";
+				// base/legs
+				for (let r = 20; r < 24; r++) for (let c = 3; c < 13; c++) s[r][c] = "#999aab";
+				for (let c = 3; c < 13; c++) s[20][c] = "#aaaabb";
+				return s;
+			})();
 
-// ── CHARACTER SPRITE FACTORY ──
-function makeCharacter(skinTone, hairColor, shirtColor, pantsColor) {
-  const skin = skinTone, hair = hairColor, shirt = shirtColor, pants = pantsColor;
-  const darkSkin = shadeColor(skin, -30);
-  const darkShirt = shadeColor(shirt, -30);
-  const eye = '#222233';
+			// ── CHARACTER SPRITE FACTORY ──
+			function makeCharacter(skinTone, hairColor, shirtColor, pantsColor) {
+				const skin = skinTone,
+					hair = hairColor,
+					shirt = shirtColor,
+					pants = pantsColor;
+				const darkSkin = shadeColor(skin, -30);
+				const darkShirt = shadeColor(shirt, -30);
+				const eye = "#222233";
 
-  function frame(armL, armR, legOffset) {
-    // 16 wide x 24 tall
-    const s = Array.from({length:24}, () => Array(16).fill(''));
-    // hair top
-    for (let c = 5; c < 11; c++) s[0][c] = hair;
-    for (let c = 4; c < 12; c++) s[1][c] = hair;
-    for (let c = 4; c < 12; c++) s[2][c] = hair;
-    // face
-    for (let c = 5; c < 11; c++) s[3][c] = skin;
-    for (let c = 4; c < 12; c++) s[4][c] = skin;
-    for (let c = 4; c < 12; c++) s[5][c] = skin;
-    for (let c = 5; c < 11; c++) s[6][c] = skin;
-    for (let c = 5; c < 11; c++) s[7][c] = darkSkin;
-    // eyes
-    s[4][6] = eye; s[4][9] = eye;
-    // mouth
-    s[6][7] = darkSkin; s[6][8] = darkSkin;
-    // neck
-    s[8][7] = skin; s[8][8] = skin;
-    // body/shirt
-    for (let r = 9; r < 16; r++) for (let c = 5; c < 11; c++) s[r][c] = shirt;
-    for (let r = 9; r < 16; r++) { s[r][5] = darkShirt; s[r][10] = darkShirt; }
-    // arms
-    const armY = 10;
-    if (armL === 'down') { for (let r = armY; r < armY + 5; r++) { s[r][4] = shirt; s[r][3] = skin; } }
-    else if (armL === 'up') { for (let r = armY - 2; r < armY + 3; r++) { s[r][4] = shirt; s[r][3] = skin; } }
-    else if (armL === 'fwd') { for (let r = armY; r < armY + 4; r++) { s[r][4] = shirt; s[r][3] = skin; } s[armY+1][2] = skin; }
-    if (armR === 'down') { for (let r = armY; r < armY + 5; r++) { s[r][11] = shirt; s[r][12] = skin; } }
-    else if (armR === 'up') { for (let r = armY - 2; r < armY + 3; r++) { s[r][11] = shirt; s[r][12] = skin; } }
-    else if (armR === 'fwd') { for (let r = armY; r < armY + 4; r++) { s[r][11] = shirt; s[r][12] = skin; } s[armY+1][13] = skin; }
-    // belt
-    for (let c = 5; c < 11; c++) s[15][c] = shadeColor(pants, -20);
-    // pants
-    for (let r = 16; r < 20; r++) for (let c = 5; c < 11; c++) s[r][c] = pants;
-    // leg split
-    s[18][7] = ''; s[18][8] = '';
-    s[19][7] = ''; s[19][8] = '';
-    // shoes
-    const shoeColor = '#333344';
-    if (legOffset === 0) {
-      for (let c = 5; c < 8; c++) s[20][c] = shoeColor;
-      for (let c = 8; c < 11; c++) s[20][c] = shoeColor;
-    } else if (legOffset === 1) {
-      for (let c = 5; c < 8; c++) s[19][c] = shoeColor;
-      for (let c = 8; c < 11; c++) s[21][c] = shoeColor;
-    } else {
-      for (let c = 5; c < 8; c++) s[21][c] = shoeColor;
-      for (let c = 8; c < 11; c++) s[19][c] = shoeColor;
-    }
-    return s;
-  }
+				function frame(armL, armR, legOffset) {
+					// 16 wide x 24 tall
+					const s = Array.from({ length: 24 }, () => Array(16).fill(""));
+					// hair top
+					for (let c = 5; c < 11; c++) s[0][c] = hair;
+					for (let c = 4; c < 12; c++) s[1][c] = hair;
+					for (let c = 4; c < 12; c++) s[2][c] = hair;
+					// face
+					for (let c = 5; c < 11; c++) s[3][c] = skin;
+					for (let c = 4; c < 12; c++) s[4][c] = skin;
+					for (let c = 4; c < 12; c++) s[5][c] = skin;
+					for (let c = 5; c < 11; c++) s[6][c] = skin;
+					for (let c = 5; c < 11; c++) s[7][c] = darkSkin;
+					// eyes
+					s[4][6] = eye;
+					s[4][9] = eye;
+					// mouth
+					s[6][7] = darkSkin;
+					s[6][8] = darkSkin;
+					// neck
+					s[8][7] = skin;
+					s[8][8] = skin;
+					// body/shirt
+					for (let r = 9; r < 16; r++) for (let c = 5; c < 11; c++) s[r][c] = shirt;
+					for (let r = 9; r < 16; r++) {
+						s[r][5] = darkShirt;
+						s[r][10] = darkShirt;
+					}
+					// arms
+					const armY = 10;
+					if (armL === "down") {
+						for (let r = armY; r < armY + 5; r++) {
+							s[r][4] = shirt;
+							s[r][3] = skin;
+						}
+					} else if (armL === "up") {
+						for (let r = armY - 2; r < armY + 3; r++) {
+							s[r][4] = shirt;
+							s[r][3] = skin;
+						}
+					} else if (armL === "fwd") {
+						for (let r = armY; r < armY + 4; r++) {
+							s[r][4] = shirt;
+							s[r][3] = skin;
+						}
+						s[armY + 1][2] = skin;
+					}
+					if (armR === "down") {
+						for (let r = armY; r < armY + 5; r++) {
+							s[r][11] = shirt;
+							s[r][12] = skin;
+						}
+					} else if (armR === "up") {
+						for (let r = armY - 2; r < armY + 3; r++) {
+							s[r][11] = shirt;
+							s[r][12] = skin;
+						}
+					} else if (armR === "fwd") {
+						for (let r = armY; r < armY + 4; r++) {
+							s[r][11] = shirt;
+							s[r][12] = skin;
+						}
+						s[armY + 1][13] = skin;
+					}
+					// belt
+					for (let c = 5; c < 11; c++) s[15][c] = shadeColor(pants, -20);
+					// pants
+					for (let r = 16; r < 20; r++) for (let c = 5; c < 11; c++) s[r][c] = pants;
+					// leg split
+					s[18][7] = "";
+					s[18][8] = "";
+					s[19][7] = "";
+					s[19][8] = "";
+					// shoes
+					const shoeColor = "#333344";
+					if (legOffset === 0) {
+						for (let c = 5; c < 8; c++) s[20][c] = shoeColor;
+						for (let c = 8; c < 11; c++) s[20][c] = shoeColor;
+					} else if (legOffset === 1) {
+						for (let c = 5; c < 8; c++) s[19][c] = shoeColor;
+						for (let c = 8; c < 11; c++) s[21][c] = shoeColor;
+					} else {
+						for (let c = 5; c < 8; c++) s[21][c] = shoeColor;
+						for (let c = 8; c < 11; c++) s[19][c] = shoeColor;
+					}
+					return s;
+				}
 
-  return {
-    idle: frame('down', 'down', 0),
-    walk: [frame('fwd', 'down', 1), frame('down', 'down', 0), frame('down', 'fwd', 2), frame('down', 'down', 0)],
-    type: [frame('fwd', 'fwd', 0), frame('up', 'up', 0)],
-  };
-}
+				return {
+					idle: frame("down", "down", 0),
+					walk: [
+						frame("fwd", "down", 1),
+						frame("down", "down", 0),
+						frame("down", "fwd", 2),
+						frame("down", "down", 0),
+					],
+					type: [frame("fwd", "fwd", 0), frame("up", "up", 0)],
+				};
+			}
 
-function shadeColor(hex, amt) {
-  let r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-  r = Math.max(0,Math.min(255, r + amt));
-  g = Math.max(0,Math.min(255, g + amt));
-  b = Math.max(0,Math.min(255, b + amt));
-  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
-}
+			function shadeColor(hex, amt) {
+				let r = parseInt(hex.slice(1, 3), 16),
+					g = parseInt(hex.slice(3, 5), 16),
+					b = parseInt(hex.slice(5, 7), 16);
+				r = Math.max(0, Math.min(255, r + amt));
+				g = Math.max(0, Math.min(255, g + amt));
+				b = Math.max(0, Math.min(255, b + amt));
+				return "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
+			}
 
-// ── CREATE CHARACTERS ──
-const charDefs = [
-  { skin: '#E8B896', hair: '#8B4513', shirt: '#4477AA', pants: '#334455', name: 'Agent #1' },
-  { skin: '#C68642', hair: '#1a1a2e', shirt: '#CC4444', pants: '#3a3a4d', name: 'Agent #2' },
-  { skin: '#FFDBB4', hair: '#DAA520', shirt: '#44AA66', pants: '#2d3d4d', name: 'Agent #3' },
-];
+			// ── CREATE CHARACTERS ──
+			const charDefs = [
+				{ skin: "#E8B896", hair: "#8B4513", shirt: "#4477AA", pants: "#334455", name: "Agent #1" },
+				{ skin: "#C68642", hair: "#1a1a2e", shirt: "#CC4444", pants: "#3a3a4d", name: "Agent #2" },
+				{ skin: "#FFDBB4", hair: "#DAA520", shirt: "#44AA66", pants: "#2d3d4d", name: "Agent #3" },
+			];
 
-const characters = charDefs.map((def, i) => {
-  const sprites = makeCharacter(def.skin, def.hair, def.shirt, def.pants);
-  return {
-    name: def.name,
-    sprites,
-    x: 0, y: 0,
-    state: 'idle', // idle, walk, type
-    dir: 'down',
-    frame: 0,
-    frameTimer: 0,
-    path: [],
-    targetDesk: -1,
-    deskIdx: i,
-    waitTimer: 0,
-    typeTimer: 0,
-    spawnTimer: 0.3,
-    spawned: false,
-    spawnColumns: Array.from({length:16}, () => Math.random() * 0.2),
-  };
-});
+			const characters = charDefs.map((def, i) => {
+				const sprites = makeCharacter(def.skin, def.hair, def.shirt, def.pants);
+				return {
+					name: def.name,
+					sprites,
+					x: 0,
+					y: 0,
+					state: "idle", // idle, walk, type
+					dir: "down",
+					frame: 0,
+					frameTimer: 0,
+					path: [],
+					targetDesk: -1,
+					deskIdx: i,
+					waitTimer: 0,
+					typeTimer: 0,
+					spawnTimer: 0.3,
+					spawned: false,
+					spawnColumns: Array.from({ length: 16 }, () => Math.random() * 0.2),
+				};
+			});
 
-// ── OFFICE LAYOUT ──
-// Walkable grid (0 = blocked, 1 = walkable, 2 = desk seat position)
-const grid = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+			// ── OFFICE LAYOUT ──
+			// Walkable grid (0 = blocked, 1 = walkable, 2 = desk seat position)
+			const grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
 
-// Floor area (rows 2-10, cols 1-18)
-for (let r = 2; r < ROWS; r++) for (let c = 1; c < COLS - 1; c++) grid[r][c] = 1;
+			// Floor area (rows 2-10, cols 1-18)
+			for (let r = 2; r < ROWS; r++) for (let c = 1; c < COLS - 1; c++) grid[r][c] = 1;
 
-// Furniture items for z-sorted rendering
-const furniture = [];
+			// Furniture items for z-sorted rendering
+			const furniture = [];
 
-// Bookshelves along top wall (row 0-1)
-const bookColors1 = [C.bookR, C.bookB, C.bookG, C.bookY];
-const bookColors2 = [C.bookP, C.bookR, C.bookB, C.bookG];
-const bookColors3 = [C.bookY, C.bookP, C.bookR, C.bookB];
-const shelfPositions = [1, 3, 5, 14, 16, 18];
-shelfPositions.forEach((col, i) => {
-  const colors = [bookColors1, bookColors2, bookColors3][i % 3];
-  furniture.push({ type: 'bookshelf', x: col * T, y: 0, sprite: makeBookshelf(colors), bottom: 32 });
-  grid[0][col] = 0; grid[1][col] = 0;
-});
+			// Bookshelves along top wall (row 0-1)
+			const bookColors1 = [C.bookR, C.bookB, C.bookG, C.bookY];
+			const bookColors2 = [C.bookP, C.bookR, C.bookB, C.bookG];
+			const bookColors3 = [C.bookY, C.bookP, C.bookR, C.bookB];
+			const shelfPositions = [1, 3, 5, 14, 16, 18];
+			shelfPositions.forEach((col, i) => {
+				const colors = [bookColors1, bookColors2, bookColors3][i % 3];
+				furniture.push({
+					type: "bookshelf",
+					x: col * T,
+					y: 0,
+					sprite: makeBookshelf(colors),
+					bottom: 32,
+				});
+				grid[0][col] = 0;
+				grid[1][col] = 0;
+			});
 
-// Plants
-const plantPositions = [{c:0,r:2},{c:0,r:7},{c:19,r:2},{c:19,r:7},{c:7,r:1},{c:12,r:1}];
-plantPositions.forEach(p => {
-  furniture.push({ type: 'plant', x: p.c * T, y: p.r * T - 8, sprite: SPRITES.plant, bottom: p.r * T + 16 });
-  grid[p.r][p.c] = 0;
-});
+			// Plants
+			const plantPositions = [
+				{ c: 0, r: 2 },
+				{ c: 0, r: 7 },
+				{ c: 19, r: 2 },
+				{ c: 19, r: 7 },
+				{ c: 7, r: 1 },
+				{ c: 12, r: 1 },
+			];
+			plantPositions.forEach((p) => {
+				furniture.push({
+					type: "plant",
+					x: p.c * T,
+					y: p.r * T - 8,
+					sprite: SPRITES.plant,
+					bottom: p.r * T + 16,
+				});
+				grid[p.r][p.c] = 0;
+			});
 
-// Water cooler
-furniture.push({ type: 'waterCooler', x: 0 * T, y: 4 * T - 8, sprite: SPRITES.waterCooler, bottom: 5 * T + 8 });
-grid[4][0] = 0; grid[5][0] = 0;
+			// Water cooler
+			furniture.push({
+				type: "waterCooler",
+				x: 0 * T,
+				y: 4 * T - 8,
+				sprite: SPRITES.waterCooler,
+				bottom: 5 * T + 8,
+			});
+			grid[4][0] = 0;
+			grid[5][0] = 0;
 
-// Desks (8 desks in 2 rows of 4)
-const deskLayout = [
-  // Row 1: y=3 (grid rows 3-4)
-  { col: 2, row: 3 }, { col: 5, row: 3 }, { col: 12, row: 3 }, { col: 15, row: 3 },
-  // Row 2: y=7 (grid rows 7-8)
-  { col: 2, row: 7 }, { col: 5, row: 7 }, { col: 12, row: 7 }, { col: 15, row: 7 },
-];
+			// Desks (8 desks in 2 rows of 4)
+			const deskLayout = [
+				// Row 1: y=3 (grid rows 3-4)
+				{ col: 2, row: 3 },
+				{ col: 5, row: 3 },
+				{ col: 12, row: 3 },
+				{ col: 15, row: 3 },
+				// Row 2: y=7 (grid rows 7-8)
+				{ col: 2, row: 7 },
+				{ col: 5, row: 7 },
+				{ col: 12, row: 7 },
+				{ col: 15, row: 7 },
+			];
 
-// Seat positions (where characters sit to type - in front of desk)
-const seatPositions = deskLayout.map(d => ({ col: d.col, row: d.row + 2, deskCol: d.col, deskRow: d.row }));
+			// Seat positions (where characters sit to type - in front of desk)
+			const seatPositions = deskLayout.map((d) => ({
+				col: d.col,
+				row: d.row + 2,
+				deskCol: d.col,
+				deskRow: d.row,
+			}));
 
-deskLayout.forEach((d, i) => {
-  // Desk
-  furniture.push({
-    type: 'desk', x: d.col * T, y: d.row * T, sprite: SPRITES.desk,
-    bottom: d.row * T + 24,
-  });
-  // Block desk tiles
-  grid[d.row][d.col] = 0; grid[d.row][d.col + 1] = 0;
-  grid[d.row + 1][d.col] = 0; grid[d.row + 1][d.col + 1] = 0;
+			deskLayout.forEach((d, i) => {
+				// Desk
+				furniture.push({
+					type: "desk",
+					x: d.col * T,
+					y: d.row * T,
+					sprite: SPRITES.desk,
+					bottom: d.row * T + 24,
+				});
+				// Block desk tiles
+				grid[d.row][d.col] = 0;
+				grid[d.row][d.col + 1] = 0;
+				grid[d.row + 1][d.col] = 0;
+				grid[d.row + 1][d.col + 1] = 0;
 
-  // Monitor on left side of desk
-  const monOn = (i < 3); // first 3 desks have active monitors
-  furniture.push({
-    type: 'monitor', x: d.col * T, y: (d.row - 1) * T + 4,
-    sprite: monOn ? SPRITES.monitorOn : SPRITES.monitor,
-    bottom: d.row * T + 4, glowing: monOn,
-  });
+				// Monitor on left side of desk
+				const monOn = i < 3; // first 3 desks have active monitors
+				furniture.push({
+					type: "monitor",
+					x: d.col * T,
+					y: (d.row - 1) * T + 4,
+					sprite: monOn ? SPRITES.monitorOn : SPRITES.monitor,
+					bottom: d.row * T + 4,
+					glowing: monOn,
+				});
 
-  // Monitor on right side
-  furniture.push({
-    type: 'monitor', x: (d.col + 1) * T, y: (d.row - 1) * T + 4,
-    sprite: monOn ? SPRITES.monitorOn : SPRITES.monitor,
-    bottom: d.row * T + 4, glowing: monOn,
-  });
+				// Monitor on right side
+				furniture.push({
+					type: "monitor",
+					x: (d.col + 1) * T,
+					y: (d.row - 1) * T + 4,
+					sprite: monOn ? SPRITES.monitorOn : SPRITES.monitor,
+					bottom: d.row * T + 4,
+					glowing: monOn,
+				});
 
-  // Keyboard
-  furniture.push({
-    type: 'keyboard', x: d.col * T + 4, y: d.row * T + 4,
-    sprite: SPRITES.keyboard, bottom: d.row * T + 16,
-  });
+				// Keyboard
+				furniture.push({
+					type: "keyboard",
+					x: d.col * T + 4,
+					y: d.row * T + 4,
+					sprite: SPRITES.keyboard,
+					bottom: d.row * T + 16,
+				});
 
-  // Chair in front of desk
-  const chairRow = d.row + 2;
-  furniture.push({
-    type: 'chair', x: d.col * T + 4, y: chairRow * T,
-    sprite: SPRITES.chair, bottom: chairRow * T + 16,
-  });
-  // Chair area stays walkable for sitting
-});
+				// Chair in front of desk
+				const chairRow = d.row + 2;
+				furniture.push({
+					type: "chair",
+					x: d.col * T + 4,
+					y: chairRow * T,
+					sprite: SPRITES.chair,
+					bottom: chairRow * T + 16,
+				});
+				// Chair area stays walkable for sitting
+			});
 
-// Assign characters to desks
-characters[0].deskIdx = 0;
-characters[1].deskIdx = 1;
-characters[2].deskIdx = 4;
+			// Assign characters to desks
+			characters[0].deskIdx = 0;
+			characters[1].deskIdx = 1;
+			characters[2].deskIdx = 4;
 
-// Set initial positions (at their seats or nearby)
-characters.forEach((ch, i) => {
-  const seat = seatPositions[ch.deskIdx];
-  ch.x = seat.col * T;
-  ch.y = seat.row * T - 8;
-  ch.state = 'type';
-});
+			// Set initial positions (at their seats or nearby)
+			characters.forEach((ch, i) => {
+				const seat = seatPositions[ch.deskIdx];
+				ch.x = seat.col * T;
+				ch.y = seat.row * T - 8;
+				ch.state = "type";
+			});
 
-// ── BFS PATHFINDING ──
-function bfs(startCol, startRow, endCol, endRow) {
-  if (startCol === endCol && startRow === endRow) return [];
-  const visited = Array.from({length: ROWS}, () => Array(COLS).fill(false));
-  const parent = Array.from({length: ROWS}, () => Array(COLS).fill(null));
-  const queue = [[startCol, startRow]];
-  visited[startRow][startCol] = true;
-  const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
-  while (queue.length) {
-    const [cx, cy] = queue.shift();
-    if (cx === endCol && cy === endRow) {
-      // reconstruct
-      const path = [];
-      let cur = [endCol, endRow];
-      while (cur[0] !== startCol || cur[1] !== startRow) {
-        path.unshift({x: cur[0] * T, y: cur[1] * T - 8});
-        cur = parent[cur[1]][cur[0]];
-      }
-      return path;
-    }
-    for (const [dx, dy] of dirs) {
-      const nx = cx + dx, ny = cy + dy;
-      if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && !visited[ny][nx] && grid[ny][nx] !== 0) {
-        visited[ny][nx] = true;
-        parent[ny][nx] = [cx, cy];
-        queue.push([nx, ny]);
-      }
-    }
-  }
-  return null;
-}
+			// ── BFS PATHFINDING ──
+			function bfs(startCol, startRow, endCol, endRow) {
+				if (startCol === endCol && startRow === endRow) return [];
+				const visited = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+				const parent = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+				const queue = [[startCol, startRow]];
+				visited[startRow][startCol] = true;
+				const dirs = [
+					[0, -1],
+					[0, 1],
+					[-1, 0],
+					[1, 0],
+				];
+				while (queue.length) {
+					const [cx, cy] = queue.shift();
+					if (cx === endCol && cy === endRow) {
+						// reconstruct
+						const path = [];
+						let cur = [endCol, endRow];
+						while (cur[0] !== startCol || cur[1] !== startRow) {
+							path.unshift({ x: cur[0] * T, y: cur[1] * T - 8 });
+							cur = parent[cur[1]][cur[0]];
+						}
+						return path;
+					}
+					for (const [dx, dy] of dirs) {
+						const nx = cx + dx,
+							ny = cy + dy;
+						if (
+							nx >= 0 &&
+							nx < COLS &&
+							ny >= 0 &&
+							ny < ROWS &&
+							!visited[ny][nx] &&
+							grid[ny][nx] !== 0
+						) {
+							visited[ny][nx] = true;
+							parent[ny][nx] = [cx, cy];
+							queue.push([nx, ny]);
+						}
+					}
+				}
+				return null;
+			}
 
-// ── CHARACTER AI ──
-function getWalkTarget(ch) {
-  // Pick a random walkable tile
-  const walkable = [];
-  for (let r = 2; r < ROWS; r++)
-    for (let c = 1; c < COLS - 1; c++)
-      if (grid[r][c] === 1) walkable.push({c, r});
-  return walkable[Math.floor(Math.random() * walkable.length)];
-}
+			// ── CHARACTER AI ──
+			function getWalkTarget(ch) {
+				// Pick a random walkable tile
+				const walkable = [];
+				for (let r = 2; r < ROWS; r++)
+					for (let c = 1; c < COLS - 1; c++) if (grid[r][c] === 1) walkable.push({ c, r });
+				return walkable[Math.floor(Math.random() * walkable.length)];
+			}
 
-function updateCharacter(ch, dt) {
-  // Spawn effect
-  if (ch.spawnTimer > 0) {
-    ch.spawnTimer -= dt;
-    if (ch.spawnTimer <= 0) ch.spawned = true;
-    return;
-  }
+			function updateCharacter(ch, dt) {
+				// Spawn effect
+				if (ch.spawnTimer > 0) {
+					ch.spawnTimer -= dt;
+					if (ch.spawnTimer <= 0) ch.spawned = true;
+					return;
+				}
 
-  if (ch.state === 'type') {
-    ch.frameTimer += dt;
-    if (ch.frameTimer >= 0.3) {
-      ch.frameTimer = 0;
-      ch.frame = (ch.frame + 1) % 2;
-    }
-    ch.typeTimer += dt;
-    if (ch.typeTimer > 4 + Math.random() * 6) {
-      ch.typeTimer = 0;
-      ch.state = 'walk';
-      ch.frame = 0;
-      // Get path to random location
-      const curCol = Math.round((ch.x) / T);
-      const curRow = Math.round((ch.y + 8) / T);
-      const target = getWalkTarget(ch);
-      if (target) {
-        ch.path = bfs(curCol, curRow, target.c, target.r) || [];
-      }
-      ch.waitTimer = 2 + Math.random() * 3;
-    }
-  } else if (ch.state === 'walk') {
-    if (ch.path.length > 0) {
-      const target = ch.path[0];
-      const dx = target.x - ch.x;
-      const dy = target.y - ch.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const speed = 48;
-      if (dist < speed * dt) {
-        ch.x = target.x;
-        ch.y = target.y;
-        ch.path.shift();
-      } else {
-        ch.x += (dx / dist) * speed * dt;
-        ch.y += (dy / dist) * speed * dt;
-        // direction
-        if (Math.abs(dx) > Math.abs(dy)) ch.dir = dx > 0 ? 'right' : 'left';
-        else ch.dir = dy > 0 ? 'down' : 'up';
-      }
-      ch.frameTimer += dt;
-      if (ch.frameTimer >= 0.15) {
-        ch.frameTimer = 0;
-        ch.frame = (ch.frame + 1) % 4;
-      }
-    } else {
-      // waiting at destination
-      ch.state = 'idle';
-      ch.frame = 0;
-      ch.frameTimer = 0;
-    }
-  } else if (ch.state === 'idle') {
-    ch.waitTimer -= dt;
-    if (ch.waitTimer <= 0) {
-      // Go back to desk
-      ch.state = 'walk';
-      const seat = seatPositions[ch.deskIdx];
-      const curCol = Math.round(ch.x / T);
-      const curRow = Math.round((ch.y + 8) / T);
-      ch.path = bfs(curCol, curRow, seat.col, seat.row) || [];
-      ch.waitTimer = 0;
-      // If already at desk, start typing
-      if (ch.path.length === 0) {
-        ch.state = 'type';
-        ch.typeTimer = 0;
-      }
-    }
-  }
+				if (ch.state === "type") {
+					ch.frameTimer += dt;
+					if (ch.frameTimer >= 0.3) {
+						ch.frameTimer = 0;
+						ch.frame = (ch.frame + 1) % 2;
+					}
+					ch.typeTimer += dt;
+					if (ch.typeTimer > 4 + Math.random() * 6) {
+						ch.typeTimer = 0;
+						ch.state = "walk";
+						ch.frame = 0;
+						// Get path to random location
+						const curCol = Math.round(ch.x / T);
+						const curRow = Math.round((ch.y + 8) / T);
+						const target = getWalkTarget(ch);
+						if (target) {
+							ch.path = bfs(curCol, curRow, target.c, target.r) || [];
+						}
+						ch.waitTimer = 2 + Math.random() * 3;
+					}
+				} else if (ch.state === "walk") {
+					if (ch.path.length > 0) {
+						const target = ch.path[0];
+						const dx = target.x - ch.x;
+						const dy = target.y - ch.y;
+						const dist = Math.sqrt(dx * dx + dy * dy);
+						const speed = 48;
+						if (dist < speed * dt) {
+							ch.x = target.x;
+							ch.y = target.y;
+							ch.path.shift();
+						} else {
+							ch.x += (dx / dist) * speed * dt;
+							ch.y += (dy / dist) * speed * dt;
+							// direction
+							if (Math.abs(dx) > Math.abs(dy)) ch.dir = dx > 0 ? "right" : "left";
+							else ch.dir = dy > 0 ? "down" : "up";
+						}
+						ch.frameTimer += dt;
+						if (ch.frameTimer >= 0.15) {
+							ch.frameTimer = 0;
+							ch.frame = (ch.frame + 1) % 4;
+						}
+					} else {
+						// waiting at destination
+						ch.state = "idle";
+						ch.frame = 0;
+						ch.frameTimer = 0;
+					}
+				} else if (ch.state === "idle") {
+					ch.waitTimer -= dt;
+					if (ch.waitTimer <= 0) {
+						// Go back to desk
+						ch.state = "walk";
+						const seat = seatPositions[ch.deskIdx];
+						const curCol = Math.round(ch.x / T);
+						const curRow = Math.round((ch.y + 8) / T);
+						ch.path = bfs(curCol, curRow, seat.col, seat.row) || [];
+						ch.waitTimer = 0;
+						// If already at desk, start typing
+						if (ch.path.length === 0) {
+							ch.state = "type";
+							ch.typeTimer = 0;
+						}
+					}
+				}
 
-  // Check if arrived at desk seat → start typing
-  if (ch.state === 'walk' && ch.path.length === 0) {
-    const seat = seatPositions[ch.deskIdx];
-    const atSeat = Math.abs(ch.x - seat.col * T) < 2 && Math.abs(ch.y - (seat.row * T - 8)) < 2;
-    if (atSeat) {
-      ch.x = seat.col * T;
-      ch.y = seat.row * T - 8;
-      ch.state = 'type';
-      ch.typeTimer = 0;
-      ch.frame = 0;
-    }
-  }
-}
+				// Check if arrived at desk seat → start typing
+				if (ch.state === "walk" && ch.path.length === 0) {
+					const seat = seatPositions[ch.deskIdx];
+					const atSeat =
+						Math.abs(ch.x - seat.col * T) < 2 && Math.abs(ch.y - (seat.row * T - 8)) < 2;
+					if (atSeat) {
+						ch.x = seat.col * T;
+						ch.y = seat.row * T - 8;
+						ch.state = "type";
+						ch.typeTimer = 0;
+						ch.frame = 0;
+					}
+				}
+			}
 
-// ── RENDER ──
-function drawFloor() {
-  // Walls
-  for (let c = 0; c < COLS; c++) for (let r = 0; r < 2; r++)
-    drawSprite(c * T, r * T, SPRITES.wall);
-  // Floor
-  for (let r = 2; r < ROWS; r++) for (let c = 0; c < COLS; c++)
-    drawSprite(c * T, r * T, SPRITES.floor);
-}
+			// ── RENDER ──
+			function drawFloor() {
+				// Walls
+				for (let c = 0; c < COLS; c++)
+					for (let r = 0; r < 2; r++) drawSprite(c * T, r * T, SPRITES.wall);
+				// Floor
+				for (let r = 2; r < ROWS; r++)
+					for (let c = 0; c < COLS; c++) drawSprite(c * T, r * T, SPRITES.floor);
+			}
 
-function drawLabel(ch) {
-  const nameX = ch.x + 8;
-  const nameY = ch.y - 6;
-  // Background
-  ctx.fillStyle = C.labelBg;
-  const textW = ch.name.length * 4 + 12;
-  ctx.fillRect(Math.floor(nameX - textW / 2), Math.floor(nameY - 4), textW, 7);
-  // Status dot
-  const dotColors = ['#4a9eff', '#ffcc44', '#5ac28c'];
-  ctx.fillStyle = dotColors[characters.indexOf(ch) % 3];
-  ctx.fillRect(Math.floor(nameX - textW / 2 + 2), Math.floor(nameY - 2), 3, 3);
-  // Name text (pixel-by-pixel approximation using tiny font)
-  ctx.fillStyle = '#c0c0d0';
-  ctx.font = '3px monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(ch.name, Math.floor(nameX), Math.floor(nameY));
-}
+			function drawLabel(ch) {
+				const nameX = ch.x + 8;
+				const nameY = ch.y - 6;
+				// Background
+				ctx.fillStyle = C.labelBg;
+				const textW = ch.name.length * 4 + 12;
+				ctx.fillRect(Math.floor(nameX - textW / 2), Math.floor(nameY - 4), textW, 7);
+				// Status dot
+				const dotColors = ["#4a9eff", "#ffcc44", "#5ac28c"];
+				ctx.fillStyle = dotColors[characters.indexOf(ch) % 3];
+				ctx.fillRect(Math.floor(nameX - textW / 2 + 2), Math.floor(nameY - 2), 3, 3);
+				// Name text (pixel-by-pixel approximation using tiny font)
+				ctx.fillStyle = "#c0c0d0";
+				ctx.font = "3px monospace";
+				ctx.textAlign = "center";
+				ctx.textBaseline = "middle";
+				ctx.fillText(ch.name, Math.floor(nameX), Math.floor(nameY));
+			}
 
-function drawCharSpawnEffect(ch) {
-  if (ch.spawnTimer <= 0) return;
-  const progress = 1 - (ch.spawnTimer / 0.3);
-  const sprite = ch.sprites.idle;
-  for (let c = 0; c < 16; c++) {
-    const colDelay = ch.spawnColumns[c];
-    const colProgress = Math.max(0, (progress - colDelay) / (1 - colDelay));
-    const revealRow = Math.floor(colProgress * 24);
-    for (let r = 0; r < 24; r++) {
-      if (r <= revealRow && sprite[r] && sprite[r][c]) {
-        if (r === revealRow) {
-          ctx.fillStyle = '#ccffcc';
-        } else if (r >= revealRow - 3) {
-          const fade = (revealRow - r) / 3;
-          ctx.fillStyle = `rgba(${0x3D},${0x8B},${0x37},${1 - fade})`;
-        } else {
-          ctx.fillStyle = sprite[r][c];
-        }
-        ctx.fillRect(Math.floor(ch.x + c), Math.floor(ch.y + r), 1, 1);
-      }
-    }
-  }
-}
+			function drawCharSpawnEffect(ch) {
+				if (ch.spawnTimer <= 0) return;
+				const progress = 1 - ch.spawnTimer / 0.3;
+				const sprite = ch.sprites.idle;
+				for (let c = 0; c < 16; c++) {
+					const colDelay = ch.spawnColumns[c];
+					const colProgress = Math.max(0, (progress - colDelay) / (1 - colDelay));
+					const revealRow = Math.floor(colProgress * 24);
+					for (let r = 0; r < 24; r++) {
+						if (r <= revealRow && sprite[r] && sprite[r][c]) {
+							if (r === revealRow) {
+								ctx.fillStyle = "#ccffcc";
+							} else if (r >= revealRow - 3) {
+								const fade = (revealRow - r) / 3;
+								ctx.fillStyle = `rgba(${0x3d},${0x8b},${0x37},${1 - fade})`;
+							} else {
+								ctx.fillStyle = sprite[r][c];
+							}
+							ctx.fillRect(Math.floor(ch.x + c), Math.floor(ch.y + r), 1, 1);
+						}
+					}
+				}
+			}
 
-function getCharSprite(ch) {
-  if (ch.state === 'type') return ch.sprites.type[ch.frame % 2];
-  if (ch.state === 'walk') return ch.sprites.walk[ch.frame % 4];
-  return ch.sprites.idle;
-}
+			function getCharSprite(ch) {
+				if (ch.state === "type") return ch.sprites.type[ch.frame % 2];
+				if (ch.state === "walk") return ch.sprites.walk[ch.frame % 4];
+				return ch.sprites.idle;
+			}
 
-// ── MONITOR GLOW EFFECT ──
-function drawMonitorGlow(item) {
-  if (!item.glowing) return;
-  ctx.fillStyle = 'rgba(74,106,138,0.06)';
-  ctx.fillRect(item.x - 2, item.y - 2, 20, 20);
-}
+			// ── MONITOR GLOW EFFECT ──
+			function drawMonitorGlow(item) {
+				if (!item.glowing) return;
+				ctx.fillStyle = "rgba(74,106,138,0.06)";
+				ctx.fillRect(item.x - 2, item.y - 2, 20, 20);
+			}
 
-// ── MAIN LOOP ──
-let lastTime = 0;
-let thinkDots = 0;
-let thinkTimer = 0;
+			// ── MAIN LOOP ──
+			let lastTime = 0;
+			let thinkDots = 0;
+			let thinkTimer = 0;
 
-function update(dt) {
-  characters.forEach(ch => updateCharacter(ch, dt));
+			function update(dt) {
+				characters.forEach((ch) => updateCharacter(ch, dt));
 
-  // Thinking animation
-  thinkTimer += dt;
-  if (thinkTimer >= 0.5) {
-    thinkTimer = 0;
-    thinkDots = (thinkDots + 1) % 4;
-  }
-  const el = document.getElementById('thinking-text');
-  if (el) el.textContent = 'Manager is thinking' + '.'.repeat(thinkDots);
-}
+				// Thinking animation
+				thinkTimer += dt;
+				if (thinkTimer >= 0.5) {
+					thinkTimer = 0;
+					thinkDots = (thinkDots + 1) % 4;
+				}
+				const el = document.getElementById("thinking-text");
+				if (el) el.textContent = "Manager is thinking" + ".".repeat(thinkDots);
+			}
 
-function render() {
-  ctx.fillStyle = C.bg;
-  ctx.fillRect(0, 0, PW, PH);
-  ctx.imageSmoothingEnabled = false;
+			function render() {
+				ctx.fillStyle = C.bg;
+				ctx.fillRect(0, 0, PW, PH);
+				ctx.imageSmoothingEnabled = false;
 
-  drawFloor();
+				drawFloor();
 
-  // Collect all z-sortable items
-  const items = [];
+				// Collect all z-sortable items
+				const items = [];
 
-  // Furniture
-  furniture.forEach(f => {
-    items.push({ type: 'furniture', data: f, bottom: f.bottom });
-  });
+				// Furniture
+				furniture.forEach((f) => {
+					items.push({ type: "furniture", data: f, bottom: f.bottom });
+				});
 
-  // Characters
-  characters.forEach(ch => {
-    items.push({ type: 'character', data: ch, bottom: ch.y + 24 });
-  });
+				// Characters
+				characters.forEach((ch) => {
+					items.push({ type: "character", data: ch, bottom: ch.y + 24 });
+				});
 
-  // Z-sort by bottom Y
-  items.sort((a, b) => a.bottom - b.bottom);
+				// Z-sort by bottom Y
+				items.sort((a, b) => a.bottom - b.bottom);
 
-  // Draw all
-  items.forEach(item => {
-    if (item.type === 'furniture') {
-      const f = item.data;
-      drawMonitorGlow(f);
-      drawSprite(f.x, f.y, f.sprite);
-    } else {
-      const ch = item.data;
-      if (ch.spawnTimer > 0) {
-        drawCharSpawnEffect(ch);
-      } else {
-        const sprite = getCharSprite(ch);
-        drawSprite(Math.floor(ch.x), Math.floor(ch.y), sprite);
-        drawLabel(ch);
-      }
-    }
-  });
-}
+				// Draw all
+				items.forEach((item) => {
+					if (item.type === "furniture") {
+						const f = item.data;
+						drawMonitorGlow(f);
+						drawSprite(f.x, f.y, f.sprite);
+					} else {
+						const ch = item.data;
+						if (ch.spawnTimer > 0) {
+							drawCharSpawnEffect(ch);
+						} else {
+							const sprite = getCharSprite(ch);
+							drawSprite(Math.floor(ch.x), Math.floor(ch.y), sprite);
+							drawLabel(ch);
+						}
+					}
+				});
+			}
 
-function frame(time) {
-  const dt = lastTime === 0 ? 0 : Math.min((time - lastTime) / 1000, 0.1);
-  lastTime = time;
-  update(dt);
-  ctx.imageSmoothingEnabled = false;
-  render();
-  requestAnimationFrame(frame);
-}
-requestAnimationFrame(frame);
-</script>
-</body>
+			function frame(time) {
+				const dt = lastTime === 0 ? 0 : Math.min((time - lastTime) / 1000, 0.1);
+				lastTime = time;
+				update(dt);
+				ctx.imageSmoothingEnabled = false;
+				render();
+				requestAnimationFrame(frame);
+			}
+			requestAnimationFrame(frame);
+		</script>
+	</body>
 </html>
