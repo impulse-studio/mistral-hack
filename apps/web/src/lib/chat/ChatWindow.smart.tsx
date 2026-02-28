@@ -1,10 +1,12 @@
 import { useUIMessages, type UIMessage } from "@convex-dev/agent/react";
 import { api } from "@mistral-hack/backend/convex/_generated/api";
 import { useMutation } from "convex/react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import type { ChatWindowMessage } from "./ChatWindow.component";
 import { ChatWindow } from "./ChatWindow.component";
+
+const THREAD_STORAGE_KEY = "chat-thread-id";
 
 interface ChatWindowSmartProps {
 	threadId?: string | null;
@@ -31,10 +33,18 @@ function ChatWindowSmart({
 	title,
 	className,
 }: ChatWindowSmartProps) {
-	const [chatInternalThreadId, setChatInternalThreadId] = useState<string | null>(null);
+	const [chatInternalThreadId, setChatInternalThreadId] = useState<string | null>(() => {
+		if (typeof window === "undefined") return null;
+		return sessionStorage.getItem(THREAD_STORAGE_KEY);
+	});
 	const [chatIsLoading, setChatIsLoading] = useState(false);
 
 	const chatActiveThreadId = controlledThreadId ?? chatInternalThreadId;
+
+	const setAndPersistThreadId = useCallback((id: string) => {
+		setChatInternalThreadId(id);
+		sessionStorage.setItem(THREAD_STORAGE_KEY, id);
+	}, []);
 
 	const createThread = useMutation(api.chat.createNewThread);
 	const sendMessage = useMutation(api.chat.sendMessage);
@@ -59,7 +69,7 @@ function ChatWindowSmart({
 			let currentThreadId = chatActiveThreadId;
 			if (!currentThreadId) {
 				currentThreadId = await createThread();
-				setChatInternalThreadId(currentThreadId);
+				setAndPersistThreadId(currentThreadId);
 				onThreadCreated?.(currentThreadId);
 			}
 

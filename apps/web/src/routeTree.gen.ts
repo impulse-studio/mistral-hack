@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ManagerRouteImport } from './routes/manager'
+import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AiRouteImport } from './routes/ai'
 import { Route as IndexRouteImport } from './routes/index'
@@ -20,6 +22,16 @@ import { Route as ProtoV3RouteImport } from './routes/proto/v3'
 import { Route as ProtoV2RouteImport } from './routes/proto/v2'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
+const ManagerRoute = ManagerRouteImport.update({
+  id: '/manager',
+  path: '/manager',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KanbanRoute = KanbanRouteImport.update({
+  id: '/kanban',
+  path: '/kanban',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -75,6 +87,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
+  '/kanban': typeof KanbanRoute
+  '/manager': typeof ManagerRoute
   '/proto/v2': typeof ProtoV2Route
   '/proto/v3': typeof ProtoV3Route
   '/proto/v4': typeof ProtoV4Route
@@ -87,6 +101,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
+  '/kanban': typeof KanbanRoute
+  '/manager': typeof ManagerRoute
   '/proto/v2': typeof ProtoV2Route
   '/proto/v3': typeof ProtoV3Route
   '/proto/v4': typeof ProtoV4Route
@@ -100,6 +116,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
+  '/kanban': typeof KanbanRoute
+  '/manager': typeof ManagerRoute
   '/proto/v2': typeof ProtoV2Route
   '/proto/v3': typeof ProtoV3Route
   '/proto/v4': typeof ProtoV4Route
@@ -114,6 +132,8 @@ export interface FileRouteTypes {
     | '/'
     | '/ai'
     | '/dashboard'
+    | '/kanban'
+    | '/manager'
     | '/proto/v2'
     | '/proto/v3'
     | '/proto/v4'
@@ -126,6 +146,8 @@ export interface FileRouteTypes {
     | '/'
     | '/ai'
     | '/dashboard'
+    | '/kanban'
+    | '/manager'
     | '/proto/v2'
     | '/proto/v3'
     | '/proto/v4'
@@ -138,6 +160,8 @@ export interface FileRouteTypes {
     | '/'
     | '/ai'
     | '/dashboard'
+    | '/kanban'
+    | '/manager'
     | '/proto/v2'
     | '/proto/v3'
     | '/proto/v4'
@@ -151,6 +175,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AiRoute: typeof AiRoute
   DashboardRoute: typeof DashboardRoute
+  KanbanRoute: typeof KanbanRoute
+  ManagerRoute: typeof ManagerRoute
   ProtoV2Route: typeof ProtoV2Route
   ProtoV3Route: typeof ProtoV3Route
   ProtoV4Route: typeof ProtoV4Route
@@ -162,6 +188,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/manager': {
+      id: '/manager'
+      path: '/manager'
+      fullPath: '/manager'
+      preLoaderRoute: typeof ManagerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kanban': {
+      id: '/kanban'
+      path: '/kanban'
+      fullPath: '/kanban'
+      preLoaderRoute: typeof KanbanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -239,6 +279,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AiRoute: AiRoute,
   DashboardRoute: DashboardRoute,
+  KanbanRoute: KanbanRoute,
+  ManagerRoute: ManagerRoute,
   ProtoV2Route: ProtoV2Route,
   ProtoV3Route: ProtoV3Route,
   ProtoV4Route: ProtoV4Route,
