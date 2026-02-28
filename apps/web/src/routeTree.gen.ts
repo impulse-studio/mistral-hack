@@ -9,6 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TestRouteImport } from './routes/test'
+import { Route as OfficeRouteImport } from './routes/office'
+import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AiRouteImport } from './routes/ai'
 import { Route as IndexRouteImport } from './routes/index'
@@ -20,6 +23,21 @@ import { Route as ProtoV3RouteImport } from './routes/proto/v3'
 import { Route as ProtoV2RouteImport } from './routes/proto/v2'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
+const TestRoute = TestRouteImport.update({
+  id: '/test',
+  path: '/test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OfficeRoute = OfficeRouteImport.update({
+  id: '/office',
+  path: '/office',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KanbanRoute = KanbanRouteImport.update({
+  id: '/kanban',
+  path: '/kanban',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -75,6 +93,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
+  '/kanban': typeof KanbanRoute
+  '/office': typeof OfficeRoute
+  '/test': typeof TestRoute
   '/proto/v2': typeof ProtoV2Route
   '/proto/v3': typeof ProtoV3Route
   '/proto/v4': typeof ProtoV4Route
@@ -87,6 +108,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
+  '/kanban': typeof KanbanRoute
+  '/office': typeof OfficeRoute
+  '/test': typeof TestRoute
   '/proto/v2': typeof ProtoV2Route
   '/proto/v3': typeof ProtoV3Route
   '/proto/v4': typeof ProtoV4Route
@@ -100,6 +124,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
+  '/kanban': typeof KanbanRoute
+  '/office': typeof OfficeRoute
+  '/test': typeof TestRoute
   '/proto/v2': typeof ProtoV2Route
   '/proto/v3': typeof ProtoV3Route
   '/proto/v4': typeof ProtoV4Route
@@ -114,6 +141,9 @@ export interface FileRouteTypes {
     | '/'
     | '/ai'
     | '/dashboard'
+    | '/kanban'
+    | '/office'
+    | '/test'
     | '/proto/v2'
     | '/proto/v3'
     | '/proto/v4'
@@ -126,6 +156,9 @@ export interface FileRouteTypes {
     | '/'
     | '/ai'
     | '/dashboard'
+    | '/kanban'
+    | '/office'
+    | '/test'
     | '/proto/v2'
     | '/proto/v3'
     | '/proto/v4'
@@ -138,6 +171,9 @@ export interface FileRouteTypes {
     | '/'
     | '/ai'
     | '/dashboard'
+    | '/kanban'
+    | '/office'
+    | '/test'
     | '/proto/v2'
     | '/proto/v3'
     | '/proto/v4'
@@ -151,6 +187,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AiRoute: typeof AiRoute
   DashboardRoute: typeof DashboardRoute
+  KanbanRoute: typeof KanbanRoute
+  OfficeRoute: typeof OfficeRoute
+  TestRoute: typeof TestRoute
   ProtoV2Route: typeof ProtoV2Route
   ProtoV3Route: typeof ProtoV3Route
   ProtoV4Route: typeof ProtoV4Route
@@ -162,6 +201,27 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/test': {
+      id: '/test'
+      path: '/test'
+      fullPath: '/test'
+      preLoaderRoute: typeof TestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/office': {
+      id: '/office'
+      path: '/office'
+      fullPath: '/office'
+      preLoaderRoute: typeof OfficeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kanban': {
+      id: '/kanban'
+      path: '/kanban'
+      fullPath: '/kanban'
+      preLoaderRoute: typeof KanbanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -239,6 +299,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AiRoute: AiRoute,
   DashboardRoute: DashboardRoute,
+  KanbanRoute: KanbanRoute,
+  OfficeRoute: OfficeRoute,
+  TestRoute: TestRoute,
   ProtoV2Route: ProtoV2Route,
   ProtoV3Route: ProtoV3Route,
   ProtoV4Route: ProtoV4Route,

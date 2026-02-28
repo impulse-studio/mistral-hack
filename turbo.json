@@ -5,8 +5,19 @@
 		"build": {
 			"dependsOn": ["^build"],
 			"inputs": ["$TURBO_DEFAULT$", ".env*"],
-			"outputs": ["dist/**"],
-			"env": ["SITE_URL", "CONVEX_DEPLOYMENT", "VITE_CONVEX_URL", "VITE_CONVEX_SITE_URL"]
+			"outputs": ["dist/**", ".output/**", ".vercel/output/**"],
+			"env": [
+				"SITE_URL",
+				"CONVEX_DEPLOYMENT",
+				"VITE_CONVEX_URL",
+				"VITE_CONVEX_SITE_URL",
+				"DAYTONA_API_KEY",
+				"DAYTONA_API_URL",
+				"BETTER_AUTH_SECRET",
+				"AI_GATEWAY_API_KEY",
+				"MISTRAL_API_KEY",
+				"ELEVENLABS_API_KEY"
+			]
 		},
 		"lint": {
 			"dependsOn": ["^lint"]
