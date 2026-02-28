@@ -8,7 +8,8 @@ import { components } from "./_generated/api";
 import { query } from "./_generated/server";
 import authConfig from "./auth.config";
 
-const siteUrl = process.env.SITE_URL!;
+const stripTrailingSlash = (url: string) => url.replace(/\/+$/, "");
+const siteUrl = stripTrailingSlash(process.env.SITE_URL!);
 
 export const authComponent = createClient<DataModel>(components.betterAuth);
 
@@ -16,7 +17,10 @@ function createAuth(ctx: GenericCtx<DataModel>) {
 	return betterAuth({
 		secret: process.env.BETTER_AUTH_SECRET,
 		baseURL: siteUrl,
-		trustedOrigins: [siteUrl, process.env.DEPLOY_URL].filter(Boolean) as string[],
+		trustedOrigins: [
+			siteUrl,
+			process.env.DEPLOY_URL && stripTrailingSlash(process.env.DEPLOY_URL),
+		].filter(Boolean) as string[],
 		database: authComponent.adapter(ctx),
 		emailAndPassword: {
 			enabled: true,
