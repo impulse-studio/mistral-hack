@@ -5,6 +5,7 @@
  *
  * Rules:
  *   - tsx-pascal-case: Enforce casing for .ts/.tsx file names (configurable: PascalCase | camelCase).
+ *   - folder-camel-case: Enforce camelCase folder names in configured paths.
  *   - export-prefix: Enforce that named exports are prefixed with the
  *     folder path (stripping configured root prefixes like components/, lib/).
  */
@@ -179,6 +180,78 @@ const tsxPascalCaseRule = {
 };
 
 // =========================================================================
+// Rule: folder-camel-case
+// =========================================================================
+const folderCamelCaseRule = {
+	meta: {
+		docs: {
+			description: "Enforce camelCase folder names within configured base paths",
+		},
+		fixable: null,
+		schema: [
+			{
+				type: "object",
+				properties: {
+					basePaths: {
+						type: "array",
+						items: { type: "string" },
+					},
+					exclude: {
+						type: "array",
+						items: { type: "string" },
+					},
+				},
+			},
+		],
+	},
+	create(context) {
+		const options = context.options[0] || {};
+		const basePaths = options.basePaths || [];
+		const exclude = options.exclude || [];
+		const filename = context.filename || context.getFilename();
+		const normalized = filename.replace(/\\/g, "/");
+
+		// Find matching base path
+		let relativePath = null;
+		for (const base of basePaths) {
+			const normalizedBase = base.replace(/\\/g, "/");
+			const idx = normalized.indexOf(`${normalizedBase}/`);
+			if (idx !== -1) {
+				relativePath = normalized.slice(idx + normalizedBase.length + 1);
+				break;
+			}
+		}
+
+		if (!relativePath) return {};
+
+		// Get folder segments (drop file name)
+		const segments = relativePath.split("/");
+		segments.pop();
+
+		if (segments.length === 0) return {};
+
+		// Find first non-camelCase folder that isn't excluded
+		const bad = segments.find((seg) => !isCamelCase(seg) && !exclude.includes(seg));
+
+		if (!bad) return {};
+
+		const suggestion = toCamelCase(bad);
+		let reported = false;
+
+		return {
+			Program(node) {
+				if (reported) return;
+				reported = true;
+				context.report({
+					message: `Folder name "${bad}" must use camelCase. Rename to "${suggestion}".`,
+					node,
+				});
+			},
+		};
+	},
+};
+
+// =========================================================================
 // Rule: export-prefix
 // =========================================================================
 const exportPrefixRule = {
@@ -310,6 +383,7 @@ const plugin = {
 	},
 	rules: {
 		"tsx-pascal-case": tsxPascalCaseRule,
+		"folder-camel-case": folderCamelCaseRule,
 		"export-prefix": exportPrefixRule,
 	},
 };
