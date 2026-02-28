@@ -21,6 +21,8 @@ pre-push:
     oxlint:
       glob: "*.{ts,tsx,js,jsx}"
       run: bunx oxlint -c .oxlintrc.json {push_files}
+    check-types:
+      run: bun check-types
 
 # ============================================================================
 # IMPORTANT: If this hook fails and you need to bypass it:
