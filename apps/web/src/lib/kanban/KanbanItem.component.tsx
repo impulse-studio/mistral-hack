@@ -2,6 +2,7 @@ import type { VariantProps } from "class-variance-authority";
 
 import { cva } from "class-variance-authority";
 
+import { PixelAvatar, PixelBadge, PixelProgress } from "@/lib/pixel";
 import { cn } from "@/lib/utils";
 
 const kanbanItemVariants = cva(
@@ -22,6 +23,7 @@ const kanbanItemVariants = cva(
 	},
 );
 
+/** @deprecated Use PixelBadge instead */
 const kanbanLabelVariants = cva(
 	"inline-flex items-center border px-1.5 py-px font-mono text-[10px] font-semibold uppercase tracking-widest",
 	{
@@ -127,7 +129,6 @@ function KanbanItem({
 }: KanbanItemProps) {
 	const hasSubtasks =
 		subtasksTotal !== undefined && subtasksTotal > 0 && subtasksDone !== undefined;
-	const subtaskPercent = hasSubtasks ? Math.round((subtasksDone / subtasksTotal) * 100) : 0;
 	const subtasksDoneAll = hasSubtasks && subtasksDone === subtasksTotal;
 
 	return (
@@ -151,9 +152,9 @@ function KanbanItem({
 			{labels && labels.length > 0 && (
 				<div className="mb-2 flex flex-wrap gap-1">
 					{labels.map((label) => (
-						<span key={label.text} className={kanbanLabelVariants({ color: label.color })}>
+						<PixelBadge key={label.text} color={label.color}>
 							{label.text}
-						</span>
+						</PixelBadge>
 					))}
 				</div>
 			)}
@@ -162,32 +163,18 @@ function KanbanItem({
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-2">
 					{hasSubtasks && (
-						<div className="flex items-center gap-1">
-							<div className="h-2 w-8 overflow-hidden border border-border bg-muted">
-								<div
-									className={cn(
-										"h-full",
-										subtasksDoneAll ? "bg-green-500" : "bg-muted-foreground/60",
-									)}
-									style={{ width: `${subtaskPercent}%` }}
-								/>
-							</div>
-							<span className="text-[11px] text-muted-foreground">
-								{subtasksDone}/{subtasksTotal}
-							</span>
-						</div>
+						<PixelProgress
+							value={subtasksDone}
+							max={subtasksTotal}
+							showLabel
+							size="sm"
+							color={subtasksDoneAll ? "green" : "muted"}
+						/>
 					)}
 				</div>
 
 				{assigneeInitials && (
-					<div
-						className="flex size-5 shrink-0 items-center justify-center border border-border font-mono text-[9px] font-semibold text-white"
-						style={{
-							background: assigneeColor ?? "linear-gradient(135deg, var(--primary), var(--ring))",
-						}}
-					>
-						{assigneeInitials}
-					</div>
+					<PixelAvatar initials={assigneeInitials} color={assigneeColor} size="xs" />
 				)}
 			</div>
 		</div>

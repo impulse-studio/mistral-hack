@@ -3,6 +3,7 @@ import type { VariantProps } from "class-variance-authority";
 
 import { cva } from "class-variance-authority";
 
+import { PixelText } from "@/lib/pixel";
 import { cn } from "@/lib/utils";
 
 const kanbanEmptyStateVariants = cva("flex flex-col items-center justify-center text-center", {
@@ -81,25 +82,20 @@ function KanbanEmptyState({
 				)}
 
 				{/* Title */}
-				<h3
-					className={cn(
-						"font-mono font-semibold uppercase tracking-widest text-foreground",
-						variant === "board" ? "text-sm" : "text-[10px]",
-					)}
-				>
+				<PixelText as="h3" variant={variant === "board" ? "heading" : "label"}>
 					{title}
-				</h3>
+				</PixelText>
 
 				{/* Description */}
 				{description && (
-					<p
-						className={cn(
-							"max-w-xs font-mono leading-relaxed text-muted-foreground",
-							variant === "board" ? "text-xs" : "text-[10px]",
-						)}
+					<PixelText
+						as="p"
+						variant="body"
+						color="muted"
+						className={cn("max-w-xs leading-relaxed", variant === "column" && "text-[10px]")}
 					>
 						{description}
-					</p>
+					</PixelText>
 				)}
 
 				{/* Primary action */}

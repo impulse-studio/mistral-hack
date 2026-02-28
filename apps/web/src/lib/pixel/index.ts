@@ -24,3 +24,10 @@ export type { PixelTextProps } from "./PixelText";
 
 export { PixelTooltip } from "./PixelTooltip";
 export type { PixelTooltipProps } from "./PixelTooltip";
+
+export { PixelContextMenu } from "./PixelContextMenu";
+export type {
+	PixelContextMenuProps,
+	PixelContextMenuItem,
+	PixelContextMenuGroup,
+} from "./PixelContextMenu";
