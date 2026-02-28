@@ -11,7 +11,6 @@ import { ConvexError, v } from "convex/values";
 import { components, internal } from "./_generated/api";
 import { internalAction, internalMutation, mutation, query } from "./_generated/server";
 import { managerAgent } from "./agent";
-import { streamToSpeech } from "./voice/elevenLabsStream";
 
 export const createNewThread = mutation({
 	args: {},
@@ -79,8 +78,6 @@ export const generateResponseAsync = internalAction({
 		);
 	},
 });
-
-// ── Voice-specific internals ────────────────────────────
 
 /** Save a user message to the agent thread + messages table (no async generation). */
 export const saveUserMessage = mutation({

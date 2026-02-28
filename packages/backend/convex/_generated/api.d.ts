@@ -44,6 +44,8 @@ import type * as telegram_send from "../telegram/send.js";
 import type * as telegram_webhook from "../telegram/webhook.js";
 import type * as voice_converse from "../voice/converse.js";
 import type * as voice_elevenLabsStream from "../voice/elevenLabsStream.js";
+import type * as voice_generate from "../voice/generate.js";
+import type * as voice_transcribe from "../voice/transcribe.js";
 import type * as workpool from "../workpool.js";
 
 import type {
@@ -89,6 +91,8 @@ declare const fullApi: ApiFromModules<{
   "telegram/webhook": typeof telegram_webhook;
   "voice/converse": typeof voice_converse;
   "voice/elevenLabsStream": typeof voice_elevenLabsStream;
+  "voice/generate": typeof voice_generate;
+  "voice/transcribe": typeof voice_transcribe;
   workpool: typeof workpool;
 }>;
 
