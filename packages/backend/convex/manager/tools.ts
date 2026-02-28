@@ -4,24 +4,28 @@ import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
+import { agentPool } from "../workpool";
 
 const roleToModel: Record<string, string> = {
 	coder: "codestral-latest",
+	browser: "mistral-large-latest",
+	designer: "mistral-large-latest",
 	researcher: "mistral-small-latest",
 	copywriter: "mistral-small-latest",
 	general: "mistral-small-latest",
 };
 
-// Tool action: spawn a sub-agent
+// Tool action: spawn a sub-agent and optionally enqueue it on the workpool
 export const spawnAgentAction = internalAction({
 	args: {
 		name: v.string(),
 		role: v.string(),
 		color: v.string(),
+		taskId: v.optional(v.string()),
 	},
 	handler: async (
 		ctx,
-		{ name, role, color },
+		{ name, role, color, taskId },
 	): Promise<{
 		agentId: Id<"agents">;
 		name: string;
@@ -42,12 +46,31 @@ export const spawnAgentAction = internalAction({
 			},
 		);
 
+		// If a task is provided, assign it and enqueue the sub-agent runner
+		if (taskId) {
+			const typedTaskId = taskId as Id<"tasks">;
+
+			// Assign task to agent
+			await ctx.runMutation(internal.tasks.mutations.assignInternal, {
+				taskId: typedTaskId,
+				agentId,
+			});
+
+			// Enqueue agent work on the workpool
+			await agentPool.enqueueAction(ctx, internal.agents.runner.runSubAgent, {
+				agentId,
+				taskId: typedTaskId,
+			});
+		}
+
 		return {
 			agentId,
 			name,
 			role,
 			model,
-			message: `Agent "${name}" (${role}) spawned successfully.`,
+			message: taskId
+				? `Agent "${name}" (${role}) spawned and assigned to task.`
+				: `Agent "${name}" (${role}) spawned successfully.`,
 		};
 	},
 });

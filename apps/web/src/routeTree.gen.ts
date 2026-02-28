@@ -12,6 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AiRouteImport } from './routes/ai'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProtoV9RouteImport } from './routes/proto/v9'
+import { Route as ProtoV8RouteImport } from './routes/proto/v8'
+import { Route as ProtoV5RouteImport } from './routes/proto/v5'
+import { Route as ProtoV4RouteImport } from './routes/proto/v4'
+import { Route as ProtoV3RouteImport } from './routes/proto/v3'
+import { Route as ProtoV2RouteImport } from './routes/proto/v2'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const DashboardRoute = DashboardRouteImport.update({
@@ -29,6 +35,36 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProtoV9Route = ProtoV9RouteImport.update({
+  id: '/proto/v9',
+  path: '/proto/v9',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProtoV8Route = ProtoV8RouteImport.update({
+  id: '/proto/v8',
+  path: '/proto/v8',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProtoV5Route = ProtoV5RouteImport.update({
+  id: '/proto/v5',
+  path: '/proto/v5',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProtoV4Route = ProtoV4RouteImport.update({
+  id: '/proto/v4',
+  path: '/proto/v4',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProtoV3Route = ProtoV3RouteImport.update({
+  id: '/proto/v3',
+  path: '/proto/v3',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProtoV2Route = ProtoV2RouteImport.update({
+  id: '/proto/v2',
+  path: '/proto/v2',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -39,12 +75,24 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
+  '/proto/v2': typeof ProtoV2Route
+  '/proto/v3': typeof ProtoV3Route
+  '/proto/v4': typeof ProtoV4Route
+  '/proto/v5': typeof ProtoV5Route
+  '/proto/v8': typeof ProtoV8Route
+  '/proto/v9': typeof ProtoV9Route
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
+  '/proto/v2': typeof ProtoV2Route
+  '/proto/v3': typeof ProtoV3Route
+  '/proto/v4': typeof ProtoV4Route
+  '/proto/v5': typeof ProtoV5Route
+  '/proto/v8': typeof ProtoV8Route
+  '/proto/v9': typeof ProtoV9Route
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -52,20 +100,63 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
+  '/proto/v2': typeof ProtoV2Route
+  '/proto/v3': typeof ProtoV3Route
+  '/proto/v4': typeof ProtoV4Route
+  '/proto/v5': typeof ProtoV5Route
+  '/proto/v8': typeof ProtoV8Route
+  '/proto/v9': typeof ProtoV9Route
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/ai' | '/dashboard' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/ai'
+    | '/dashboard'
+    | '/proto/v2'
+    | '/proto/v3'
+    | '/proto/v4'
+    | '/proto/v5'
+    | '/proto/v8'
+    | '/proto/v9'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/ai' | '/dashboard' | '/api/auth/$'
-  id: '__root__' | '/' | '/ai' | '/dashboard' | '/api/auth/$'
+  to:
+    | '/'
+    | '/ai'
+    | '/dashboard'
+    | '/proto/v2'
+    | '/proto/v3'
+    | '/proto/v4'
+    | '/proto/v5'
+    | '/proto/v8'
+    | '/proto/v9'
+    | '/api/auth/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/ai'
+    | '/dashboard'
+    | '/proto/v2'
+    | '/proto/v3'
+    | '/proto/v4'
+    | '/proto/v5'
+    | '/proto/v8'
+    | '/proto/v9'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AiRoute: typeof AiRoute
   DashboardRoute: typeof DashboardRoute
+  ProtoV2Route: typeof ProtoV2Route
+  ProtoV3Route: typeof ProtoV3Route
+  ProtoV4Route: typeof ProtoV4Route
+  ProtoV5Route: typeof ProtoV5Route
+  ProtoV8Route: typeof ProtoV8Route
+  ProtoV9Route: typeof ProtoV9Route
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -92,6 +183,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/proto/v9': {
+      id: '/proto/v9'
+      path: '/proto/v9'
+      fullPath: '/proto/v9'
+      preLoaderRoute: typeof ProtoV9RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/proto/v8': {
+      id: '/proto/v8'
+      path: '/proto/v8'
+      fullPath: '/proto/v8'
+      preLoaderRoute: typeof ProtoV8RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/proto/v5': {
+      id: '/proto/v5'
+      path: '/proto/v5'
+      fullPath: '/proto/v5'
+      preLoaderRoute: typeof ProtoV5RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/proto/v4': {
+      id: '/proto/v4'
+      path: '/proto/v4'
+      fullPath: '/proto/v4'
+      preLoaderRoute: typeof ProtoV4RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/proto/v3': {
+      id: '/proto/v3'
+      path: '/proto/v3'
+      fullPath: '/proto/v3'
+      preLoaderRoute: typeof ProtoV3RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/proto/v2': {
+      id: '/proto/v2'
+      path: '/proto/v2'
+      fullPath: '/proto/v2'
+      preLoaderRoute: typeof ProtoV2RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -106,6 +239,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AiRoute: AiRoute,
   DashboardRoute: DashboardRoute,
+  ProtoV2Route: ProtoV2Route,
+  ProtoV3Route: ProtoV3Route,
+  ProtoV4Route: ProtoV4Route,
+  ProtoV5Route: ProtoV5Route,
+  ProtoV8Route: ProtoV8Route,
+  ProtoV9Route: ProtoV9Route,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

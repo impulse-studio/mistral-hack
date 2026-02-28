@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query } from "../_generated/server";
+import { query, internalQuery } from "../_generated/server";
 
 // Get full office state — all desks with their occupants
 export const getOfficeState = query({
@@ -39,6 +39,14 @@ export const getAgent = query({
 		}
 
 		return { agent, desk, currentTask };
+	},
+});
+
+// Internal version for use by actions (runner, lifecycle, etc.)
+export const getAgentInternal = internalQuery({
+	args: { agentId: v.id("agents") },
+	handler: async (ctx, { agentId }) => {
+		return await ctx.db.get(agentId);
 	},
 });
 

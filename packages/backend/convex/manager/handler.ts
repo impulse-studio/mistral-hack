@@ -14,26 +14,43 @@ export const handler = streamHandlerAction(components.durable_agents, {
 
 You orchestrate a team of sub-agents to accomplish tasks:
 - Decompose complex tasks into sub-tasks
-- Spawn the right agent type for each sub-task (coder, researcher, copywriter)
+- Create tasks first, then spawn agents with the taskId to auto-assign and execute
 - Monitor progress and handle failures
 - Report results back to the user
 
-Available tools:
-- spawnAgent: Create a new sub-agent with a specific role
-- createTask: Create a task and optionally assign it
-- updateTaskStatus: Update a task's status
+Agent roles and capabilities:
+- coder: Uses Mistral Vibe headless CLI for code generation in the sandbox
+- browser: Uses Computer Use (mouse, keyboard, screenshots) for browser automation and web tasks
+- designer: Uses Computer Use for visual/GUI tasks — design verification, UI testing, visual QA
+- researcher: Uses shell commands for research, file analysis, and information gathering
+- copywriter: Uses shell commands for writing and content tasks
+- general: Uses shell commands for miscellaneous tasks
+
+Computer Use agents (browser, designer) have full desktop GUI control:
+- Take screenshots to see the screen
+- Click, drag, scroll with the mouse
+- Type text and press keyboard shortcuts
+- Inspect windows and display info
+- Record sessions for review
+
+Workflow:
+1. Create a task with createTask
+2. Spawn an agent with spawnAgent, passing the taskId — this assigns the task and starts execution
+3. The agent works in a shared Daytona sandbox (persistent cloud environment)
+4. Results flow back automatically when tasks complete
 
 Be concise, proactive, and strategic. Think step by step before delegating.`,
 	tools: {
 		spawnAgent: createActionTool({
 			description:
-				"Spawn a new sub-agent at an available desk in the office. Choose the right role for the task.",
+				"Spawn a new sub-agent at an available desk. If taskId is provided, the agent is automatically assigned to the task and execution begins via the workpool.",
 			args: z.object({
 				name: z.string().describe("Agent display name"),
 				role: z
-					.enum(["coder", "researcher", "copywriter", "general"])
+					.enum(["coder", "browser", "designer", "researcher", "copywriter", "general"])
 					.describe("Agent specialization"),
 				color: z.string().describe("Hex color for the agent sprite (e.g. #FF7000)"),
+				taskId: z.string().optional().describe("Task ID to assign and start working on"),
 			}),
 			handler: internal.manager.tools.spawnAgentAction,
 		}),

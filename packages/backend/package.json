@@ -17,6 +17,7 @@
 		"@convex-dev/agent": "0.6.0-alpha.1",
 		"@convex-dev/better-auth": "catalog:",
 		"@convex-dev/workpool": "^0.4.0",
+		"@daytonaio/sdk": "^0.148.0",
 		"ai": "^6",
 		"better-auth": "catalog:",
 		"convex": "catalog:",

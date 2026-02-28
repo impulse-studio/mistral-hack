@@ -125,6 +125,22 @@ export const createInternal = internalMutation({
 	},
 });
 
+export const assignInternal = internalMutation({
+	args: {
+		taskId: v.id("tasks"),
+		agentId: v.id("agents"),
+	},
+	handler: async (ctx, { taskId, agentId }) => {
+		await ctx.db.patch(taskId, {
+			assignedTo: agentId,
+			status: "todo",
+		});
+		await ctx.db.patch(agentId, {
+			currentTaskId: taskId,
+		});
+	},
+});
+
 export const updateStatusInternal = internalMutation({
 	args: {
 		taskId: v.id("tasks"),

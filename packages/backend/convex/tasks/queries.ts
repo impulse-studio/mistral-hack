@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query } from "../_generated/server";
+import { query, internalQuery } from "../_generated/server";
 import { taskStatusValidator } from "../schema";
 
 export const list = query({
@@ -18,6 +18,14 @@ export const list = query({
 });
 
 export const get = query({
+	args: { taskId: v.id("tasks") },
+	handler: async (ctx, { taskId }) => {
+		return await ctx.db.get(taskId);
+	},
+});
+
+// Internal version for use by actions
+export const getInternal = internalQuery({
 	args: { taskId: v.id("tasks") },
 	handler: async (ctx, { taskId }) => {
 		return await ctx.db.get(taskId);

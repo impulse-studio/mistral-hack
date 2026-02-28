@@ -45,6 +45,7 @@ export const logTypeValidator = v.union(
 	v.literal("status"),
 	v.literal("tool_call"),
 	v.literal("tool_result"),
+	v.literal("screenshot"),
 );
 
 export default defineSchema({

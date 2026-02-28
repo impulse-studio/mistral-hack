@@ -23,6 +23,26 @@ export const ensureSandbox = mutation({
 	},
 });
 
+// Internal version for use by actions (lifecycle, execute, etc.)
+export const ensureSandboxInternal = internalMutation({
+	args: {
+		daytonaId: v.string(),
+	},
+	handler: async (ctx, { daytonaId }) => {
+		const existing = await ctx.db.query("sandbox").collect();
+		if (existing.length > 0 && existing[0]) {
+			return existing[0]._id;
+		}
+
+		return await ctx.db.insert("sandbox", {
+			daytonaId,
+			status: "creating",
+			autoStopInterval: 15, // minutes
+			lastActivity: Date.now(),
+		});
+	},
+});
+
 // Update sandbox status
 export const updateStatus = internalMutation({
 	args: {

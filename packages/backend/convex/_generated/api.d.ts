@@ -9,6 +9,8 @@
  */
 
 import type * as agent from "../agent.js";
+import type * as agents_onComplete from "../agents/onComplete.js";
+import type * as agents_runner from "../agents/runner.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
 import type * as healthCheck from "../healthCheck.js";
@@ -23,10 +25,18 @@ import type * as messages_queries from "../messages/queries.js";
 import type * as office_mutations from "../office/mutations.js";
 import type * as office_queries from "../office/queries.js";
 import type * as privateData from "../privateData.js";
+import type * as sandbox_computerUse from "../sandbox/computerUse.js";
+import type * as sandbox_execute from "../sandbox/execute.js";
+import type * as sandbox_lifecycle from "../sandbox/lifecycle.js";
 import type * as sandbox_mutations from "../sandbox/mutations.js";
 import type * as sandbox_queries from "../sandbox/queries.js";
+import type * as sandbox_vibe from "../sandbox/vibe.js";
+import type * as tasks_dependencies from "../tasks/dependencies.js";
 import type * as tasks_mutations from "../tasks/mutations.js";
 import type * as tasks_queries from "../tasks/queries.js";
+import type * as telegram_process from "../telegram/process.js";
+import type * as telegram_send from "../telegram/send.js";
+import type * as telegram_webhook from "../telegram/webhook.js";
 import type * as workpool from "../workpool.js";
 
 import type {
@@ -37,6 +47,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   agent: typeof agent;
+  "agents/onComplete": typeof agents_onComplete;
+  "agents/runner": typeof agents_runner;
   auth: typeof auth;
   chat: typeof chat;
   healthCheck: typeof healthCheck;
@@ -51,10 +63,18 @@ declare const fullApi: ApiFromModules<{
   "office/mutations": typeof office_mutations;
   "office/queries": typeof office_queries;
   privateData: typeof privateData;
+  "sandbox/computerUse": typeof sandbox_computerUse;
+  "sandbox/execute": typeof sandbox_execute;
+  "sandbox/lifecycle": typeof sandbox_lifecycle;
   "sandbox/mutations": typeof sandbox_mutations;
   "sandbox/queries": typeof sandbox_queries;
+  "sandbox/vibe": typeof sandbox_vibe;
+  "tasks/dependencies": typeof tasks_dependencies;
   "tasks/mutations": typeof tasks_mutations;
   "tasks/queries": typeof tasks_queries;
+  "telegram/process": typeof telegram_process;
+  "telegram/send": typeof telegram_send;
+  "telegram/webhook": typeof telegram_webhook;
   workpool: typeof workpool;
 }>;
 
