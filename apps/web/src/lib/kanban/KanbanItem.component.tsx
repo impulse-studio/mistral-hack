@@ -2,7 +2,9 @@ import type { VariantProps } from "class-variance-authority";
 
 import { cva } from "class-variance-authority";
 
-import { PixelAvatar, PixelBadge, PixelProgress } from "@/lib/pixel";
+import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
+import { PixelBadge } from "@/lib/pixel/PixelBadge";
+import { PixelProgress } from "@/lib/pixel/PixelProgress";
 import { cn } from "@/lib/utils";
 
 const kanbanItemVariants = cva(

@@ -1,6 +1,8 @@
 import { toast, Toaster } from "sonner";
 
-import { PixelBadge, PixelBorderBox, PixelText } from "@/lib/pixel";
+import { PixelBadge } from "@/lib/pixel/PixelBadge";
+import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
+import { PixelText } from "@/lib/pixel/PixelText";
 import { cn } from "@/lib/utils";
 
 interface NotificationToastOptions {

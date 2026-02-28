@@ -1,4 +1,8 @@
-import { PixelBorderBox, PixelGlow, PixelProgress, PixelText, PixelTooltip } from "@/lib/pixel";
+import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
+import { PixelGlow } from "@/lib/pixel/PixelGlow";
+import { PixelProgress } from "@/lib/pixel/PixelProgress";
+import { PixelText } from "@/lib/pixel/PixelText";
+import { PixelTooltip } from "@/lib/pixel/PixelTooltip";
 import { cn } from "@/lib/utils";
 
 const STATUS_CONFIG = {

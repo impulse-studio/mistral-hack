@@ -273,6 +273,7 @@
 				"exclude": ["ui", "routes", "api", "auth"]
 			}
 		],
+		"mistral-hack/no-re-export": ["error", { "exclude": ["pixel-agents/"] }],
 		"mistral-hack/export-prefix": [
 			"error",
 			{

@@ -4,7 +4,11 @@ import type { VariantProps } from "class-variance-authority";
 
 import { cva } from "class-variance-authority";
 
-import { PixelBadge, PixelBorderBox, PixelDivider, PixelGlow, PixelText } from "@/lib/pixel";
+import { PixelBadge } from "@/lib/pixel/PixelBadge";
+import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
+import { PixelDivider } from "@/lib/pixel/PixelDivider";
+import { PixelGlow } from "@/lib/pixel/PixelGlow";
+import { PixelText } from "@/lib/pixel/PixelText";
 import { cn } from "@/lib/utils";
 
 type AgentReasoningStepStatus = "completed" | "active" | "pending" | "error";

@@ -1,14 +1,12 @@
 import { useEffect } from "react";
 
-import {
-	PixelAvatar,
-	PixelBadge,
-	PixelBorderBox,
-	PixelDivider,
-	PixelGlow,
-	PixelProgress,
-	PixelText,
-} from "@/lib/pixel";
+import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
+import { PixelBadge } from "@/lib/pixel/PixelBadge";
+import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
+import { PixelDivider } from "@/lib/pixel/PixelDivider";
+import { PixelGlow } from "@/lib/pixel/PixelGlow";
+import { PixelProgress } from "@/lib/pixel/PixelProgress";
+import { PixelText } from "@/lib/pixel/PixelText";
 import { cn } from "@/lib/utils";
 
 export interface KanbanTaskSubtask {

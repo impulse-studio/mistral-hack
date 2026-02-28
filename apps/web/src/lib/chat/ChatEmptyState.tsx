@@ -1,4 +1,5 @@
-import { PixelAvatar, PixelText } from "@/lib/pixel";
+import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
+import { PixelText } from "@/lib/pixel/PixelText";
 
 function ChatEmptyState() {
 	return (

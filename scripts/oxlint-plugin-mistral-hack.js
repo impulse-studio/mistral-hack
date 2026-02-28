@@ -375,6 +375,56 @@ const exportPrefixRule = {
 };
 
 // =========================================================================
+// Rule: no-re-export
+// =========================================================================
+const noReExportRule = {
+	meta: {
+		docs: {
+			description:
+				"Ban re-exports (export from). Import directly from source files instead of barrel files.",
+		},
+		fixable: null,
+		schema: [
+			{
+				type: "object",
+				properties: {
+					exclude: {
+						type: "array",
+						items: { type: "string" },
+					},
+				},
+			},
+		],
+	},
+	create(context) {
+		const options = context.options[0] || {};
+		const exclude = options.exclude || [];
+		const filename = (context.filename || context.getFilename()).replace(/\\/g, "/");
+
+		for (const pattern of exclude) {
+			if (filename.includes(pattern)) return {};
+		}
+
+		return {
+			ExportNamedDeclaration(node) {
+				if (node.source) {
+					context.report({
+						message: `Re-export from "${node.source.value}" is not allowed. Import directly from the source file instead.`,
+						node,
+					});
+				}
+			},
+			ExportAllDeclaration(node) {
+				context.report({
+					message: `Wildcard re-export from "${node.source.value}" is not allowed. Import directly from the source file instead.`,
+					node,
+				});
+			},
+		};
+	},
+};
+
+// =========================================================================
 // Plugin export
 // =========================================================================
 const plugin = {
@@ -385,6 +435,7 @@ const plugin = {
 		"tsx-pascal-case": tsxPascalCaseRule,
 		"folder-camel-case": folderCamelCaseRule,
 		"export-prefix": exportPrefixRule,
+		"no-re-export": noReExportRule,
 	},
 };
 

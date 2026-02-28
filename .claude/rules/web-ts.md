@@ -10,3 +10,4 @@ paths:
 - **Routes excluded** — Files in `routes/` follow TanStack Router conventions.
 - **Folder names MUST use camelCase** — Enforced by `mistral-hack/folder-camel-case`. `fileTree` not `file-tree`.
 - **Exports MUST be prefix-scoped** — Enforced by `mistral-hack/export-prefix`. See `scripts/oxlint-plugin-mistral-hack.js`.
+- **No re-exports** — `export { X } from './Y'` and `export * from './Y'` are banned. Enforced by `mistral-hack/no-re-export`. No barrel `index.ts` files — import directly from source (e.g. `from "@/lib/pixel/PixelText"` not `from "@/lib/pixel"`).

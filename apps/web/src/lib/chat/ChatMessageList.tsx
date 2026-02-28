@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { PixelGlow, PixelText } from "@/lib/pixel";
+import { PixelGlow } from "@/lib/pixel/PixelGlow";
+import { PixelText } from "@/lib/pixel/PixelText";
 import { cn } from "@/lib/utils";
 
 import { ChatEmptyState } from "./ChatEmptyState";

@@ -1,6 +1,10 @@
 import { useState } from "react";
 
-import { PixelAvatar, PixelBadge, PixelBorderBox, PixelGlow, PixelText } from "@/lib/pixel";
+import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
+import { PixelBadge } from "@/lib/pixel/PixelBadge";
+import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
+import { PixelGlow } from "@/lib/pixel/PixelGlow";
+import { PixelText } from "@/lib/pixel/PixelText";
 import { cn } from "@/lib/utils";
 
 type ManagerBarSandboxStatus = "running" | "stopped" | "error" | "provisioning";

@@ -1,7 +1,11 @@
 import { useSmoothText } from "@convex-dev/agent/react";
 import { Streamdown } from "streamdown";
 
-import { PixelAvatar, PixelBadge, PixelBorderBox, PixelGlow, PixelText } from "@/lib/pixel";
+import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
+import { PixelBadge } from "@/lib/pixel/PixelBadge";
+import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
+import { PixelGlow } from "@/lib/pixel/PixelGlow";
+import { PixelText } from "@/lib/pixel/PixelText";
 import { cn } from "@/lib/utils";
 
 interface ChatMessageProps {

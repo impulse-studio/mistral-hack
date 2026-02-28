@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { PixelBorderBox, PixelGlow, PixelText } from "@/lib/pixel";
+import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
+import { PixelGlow } from "@/lib/pixel/PixelGlow";
+import { PixelText } from "@/lib/pixel/PixelText";
 import { cn } from "@/lib/utils";
 
 import { terminalAnsiToSpans } from "./AnsiToSpans";

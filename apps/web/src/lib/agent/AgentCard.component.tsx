@@ -2,14 +2,12 @@ import type { VariantProps } from "class-variance-authority";
 
 import { cva } from "class-variance-authority";
 
-import {
-	PixelAvatar,
-	PixelBadge,
-	PixelBorderBox,
-	PixelDivider,
-	PixelGlow,
-	PixelText,
-} from "@/lib/pixel";
+import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
+import { PixelBadge } from "@/lib/pixel/PixelBadge";
+import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
+import { PixelDivider } from "@/lib/pixel/PixelDivider";
+import { PixelGlow } from "@/lib/pixel/PixelGlow";
+import { PixelText } from "@/lib/pixel/PixelText";
 import { cn } from "@/lib/utils";
 
 type AgentCardStatus = "idle" | "coding" | "thinking" | "error" | "done";

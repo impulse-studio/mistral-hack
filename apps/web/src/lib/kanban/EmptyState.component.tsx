@@ -3,7 +3,7 @@ import type { VariantProps } from "class-variance-authority";
 
 import { cva } from "class-variance-authority";
 
-import { PixelText } from "@/lib/pixel";
+import { PixelText } from "@/lib/pixel/PixelText";
 import { cn } from "@/lib/utils";
 
 const kanbanEmptyStateVariants = cva("flex flex-col items-center justify-center text-center", {

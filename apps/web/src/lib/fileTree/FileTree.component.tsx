@@ -1,6 +1,8 @@
 import { useState } from "react";
 
-import { PixelBorderBox, PixelDivider, PixelText } from "@/lib/pixel";
+import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
+import { PixelDivider } from "@/lib/pixel/PixelDivider";
+import { PixelText } from "@/lib/pixel/PixelText";
 import { cn } from "@/lib/utils";
 
 import { FileTreeNode } from "./FileTreeNode";

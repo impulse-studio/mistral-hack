@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { PixelText } from "@/lib/pixel";
+import { PixelText } from "@/lib/pixel/PixelText";
 import { cn } from "@/lib/utils";
 
 import type { FileTreeNodeData } from "./FileTree.component";
