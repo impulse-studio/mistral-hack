@@ -23,7 +23,7 @@ function OfficePage() {
 
 	// Initialize tileset (floor patterns + wall sprites) before creating OfficeState
 	useEffect(() => {
-		initTileset(false).then(() => setTilesetReady(true));
+		initTileset(true).then(() => setTilesetReady(true));
 	}, []);
 
 	// Create OfficeState once tileset is ready

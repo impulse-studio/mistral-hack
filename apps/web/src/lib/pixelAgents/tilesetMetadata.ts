@@ -1,550 +1,387 @@
 /**
  * Metadata for furniture assets in the Donarg Office Tileset (16x16).
  *
- * Each entry maps an asset ID to its location in the tileset PNG
- * (pixel coordinates) and classification metadata for buildDynamicCatalog().
+ * Coordinates from "Office Tileset All 16x16.png" (256×512px), identified
+ * via flood-fill detection + visual inspection of the generated asset catalog.
  *
- * Coordinates are from the "Office Tileset All 16x16.png" (256×512px).
- * These were identified visually from the tileset grid.
+ * Assets whose `id` matches an existing FurnitureType value override the
+ * inline sprites when buildDynamicCatalog() is called.
  */
 
+import type { FurnitureCategory } from "./furnitureCatalog";
+
 export interface TilesetAssetMeta {
-	/** Unique asset ID */
 	id: string;
-	/** Human-readable label */
 	label: string;
-	/** Pixel X in tileset */
+	/** Extraction rectangle in tileset PNG (pixels) */
 	sx: number;
-	/** Pixel Y in tileset */
 	sy: number;
-	/** Pixel width */
 	sw: number;
-	/** Pixel height */
 	sh: number;
-	/** Footprint width in tiles */
 	footprintW: number;
-	/** Footprint height in tiles */
 	footprintH: number;
-	/** Is this a desk surface agents can sit at? */
 	isDesk: boolean;
-	/** Catalog category */
-	category: "desks" | "chairs" | "storage" | "electronics" | "decor" | "wall" | "misc";
-	/** Rotation group ID (assets with same groupId can be rotated between each other) */
+	category: FurnitureCategory;
 	groupId?: string;
-	/** Orientation within rotation group */
 	orientation?: string;
-	/** On/off state */
 	state?: string;
-	/** Can be placed on desk surfaces */
 	canPlaceOnSurfaces?: boolean;
-	/** Number of background tile rows */
 	backgroundTiles?: number;
-	/** Can be placed on wall tiles */
 	canPlaceOnWalls?: boolean;
 }
 
-/**
- * Curated list of key furniture assets from the Donarg Office Tileset.
- *
- * Tileset grid: 16 columns × 32 rows of 16×16 tiles (256×512px total).
- * Coordinates identified by visual inspection of the tileset PNG.
- */
-export const TILESET_ASSETS: TilesetAssetMeta[] = [
-	// ── Desks & Counters (top rows) ──────────────────────────────
+// ── Assets that REPLACE existing FurnitureType entries ────────────
+// IDs here MUST match the FurnitureType enum values exactly.
 
-	// Row 0-1: Wooden desks
+const TILESET_REPLACEMENTS: TilesetAssetMeta[] = [
+	// Desk: ASSET_0 — wooden desk (actual 40×22 at (20,0))
+	// Extracting from x=16 to capture full desk within 48×32 (3×2 tiles)
 	{
-		id: "desk-wood-lg",
-		label: "Desk (Large)",
+		id: "desk",
+		label: "Desk",
+		category: "desks",
 		sx: 16,
 		sy: 0,
 		sw: 48,
-		sh: 32,
+		sh: 22,
 		footprintW: 3,
 		footprintH: 2,
 		isDesk: true,
-		category: "desks",
-	},
-	{
-		id: "desk-wood-lg-2",
-		label: "Desk (Large Alt)",
-		sx: 64,
-		sy: 0,
-		sw: 48,
-		sh: 32,
-		footprintW: 3,
-		footprintH: 2,
-		isDesk: true,
-		category: "desks",
-	},
-	{
-		id: "desk-wood-sm",
-		label: "Desk (Small)",
-		sx: 0,
-		sy: 32,
-		sw: 32,
-		sh: 32,
-		footprintW: 2,
-		footprintH: 2,
-		isDesk: true,
-		category: "desks",
-	},
-
-	// Counters / long desks
-	{
-		id: "counter-wood-lg",
-		label: "Counter (Long)",
-		sx: 112,
-		sy: 0,
-		sw: 112,
-		sh: 32,
-		footprintW: 7,
-		footprintH: 2,
-		isDesk: true,
-		category: "desks",
-	},
-	{
-		id: "counter-wood-sm",
-		label: "Counter",
-		sx: 224,
-		sy: 0,
-		sw: 32,
-		sh: 16,
-		footprintW: 2,
-		footprintH: 1,
-		isDesk: false,
-		category: "desks",
-	},
-
-	// Row 2-3: Gray desks and counters
-	{
-		id: "desk-gray-lg",
-		label: "Desk Gray",
-		sx: 0,
-		sy: 32,
-		sw: 48,
-		sh: 32,
-		footprintW: 3,
-		footprintH: 2,
-		isDesk: true,
-		category: "desks",
-	},
-	{
-		id: "desk-gray-sm",
-		label: "Desk Gray (Small)",
-		sx: 48,
-		sy: 32,
-		sw: 32,
-		sh: 32,
-		footprintW: 2,
-		footprintH: 2,
-		isDesk: true,
-		category: "desks",
-	},
-
-	// ── Cabinets & Shelving (rows 4-9) ───────────────────────────
-
-	// Large cabinets
-	{
-		id: "cabinet-tall",
-		label: "Cabinet (Tall)",
-		sx: 0,
-		sy: 64,
-		sw: 32,
-		sh: 48,
-		footprintW: 2,
-		footprintH: 3,
-		isDesk: false,
-		category: "storage",
-		backgroundTiles: 1,
-	},
-	{
-		id: "cabinet-wide",
-		label: "Cabinet (Wide)",
-		sx: 32,
-		sy: 64,
-		sw: 48,
-		sh: 48,
-		footprintW: 3,
-		footprintH: 3,
-		isDesk: false,
-		category: "storage",
 		backgroundTiles: 1,
 	},
 
-	// Bookshelves (colorful section around row 6-7)
+	// Chair: ASSET_32 — red cushioned chair front (actual 12×16 at (2,258))
 	{
-		id: "bookshelf-color-1",
-		label: "Bookshelf",
-		sx: 0,
-		sy: 96,
-		sw: 32,
-		sh: 48,
-		footprintW: 2,
-		footprintH: 3,
-		isDesk: false,
-		category: "storage",
-		backgroundTiles: 1,
-	},
-	{
-		id: "bookshelf-color-2",
-		label: "Bookshelf Alt",
-		sx: 32,
-		sy: 96,
-		sw: 32,
-		sh: 48,
-		footprintW: 2,
-		footprintH: 3,
-		isDesk: false,
-		category: "storage",
-		backgroundTiles: 1,
-	},
-
-	// Small shelves
-	{
-		id: "shelf-sm",
-		label: "Shelf",
-		sx: 224,
-		sy: 96,
-		sw: 16,
-		sh: 32,
-		footprintW: 1,
-		footprintH: 2,
-		isDesk: false,
-		category: "storage",
-		backgroundTiles: 1,
-	},
-
-	// ── Chairs (around rows 10-11) ───────────────────────────────
-
-	// Cushioned chairs (red/pink) - the most visible in Level 4
-	{
-		id: "chair-cushion-front",
-		label: "Chair (Cushion)",
-		sx: 0,
-		sy: 160,
-		sw: 16,
-		sh: 16,
-		footprintW: 1,
-		footprintH: 1,
-		isDesk: false,
+		id: "chair",
+		label: "Chair",
 		category: "chairs",
+		sx: 0,
+		sy: 256,
+		sw: 16,
+		sh: 16,
+		footprintW: 1,
+		footprintH: 1,
+		isDesk: false,
 		groupId: "chair-cushion",
 		orientation: "front",
 	},
+	// ASSET_33 — chair back
 	{
-		id: "chair-cushion-back",
-		label: "Chair (Cushion) Back",
+		id: "chair-back",
+		label: "Chair Back",
+		category: "chairs",
 		sx: 16,
-		sy: 160,
+		sy: 256,
 		sw: 16,
 		sh: 16,
 		footprintW: 1,
 		footprintH: 1,
 		isDesk: false,
-		category: "chairs",
 		groupId: "chair-cushion",
 		orientation: "back",
 	},
+	// ASSET_34 — chair left
 	{
-		id: "chair-cushion-left",
-		label: "Chair (Cushion) Left",
+		id: "chair-left",
+		label: "Chair Left",
+		category: "chairs",
 		sx: 32,
-		sy: 160,
+		sy: 256,
 		sw: 16,
 		sh: 16,
 		footprintW: 1,
 		footprintH: 1,
 		isDesk: false,
-		category: "chairs",
 		groupId: "chair-cushion",
 		orientation: "left",
 	},
+	// ASSET_35 — chair right
 	{
-		id: "chair-cushion-right",
-		label: "Chair (Cushion) Right",
+		id: "chair-right",
+		label: "Chair Right",
+		category: "chairs",
 		sx: 48,
-		sy: 160,
+		sy: 256,
 		sw: 16,
 		sh: 16,
 		footprintW: 1,
 		footprintH: 1,
 		isDesk: false,
-		category: "chairs",
 		groupId: "chair-cushion",
 		orientation: "right",
 	},
 
-	// Office chairs (dark)
+	// Bookshelf: ASSET_46 — tall narrow bookshelf (actual 12×32 at (18,288))
 	{
-		id: "chair-office-front",
-		label: "Office Chair",
+		id: "bookshelf",
+		label: "Bookshelf",
+		category: "storage",
+		sx: 16,
+		sy: 288,
+		sw: 16,
+		sh: 32,
+		footprintW: 1,
+		footprintH: 2,
+		isDesk: false,
+		backgroundTiles: 1,
+	},
+
+	// Plant: ASSET_129 — small green bush (actual 13×15 at (66,449))
+	{
+		id: "plant",
+		label: "Plant",
+		category: "decor",
 		sx: 64,
-		sy: 160,
+		sy: 448,
 		sw: 16,
 		sh: 16,
 		footprintW: 1,
 		footprintH: 1,
 		isDesk: false,
+	},
+
+	// PC: ASSET_75 — monitor screen (actual 16×15 at (224,360))
+	{
+		id: "pc",
+		label: "Monitor",
+		category: "electronics",
+		sx: 224,
+		sy: 358,
+		sw: 16,
+		sh: 18,
+		footprintW: 1,
+		footprintH: 1,
+		isDesk: false,
+		canPlaceOnSurfaces: true,
+	},
+
+	// Laptop: ASSET_73 — dark monitor/laptop (actual 16×15 at (192,360))
+	{
+		id: "laptop",
+		label: "Laptop",
+		category: "electronics",
+		sx: 192,
+		sy: 358,
+		sw: 16,
+		sh: 18,
+		footprintW: 1,
+		footprintH: 1,
+		isDesk: false,
+		canPlaceOnSurfaces: true,
+	},
+
+	// Whiteboard: ASSET_104 — landscape frame/board (actual 30×16 at (1,395))
+	{
+		id: "whiteboard",
+		label: "Board",
+		category: "wall",
+		sx: 0,
+		sy: 394,
+		sw: 32,
+		sh: 16,
+		footprintW: 2,
+		footprintH: 1,
+		isDesk: false,
+		canPlaceOnWalls: true,
+	},
+
+	// Cooler: ASSET_42 — fridge/cooler (actual 32×31 at (192,265))
+	{
+		id: "cooler",
+		label: "Cooler",
+		category: "misc",
+		sx: 192,
+		sy: 264,
+		sw: 32,
+		sh: 32,
+		footprintW: 2,
+		footprintH: 2,
+		isDesk: false,
+	},
+
+	// Coffee machine: no direct match, using ASSET_43 — large appliance
+	{
+		id: "coffee_machine",
+		label: "Coffee Machine",
+		category: "misc",
+		sx: 224,
+		sy: 264,
+		sw: 32,
+		sh: 32,
+		footprintW: 2,
+		footprintH: 2,
+		isDesk: false,
+	},
+];
+
+// ── Extra tileset-only furniture (additions to catalog) ──────────
+
+const TILESET_EXTRAS: TilesetAssetMeta[] = [
+	// Dark office chair: ASSET_36-39
+	{
+		id: "chair-office",
+		label: "Office Chair",
 		category: "chairs",
+		sx: 64,
+		sy: 256,
+		sw: 16,
+		sh: 16,
+		footprintW: 1,
+		footprintH: 1,
+		isDesk: false,
 		groupId: "chair-office",
 		orientation: "front",
 	},
 	{
 		id: "chair-office-back",
 		label: "Office Chair Back",
+		category: "chairs",
 		sx: 80,
-		sy: 160,
+		sy: 256,
 		sw: 16,
 		sh: 16,
 		footprintW: 1,
 		footprintH: 1,
 		isDesk: false,
-		category: "chairs",
 		groupId: "chair-office",
 		orientation: "back",
 	},
-
-	// ── Electronics (rows 12-15) ─────────────────────────────────
-
-	// Desktop monitors
 	{
-		id: "monitor-front",
-		label: "Monitor",
-		sx: 0,
-		sy: 192,
+		id: "chair-office-left",
+		label: "Office Chair Left",
+		category: "chairs",
+		sx: 96,
+		sy: 256,
 		sw: 16,
 		sh: 16,
 		footprintW: 1,
 		footprintH: 1,
 		isDesk: false,
-		category: "electronics",
-		canPlaceOnSurfaces: true,
+		groupId: "chair-office",
+		orientation: "left",
 	},
 	{
-		id: "monitor-side",
-		label: "Monitor (Side)",
-		sx: 16,
-		sy: 192,
+		id: "chair-office-right",
+		label: "Office Chair Right",
+		category: "chairs",
+		sx: 112,
+		sy: 256,
 		sw: 16,
 		sh: 16,
 		footprintW: 1,
 		footprintH: 1,
 		isDesk: false,
-		category: "electronics",
-		canPlaceOnSurfaces: true,
+		groupId: "chair-office",
+		orientation: "right",
 	},
 
-	// Desktop computer (tower)
+	// Tall plant: ASSET_133 (1×2)
 	{
-		id: "pc-tower",
-		label: "PC Tower",
-		sx: 32,
-		sy: 192,
+		id: "plant-tall",
+		label: "Tall Plant",
+		category: "decor",
+		sx: 128,
+		sy: 448,
 		sw: 16,
-		sh: 16,
+		sh: 32,
 		footprintW: 1,
-		footprintH: 1,
+		footprintH: 2,
 		isDesk: false,
-		category: "electronics",
+		backgroundTiles: 1,
 	},
 
-	// Laptop
-	{
-		id: "laptop-open",
-		label: "Laptop",
-		sx: 48,
-		sy: 192,
-		sw: 16,
-		sh: 16,
-		footprintW: 1,
-		footprintH: 1,
-		isDesk: false,
-		category: "electronics",
-		canPlaceOnSurfaces: true,
-	},
-
-	// Printer
-	{
-		id: "printer",
-		label: "Printer",
-		sx: 64,
-		sy: 192,
-		sw: 16,
-		sh: 16,
-		footprintW: 1,
-		footprintH: 1,
-		isDesk: false,
-		category: "electronics",
-	},
-
-	// Phone
-	{
-		id: "phone",
-		label: "Phone",
-		sx: 80,
-		sy: 192,
-		sw: 16,
-		sh: 16,
-		footprintW: 1,
-		footprintH: 1,
-		isDesk: false,
-		category: "electronics",
-		canPlaceOnSurfaces: true,
-	},
-
-	// Clock
+	// Clock: ASSET_77 (1×1 wall decoration)
 	{
 		id: "clock",
 		label: "Clock",
-		sx: 96,
-		sy: 192,
+		category: "wall",
+		sx: 80,
+		sy: 358,
 		sw: 16,
-		sh: 16,
+		sh: 18,
 		footprintW: 1,
 		footprintH: 1,
 		isDesk: false,
-		category: "decor",
 		canPlaceOnWalls: true,
 	},
 
-	// ── Wall Decorations (rows 16-19) ────────────────────────────
-
-	// Picture frames
+	// Small portrait frame: ASSET_106
 	{
 		id: "frame-sm",
-		label: "Frame (Small)",
-		sx: 0,
-		sy: 256,
-		sw: 16,
-		sh: 16,
-		footprintW: 1,
-		footprintH: 1,
-		isDesk: false,
+		label: "Frame",
 		category: "wall",
-		canPlaceOnWalls: true,
-	},
-	{
-		id: "frame-md",
-		label: "Frame (Medium)",
-		sx: 16,
-		sy: 256,
-		sw: 32,
-		sh: 16,
-		footprintW: 2,
-		footprintH: 1,
-		isDesk: false,
-		category: "wall",
-		canPlaceOnWalls: true,
-	},
-	{
-		id: "frame-lg",
-		label: "Frame (Large)",
-		sx: 48,
-		sy: 256,
-		sw: 48,
-		sh: 16,
-		footprintW: 3,
-		footprintH: 1,
-		isDesk: false,
-		category: "wall",
-		canPlaceOnWalls: true,
-	},
-
-	// ── Plants & Decor (rows 20-25) ──────────────────────────────
-
-	// Potted plants
-	{
-		id: "plant-sm",
-		label: "Plant (Small)",
-		sx: 0,
-		sy: 336,
-		sw: 16,
-		sh: 16,
-		footprintW: 1,
-		footprintH: 1,
-		isDesk: false,
-		category: "decor",
-	},
-	{
-		id: "plant-lg",
-		label: "Plant (Large)",
-		sx: 16,
-		sy: 336,
-		sw: 16,
-		sh: 32,
-		footprintW: 1,
-		footprintH: 2,
-		isDesk: false,
-		category: "decor",
-		backgroundTiles: 1,
-	},
-	{
-		id: "plant-tall",
-		label: "Plant (Tall)",
-		sx: 32,
-		sy: 320,
-		sw: 16,
-		sh: 32,
-		footprintW: 1,
-		footprintH: 2,
-		isDesk: false,
-		category: "decor",
-		backgroundTiles: 1,
-	},
-
-	// Water cooler
-	{
-		id: "cooler",
-		label: "Water Cooler",
-		sx: 48,
-		sy: 336,
-		sw: 16,
-		sh: 16,
-		footprintW: 1,
-		footprintH: 1,
-		isDesk: false,
-		category: "misc",
-	},
-
-	// Coffee machine
-	{
-		id: "coffee-machine",
-		label: "Coffee Machine",
 		sx: 64,
-		sy: 336,
+		sy: 394,
 		sw: 16,
 		sh: 16,
 		footprintW: 1,
 		footprintH: 1,
 		isDesk: false,
-		category: "misc",
+		canPlaceOnWalls: true,
 	},
 
-	// ── Boxes & Storage (rows 26-31) ─────────────────────────────
-
+	// Landscape painting: ASSET_105 (2×1)
 	{
-		id: "box-sm",
-		label: "Box (Small)",
-		sx: 0,
-		sy: 416,
-		sw: 16,
-		sh: 16,
-		footprintW: 1,
-		footprintH: 1,
-		isDesk: false,
-		category: "misc",
-	},
-	{
-		id: "box-lg",
-		label: "Box (Large)",
-		sx: 16,
-		sy: 416,
+		id: "painting",
+		label: "Painting",
+		category: "wall",
+		sx: 32,
+		sy: 394,
 		sw: 32,
 		sh: 16,
 		footprintW: 2,
 		footprintH: 1,
 		isDesk: false,
-		category: "misc",
+		canPlaceOnWalls: true,
+	},
+
+	// Bookshelf variant: ASSET_47
+	{
+		id: "bookshelf-2",
+		label: "Bookshelf Alt",
+		category: "storage",
+		sx: 32,
+		sy: 288,
+		sw: 16,
+		sh: 32,
+		footprintW: 1,
+		footprintH: 2,
+		isDesk: false,
+		backgroundTiles: 1,
+	},
+
+	// Desk variant: ASSET_1
+	{
+		id: "desk-alt",
+		label: "Desk Alt",
+		category: "desks",
+		sx: 64,
+		sy: 0,
+		sw: 48,
+		sh: 22,
+		footprintW: 3,
+		footprintH: 2,
+		isDesk: true,
+		backgroundTiles: 1,
+	},
+
+	// Plant bush variant: ASSET_130
+	{
+		id: "plant-bush",
+		label: "Bush",
+		category: "decor",
+		sx: 80,
+		sy: 448,
+		sw: 16,
+		sh: 16,
+		footprintW: 1,
+		footprintH: 1,
+		isDesk: false,
 	},
 ];
+
+/** All tileset assets (replacements + extras) */
+export const TILESET_ASSETS: TilesetAssetMeta[] = [...TILESET_REPLACEMENTS, ...TILESET_EXTRAS];
+
+/** IDs of assets that replace existing FurnitureType entries */
+export const TILESET_REPLACEMENT_IDS = new Set(TILESET_REPLACEMENTS.map((a) => a.id));

@@ -339,7 +339,10 @@ export function buildDynamicCatalog(assets: LoadedAssetData): boolean {
 export function getCatalogEntry(type: string): CatalogEntryWithCategory | undefined {
 	// Check internal catalog first (includes all variants, e.g., non-front rotations)
 	if (internalCatalog) {
-		return internalCatalog.find((e) => e.type === type);
+		const entry = internalCatalog.find((e) => e.type === type);
+		if (entry) return entry;
+		// Fall back to static catalog for types not covered by the tileset
+		return FURNITURE_CATALOG.find((e) => e.type === type);
 	}
 	const catalog = dynamicCatalog || FURNITURE_CATALOG;
 	return catalog.find((e) => e.type === type);

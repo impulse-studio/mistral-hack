@@ -342,25 +342,26 @@ export function createDefaultLayout(): OfficeLayout {
 
 	const furniture: PlacedFurniture[] = [
 		// ═══ WORK AREA (top-left: cols 1-12, rows 1-8) ═══
+		// Desks are 3×2 tiles (48×22px), chairs centered on desk width
 
-		// Desk 1 (top-left): PC workstation
+		// Desk 1 (top-left): PC workstation — cols 2-4, rows 2-3
 		{ uid: "desk-1", type: FurnitureType.DESK, col: 2, row: 2 },
-		{ uid: "chair-1", type: FurnitureType.CHAIR, col: 2, row: 1 },
+		{ uid: "chair-1", type: "chair-back", col: 3, row: 3 },
 		{ uid: "pc-1", type: FurnitureType.PC, col: 3, row: 2 },
 
-		// Desk 2 (top-right): Laptop workstation
+		// Desk 2 (top-right): Laptop workstation — cols 7-9, rows 2-3
 		{ uid: "desk-2", type: FurnitureType.DESK, col: 7, row: 2 },
-		{ uid: "chair-2", type: FurnitureType.CHAIR, col: 7, row: 1 },
-		{ uid: "laptop-1", type: FurnitureType.LAPTOP, col: 7, row: 2 },
+		{ uid: "chair-2", type: "chair-back", col: 8, row: 3 },
+		{ uid: "laptop-1", type: FurnitureType.LAPTOP, col: 8, row: 2 },
 
-		// Desk 3 (bottom-left): Laptop workstation
+		// Desk 3 (bottom-left): Laptop workstation — cols 2-4, rows 5-6
 		{ uid: "desk-3", type: FurnitureType.DESK, col: 2, row: 5 },
-		{ uid: "chair-3", type: FurnitureType.CHAIR, col: 3, row: 7 },
-		{ uid: "laptop-2", type: FurnitureType.LAPTOP, col: 2, row: 5 },
+		{ uid: "chair-3", type: "chair-back", col: 3, row: 6 },
+		{ uid: "laptop-2", type: FurnitureType.LAPTOP, col: 3, row: 5 },
 
-		// Desk 4 (bottom-right): PC workstation
+		// Desk 4 (bottom-right): PC workstation — cols 7-9, rows 5-6
 		{ uid: "desk-4", type: FurnitureType.DESK, col: 7, row: 5 },
-		{ uid: "chair-4", type: FurnitureType.CHAIR, col: 7, row: 7 },
+		{ uid: "chair-4", type: "chair-back", col: 8, row: 6 },
 		{ uid: "pc-2", type: FurnitureType.PC, col: 8, row: 5 },
 
 		// Work area decor
@@ -371,14 +372,14 @@ export function createDefaultLayout(): OfficeLayout {
 
 		// ═══ MEETING ROOM (top-right: cols 14-22, rows 1-8) ═══
 
-		// Meeting table (reuse desk sprite)
+		// Meeting table — cols 17-19, rows 3-4
 		{ uid: "table-1", type: FurnitureType.DESK, col: 17, row: 3 },
 
-		// Chairs around the table
+		// Chairs around the table (front above, back at desk solid row)
 		{ uid: "chair-m-1", type: FurnitureType.CHAIR, col: 17, row: 2 },
-		{ uid: "chair-m-2", type: FurnitureType.CHAIR, col: 18, row: 2 },
-		{ uid: "chair-m-3", type: FurnitureType.CHAIR, col: 17, row: 5 },
-		{ uid: "chair-m-4", type: FurnitureType.CHAIR, col: 18, row: 5 },
+		{ uid: "chair-m-2", type: FurnitureType.CHAIR, col: 19, row: 2 },
+		{ uid: "chair-m-3", type: "chair-back", col: 17, row: 4 },
+		{ uid: "chair-m-4", type: "chair-back", col: 19, row: 4 },
 
 		// Whiteboard on north wall
 		{ uid: "wb-1", type: FurnitureType.WHITEBOARD, col: 14, row: 0 },
@@ -399,13 +400,13 @@ export function createDefaultLayout(): OfficeLayout {
 
 		// ═══ KITCHEN (bottom-right: cols 14-22, rows 10-13) ═══
 
-		// Kitchen appliances along north wall
+		// Kitchen appliances — 2×2 footprints
 		{ uid: "cooler-k", type: FurnitureType.COOLER, col: 15, row: 10 },
-		{ uid: "coffee-k", type: FurnitureType.COFFEE_MACHINE, col: 17, row: 10 },
+		{ uid: "coffee-k", type: FurnitureType.COFFEE_MACHINE, col: 18, row: 10 },
 
 		// Kitchen decor
 		{ uid: "plant-k", type: FurnitureType.PLANT, col: 22, row: 10 },
-		{ uid: "lamp-k", type: FurnitureType.LAMP, col: 20, row: 13 },
+		{ uid: "lamp-k", type: FurnitureType.LAMP, col: 21, row: 13 },
 	];
 
 	return { version: 1, cols: COLS, rows: ROWS, tiles, tileColors, furniture };
