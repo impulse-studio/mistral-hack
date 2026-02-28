@@ -11,6 +11,10 @@ export const ensureSandbox = mutation({
 		// Check if sandbox already exists
 		const existing = await ctx.db.query("sandbox").collect();
 		if (existing.length > 0 && existing[0]) {
+			// BUG 5 FIX: Update daytonaId on existing record after recreation
+			if (existing[0].daytonaId !== daytonaId) {
+				await ctx.db.patch(existing[0]._id, { daytonaId });
+			}
 			return existing[0]._id;
 		}
 
@@ -31,6 +35,10 @@ export const ensureSandboxInternal = internalMutation({
 	handler: async (ctx, { daytonaId }) => {
 		const existing = await ctx.db.query("sandbox").collect();
 		if (existing.length > 0 && existing[0]) {
+			// BUG 5 FIX: Update daytonaId on existing record after recreation
+			if (existing[0].daytonaId !== daytonaId) {
+				await ctx.db.patch(existing[0]._id, { daytonaId });
+			}
 			return existing[0]._id;
 		}
 

@@ -35,8 +35,9 @@ async function runComputerUseTask(
 
 	// 4. Open a browser for browser-role agents
 	if (task.description?.includes("http") || task.title.toLowerCase().includes("browser")) {
-		await ctx.runAction(internal.sandbox.execute.runCommand, {
-			command: "firefox &",
+		// BUG 7 FIX: Use session-based background execution for reliable daemon launch
+		await ctx.runAction(internal.sandbox.execute.runBackground, {
+			command: "firefox",
 			agentId,
 		});
 
@@ -51,10 +52,57 @@ async function runComputerUseTask(
 	const results: string[] = [
 		`Computer Use task executed for: ${task.title}`,
 		`Display: ${JSON.stringify(displayInfo.displays?.[0] ?? "unknown")}`,
-		`Initial screenshot: ${screenshot.sizeBytes ?? 0} bytes`,
+		`Initial screenshot: ${screenshot.sizeBytes} bytes`,
 	];
 
 	return results.join("\n");
+}
+
+// After Vibe generates code, discover and execute the entry point
+async function verifyGeneratedCode(
+	ctx: { runAction: CallableFunction; runMutation: CallableFunction },
+	agentId: string,
+): Promise<string> {
+	const listing = await ctx.runAction(internal.sandbox.codeExecution.listFiles, {
+		path: "/home/user",
+		agentId,
+	});
+
+	const entryPoints = new Set(["index.ts", "main.ts", "index.js", "main.js", "app.ts", "app.js"]);
+	const found = listing.files.find(
+		(f: { name: string; isDir: boolean }) => !f.isDir && entryPoints.has(f.name),
+	);
+
+	if (!found) {
+		const names = listing.files.map((f: { name: string }) => f.name).join(", ");
+		await ctx.runMutation(internal.logs.mutations.append, {
+			agentId,
+			type: "status" as const,
+			content: `No standard entry point found. Files: ${names}`,
+		});
+		return "";
+	}
+
+	await ctx.runMutation(internal.logs.mutations.append, {
+		agentId,
+		type: "status" as const,
+		content: `Running entry point: ${found.name}`,
+	});
+
+	const ext = found.name.split(".").pop();
+	const cmd =
+		ext === "ts" ? `cd /home/user && npx tsx ${found.name}` : `cd /home/user && node ${found.name}`;
+
+	const execResult = await ctx.runAction(internal.sandbox.execute.runCommand, {
+		command: cmd,
+		agentId,
+	});
+
+	let output = `\n\n--- Execution (${found.name}) ---\n${execResult.result ?? "(no output)"}`;
+	if (execResult.exitCode !== 0) {
+		output += `\n[exit code: ${execResult.exitCode}]`;
+	}
+	return output;
 }
 
 // Sub-agent runner — executed by the workpool for each sub-agent
@@ -96,12 +144,30 @@ export const runSubAgent = internalAction({
 			await ctx.runAction(internal.sandbox.lifecycle.ensureRunning);
 
 			if (agent.role === "coder") {
-				// Use Vibe headless in sandbox
+				// Step 1: Use Vibe headless to generate the code
 				const vibeResult = await ctx.runAction(internal.sandbox.vibe.runVibeHeadless, {
 					agentId,
 					prompt: `${task.title}\n\n${task.description ?? ""}`,
 				});
 				result = vibeResult.output ?? "";
+
+				// Step 2: Discover and execute the generated code
+				await ctx.runMutation(internal.logs.mutations.append, {
+					agentId,
+					type: "status" as const,
+					content: "Vibe complete — verifying generated code...",
+				});
+
+				try {
+					result += await verifyGeneratedCode(ctx, agentId);
+				} catch (execError) {
+					const msg = execError instanceof Error ? execError.message : String(execError);
+					await ctx.runMutation(internal.logs.mutations.append, {
+						agentId,
+						type: "stderr" as const,
+						content: `Post-Vibe execution failed: ${msg}`,
+					});
+				}
 			} else if (agent.role === "browser" || agent.role === "designer") {
 				// Use Computer Use for GUI-based tasks
 				result = await runComputerUseTask(ctx, agentId, task);

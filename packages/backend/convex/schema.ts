@@ -118,6 +118,7 @@ export default defineSchema({
 		agentId: v.id("agents"),
 		type: logTypeValidator,
 		content: v.string(),
+		screenshotId: v.optional(v.id("_storage")),
 		timestamp: v.number(),
 	})
 		.index("by_agent", ["agentId"])

@@ -42,6 +42,24 @@ export const appendBatch = internalMutation({
 	},
 });
 
+// Append a screenshot log entry (with storage reference)
+export const appendScreenshotLog = internalMutation({
+	args: {
+		agentId: v.id("agents"),
+		screenshotId: v.id("_storage"),
+		content: v.string(),
+	},
+	handler: async (ctx, { agentId, screenshotId, content }) => {
+		return await ctx.db.insert("agentLogs", {
+			agentId,
+			type: "screenshot",
+			content,
+			screenshotId,
+			timestamp: Date.now(),
+		});
+	},
+});
+
 // Clear logs for an agent (when despawning)
 export const clearForAgent = internalMutation({
 	args: { agentId: v.id("agents") },
@@ -52,6 +70,9 @@ export const clearForAgent = internalMutation({
 			.collect();
 
 		for (const log of logs) {
+			if (log.screenshotId) {
+				await ctx.storage.delete(log.screenshotId);
+			}
 			await ctx.db.delete(log._id);
 		}
 	},

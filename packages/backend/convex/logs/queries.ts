@@ -1,5 +1,19 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import type { Doc } from "../_generated/dataModel";
+import type { QueryCtx } from "../_generated/server";
+
+async function resolveScreenshotUrls(ctx: QueryCtx, logs: Doc<"agentLogs">[]) {
+	return Promise.all(
+		logs.map(async (log) => {
+			if (log.screenshotId) {
+				const screenshotUrl = await ctx.storage.getUrl(log.screenshotId);
+				return { ...log, screenshotUrl };
+			}
+			return { ...log, screenshotUrl: null };
+		}),
+	);
+}
 
 // Stream logs for an agent (real-time via subscription)
 export const streamForAgent = query({
@@ -13,12 +27,9 @@ export const streamForAgent = query({
 			.withIndex("by_agent_time", (q) => q.eq("agentId", agentId))
 			.order("desc");
 
-		if (limit) {
-			const logs = await q.take(limit);
-			return logs.reverse(); // return in chronological order
-		}
-
-		return await q.collect();
+		const logs = limit ? await q.take(limit) : await q.collect();
+		const resolved = await resolveScreenshotUrls(ctx, logs);
+		return resolved.reverse(); // return in chronological order
 	},
 });
 
@@ -33,6 +44,7 @@ export const getRecent = query({
 			.order("desc")
 			.take(limit ?? 50);
 
-		return logs.reverse();
+		const resolved = await resolveScreenshotUrls(ctx, logs);
+		return resolved.reverse();
 	},
 });

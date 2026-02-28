@@ -1,11 +1,9 @@
 "use node";
 
-import { Daytona } from "@daytonaio/sdk";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
-
-const getDaytona = () => new Daytona();
+import { getDaytona, withRetry } from "./helpers";
 
 type SandboxResult = { sandboxId: Id<"sandbox">; daytonaId: string };
 
@@ -15,7 +13,9 @@ export const createSandbox = internalAction({
 	handler: async (ctx): Promise<SandboxResult> => {
 		try {
 			const daytona = getDaytona();
-			const sandbox = await daytona.create({ language: "typescript" });
+			const sandbox = await withRetry(() =>
+				daytona.create({ language: "typescript" }, { timeout: 60 }),
+			);
 
 			const sandboxId: Id<"sandbox"> = await ctx.runMutation(
 				internal.sandbox.mutations.ensureSandboxInternal,
@@ -56,10 +56,8 @@ export const startSandbox = internalAction({
 
 		try {
 			const daytona = getDaytona();
-			const sandbox = await daytona.findOne({
-				idOrName: sandboxRecord.daytonaId,
-			});
-			await sandbox.start();
+			const sandbox = await withRetry(() => daytona.findOne({ idOrName: sandboxRecord.daytonaId }));
+			await withRetry(() => sandbox.start());
 
 			await ctx.runMutation(internal.sandbox.mutations.updateStatus, {
 				sandboxId: sandboxRecord._id,
@@ -91,10 +89,8 @@ export const stopSandbox = internalAction({
 
 		try {
 			const daytona = getDaytona();
-			const sandbox = await daytona.findOne({
-				idOrName: sandboxRecord.daytonaId,
-			});
-			await sandbox.stop();
+			const sandbox = await withRetry(() => daytona.findOne({ idOrName: sandboxRecord.daytonaId }));
+			await withRetry(() => sandbox.stop());
 
 			await ctx.runMutation(internal.sandbox.mutations.updateStatus, {
 				sandboxId: sandboxRecord._id,
@@ -171,15 +167,13 @@ export const ensureComputerUseStarted = internalAction({
 		}
 
 		const daytona = getDaytona();
-		const sandbox = await daytona.findOne({
-			idOrName: sandboxRecord.daytonaId,
-		});
+		const sandbox = await withRetry(() => daytona.findOne({ idOrName: sandboxRecord.daytonaId }));
 
-		const status = await sandbox.computerUse.getStatus();
+		const status = await withRetry(() => sandbox.computerUse.getStatus());
 		if (status.status === "running") {
 			return; // Already started
 		}
 
-		await sandbox.computerUse.start();
+		await withRetry(() => sandbox.computerUse.start());
 	},
 });
