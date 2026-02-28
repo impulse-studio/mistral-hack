@@ -21,7 +21,8 @@
 		"apps/experiments/**",
 		"scripts/**",
 		"**/routeTree.gen.ts",
-		"**/_generated/**"
+		"**/_generated/**",
+		"**/pixelAgents/**"
 	],
 	"plugins": [
 		"import",
@@ -273,7 +274,7 @@
 				"exclude": ["ui", "routes", "api", "auth"]
 			}
 		],
-		"mistral-hack/no-re-export": ["error", { "exclude": ["pixel-agents/"] }],
+		"mistral-hack/no-re-export": ["error", { "exclude": ["pixelAgents/"] }],
 		"mistral-hack/export-prefix": [
 			"error",
 			{
@@ -281,7 +282,7 @@
 					{
 						"path": "apps/web/src",
 						"stripPrefixes": ["components", "lib"],
-						"exclude": ["routes", "components/ui", "router.tsx", "lib/utils.ts"]
+						"exclude": ["routes", "components/ui", "router.tsx", "lib/utils.ts", "lib/pixelAgents"]
 					}
 				]
 			}
