@@ -1,0 +1,40 @@
+{
+  "name": "mistral-hack",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
+    "catalog": {
+      "dotenv": "^17.2.2",
+      "zod": "^4.1.13",
+      "typescript": "^5",
+      "convex": "^1.32.0",
+      "better-auth": "1.4.9",
+      "@convex-dev/better-auth": "^0.10.11",
+      "@convex-dev/agent": "^0.3.2"
+    }
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "check-types": "turbo check-types",
+    "dev:native": "turbo -F native dev",
+    "dev:web": "turbo -F web dev",
+    "dev:server": "turbo -F @mistral-hack/backend dev",
+    "dev:setup": "turbo -F @mistral-hack/backend dev:setup"
+  },
+  "dependencies": {
+    "@mistral-hack/env": "workspace:*",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@mistral-hack/config": "workspace:*",
+    "turbo": "^2.6.3",
+    "typescript": "catalog:"
+  },
+  "packageManager": "bun@1.3.8"
+}

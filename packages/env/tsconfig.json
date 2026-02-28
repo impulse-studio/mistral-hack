@@ -1,0 +1,3 @@
+{
+  "extends": "@mistral-hack/config/tsconfig.base.json"
+}
