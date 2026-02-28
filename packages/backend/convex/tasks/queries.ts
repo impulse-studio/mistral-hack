@@ -1,11 +1,12 @@
 import { v } from "convex/values";
 import { query, internalQuery } from "../_generated/server";
-import { taskStatusValidator } from "../schema";
+import { taskDoc, taskStatusValidator } from "../schema";
 
 export const list = query({
 	args: {
 		status: v.optional(taskStatusValidator),
 	},
+	returns: v.array(taskDoc),
 	handler: async (ctx, { status }) => {
 		if (status) {
 			return await ctx.db
@@ -19,6 +20,7 @@ export const list = query({
 
 export const get = query({
 	args: { taskId: v.id("tasks") },
+	returns: v.union(taskDoc, v.null()),
 	handler: async (ctx, { taskId }) => {
 		return await ctx.db.get(taskId);
 	},
@@ -27,6 +29,7 @@ export const get = query({
 // Internal version for use by actions
 export const getInternal = internalQuery({
 	args: { taskId: v.id("tasks") },
+	returns: v.union(taskDoc, v.null()),
 	handler: async (ctx, { taskId }) => {
 		return await ctx.db.get(taskId);
 	},
@@ -34,6 +37,7 @@ export const getInternal = internalQuery({
 
 export const listByAgent = query({
 	args: { agentId: v.id("agents") },
+	returns: v.array(taskDoc),
 	handler: async (ctx, { agentId }) => {
 		return await ctx.db
 			.query("tasks")
@@ -44,6 +48,7 @@ export const listByAgent = query({
 
 export const listSubTasks = query({
 	args: { parentTaskId: v.id("tasks") },
+	returns: v.array(taskDoc),
 	handler: async (ctx, { parentTaskId }) => {
 		return await ctx.db
 			.query("tasks")
@@ -54,18 +59,26 @@ export const listSubTasks = query({
 
 export const getKanban = query({
 	args: {},
+	returns: v.object({
+		backlog: v.array(taskDoc),
+		todo: v.array(taskDoc),
+		in_progress: v.array(taskDoc),
+		review: v.array(taskDoc),
+		done: v.array(taskDoc),
+		failed: v.array(taskDoc),
+	}),
 	handler: async (ctx) => {
 		const all = await ctx.db.query("tasks").collect();
-		const kanban: Record<string, typeof all> = {
-			backlog: [],
-			todo: [],
-			in_progress: [],
-			review: [],
-			done: [],
-			failed: [],
+		const kanban = {
+			backlog: [] as typeof all,
+			todo: [] as typeof all,
+			in_progress: [] as typeof all,
+			review: [] as typeof all,
+			done: [] as typeof all,
+			failed: [] as typeof all,
 		};
 		for (const task of all) {
-			kanban[task.status]!.push(task);
+			kanban[task.status].push(task);
 		}
 		return kanban;
 	},

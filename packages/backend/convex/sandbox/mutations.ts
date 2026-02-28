@@ -2,42 +2,68 @@ import { v } from "convex/values";
 import { mutation, internalMutation } from "../_generated/server";
 import { sandboxStatusValidator } from "../schema";
 
-// Create or get sandbox record
+// Create or get sandbox record for a specific agent
 export const ensureSandbox = mutation({
 	args: {
 		daytonaId: v.string(),
+		agentId: v.optional(v.id("agents")),
+		name: v.optional(v.string()),
 	},
-	handler: async (ctx, { daytonaId }) => {
-		// Check if sandbox already exists
-		const existing = await ctx.db.query("sandbox").collect();
-		if (existing.length > 0 && existing[0]) {
-			return existing[0]._id;
+	returns: v.id("sandbox"),
+	handler: async (ctx, { daytonaId, agentId, name }) => {
+		// If agentId provided, look up by agent
+		if (agentId) {
+			const existing = await ctx.db
+				.query("sandbox")
+				.withIndex("by_agent", (q) => q.eq("agentId", agentId))
+				.first();
+			if (existing) {
+				if (existing.daytonaId !== daytonaId) {
+					await ctx.db.patch(existing._id, { daytonaId });
+				}
+				return existing._id;
+			}
 		}
 
 		return await ctx.db.insert("sandbox", {
 			daytonaId,
+			agentId,
+			name,
 			status: "creating",
-			autoStopInterval: 15, // minutes
+			autoStopInterval: 15,
 			lastActivity: Date.now(),
 		});
 	},
 });
 
-// Internal version for use by actions (lifecycle, execute, etc.)
+// Internal version for use by actions
 export const ensureSandboxInternal = internalMutation({
 	args: {
 		daytonaId: v.string(),
+		agentId: v.optional(v.id("agents")),
+		name: v.optional(v.string()),
 	},
-	handler: async (ctx, { daytonaId }) => {
-		const existing = await ctx.db.query("sandbox").collect();
-		if (existing.length > 0 && existing[0]) {
-			return existing[0]._id;
+	returns: v.id("sandbox"),
+	handler: async (ctx, { daytonaId, agentId, name }) => {
+		if (agentId) {
+			const existing = await ctx.db
+				.query("sandbox")
+				.withIndex("by_agent", (q) => q.eq("agentId", agentId))
+				.first();
+			if (existing) {
+				if (existing.daytonaId !== daytonaId) {
+					await ctx.db.patch(existing._id, { daytonaId });
+				}
+				return existing._id;
+			}
 		}
 
 		return await ctx.db.insert("sandbox", {
 			daytonaId,
+			agentId,
+			name,
 			status: "creating",
-			autoStopInterval: 15, // minutes
+			autoStopInterval: 15,
 			lastActivity: Date.now(),
 		});
 	},
@@ -50,6 +76,7 @@ export const updateStatus = internalMutation({
 		status: sandboxStatusValidator,
 		error: v.optional(v.string()),
 	},
+	returns: v.null(),
 	handler: async (ctx, { sandboxId, status, error }) => {
 		const patch: Record<string, unknown> = { status };
 		if (error !== undefined) patch.error = error;
@@ -64,6 +91,7 @@ export const updateStatus = internalMutation({
 // Record activity (extends auto-stop timer)
 export const recordActivity = internalMutation({
 	args: { sandboxId: v.id("sandbox") },
+	returns: v.null(),
 	handler: async (ctx, { sandboxId }) => {
 		await ctx.db.patch(sandboxId, {
 			lastActivity: Date.now(),
@@ -77,6 +105,7 @@ export const setAutoStopInterval = mutation({
 		sandboxId: v.id("sandbox"),
 		minutes: v.number(),
 	},
+	returns: v.null(),
 	handler: async (ctx, { sandboxId, minutes }) => {
 		await ctx.db.patch(sandboxId, {
 			autoStopInterval: minutes,
@@ -90,6 +119,7 @@ export const updateDiskUsage = internalMutation({
 		sandboxId: v.id("sandbox"),
 		diskUsage: v.string(),
 	},
+	returns: v.null(),
 	handler: async (ctx, { sandboxId, diskUsage }) => {
 		await ctx.db.patch(sandboxId, { diskUsage });
 	},

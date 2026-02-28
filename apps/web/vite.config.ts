@@ -14,6 +14,6 @@ export default defineConfig({
 		host: "0.0.0.0",
 	},
 	ssr: {
-		noExternal: ["@convex-dev/better-auth", "@noble/ciphers"],
+		noExternal: ["@convex-dev/better-auth", "@noble/ciphers", "pixelarticons"],
 	},
 });

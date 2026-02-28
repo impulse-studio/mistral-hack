@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation } from "../_generated/server";
+import { internal } from "../_generated/api";
 
 // Workpool callback: fires after a sub-agent finishes
 export const onSubAgentComplete = internalMutation({
@@ -10,23 +11,32 @@ export const onSubAgentComplete = internalMutation({
 		result: v.optional(v.string()),
 		error: v.optional(v.string()),
 	},
+	returns: v.null(),
 	handler: async (ctx, { agentId, taskId, success, result, error }) => {
-		// Update task with result or error
-		if (success && result) {
-			await ctx.db.patch(taskId, { result });
-		}
-		if (!success && error) {
-			await ctx.db.patch(taskId, { error });
+		// Update task with result or error (idempotent: check current state first)
+		const task = await ctx.db.get(taskId);
+		if (task && task.status !== "done" && task.status !== "failed") {
+			if (success && result) {
+				await ctx.db.patch(taskId, { result });
+			}
+			if (!success && error) {
+				await ctx.db.patch(taskId, { error });
+			}
 		}
 
-		// Free the desk
+		// Despawn the agent — free desk and mark as done (idempotent: check status)
 		const agent = await ctx.db.get(agentId);
-		if (agent?.deskId) {
-			await ctx.db.patch(agent.deskId, { occupiedBy: undefined });
+		if (agent && agent.status !== "despawning") {
+			if (agent.deskId) {
+				await ctx.db.patch(agent.deskId, { occupiedBy: undefined });
+			}
+			await ctx.db.patch(agentId, {
+				status: "despawning",
+				completedAt: Date.now(),
+			});
 		}
 
-		// TODO: notify Manager thread about completion
-		// This would send a message to the Manager's durable agent thread
-		// so it can decide what to do next
+		// Stop the agent's sandbox (preserves disk via shared volume)
+		await ctx.scheduler.runAfter(0, internal.sandbox.lifecycle.stopAgentSandbox, { agentId });
 	},
 });

@@ -1,8 +1,7 @@
 import type { VariantProps } from "class-variance-authority";
+import { useMemo } from "react";
 
 import { cva } from "class-variance-authority";
-
-import { useMemo } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -47,11 +46,14 @@ export interface PixelAvatarProps extends VariantProps<typeof pixelAvatarVariant
 
 const DEFAULT_BACKGROUND = "linear-gradient(135deg, var(--primary), var(--ring))";
 
-const pixelatedStyle: React.CSSProperties = { imageRendering: "pixelated" };
+const PIXELATED_IMG_STYLE = { imageRendering: "pixelated" } as const;
 
 function PixelAvatar({ initials, src, color, size = "sm", status, className }: PixelAvatarProps) {
 	const background = color ?? DEFAULT_BACKGROUND;
-	const avatarStyle = useMemo(() => (src ? undefined : { background }), [src, background]);
+	const avatarStyle = useMemo(
+		() => ({ background: src ? undefined : background }),
+		[src, background],
+	);
 
 	return (
 		<div
@@ -64,7 +66,7 @@ function PixelAvatar({ initials, src, color, size = "sm", status, className }: P
 					src={src}
 					alt={initials ?? ""}
 					className="size-full object-cover"
-					style={pixelatedStyle}
+					style={PIXELATED_IMG_STYLE}
 				/>
 			) : (
 				initials

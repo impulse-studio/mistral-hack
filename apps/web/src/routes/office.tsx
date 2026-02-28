@@ -11,6 +11,22 @@ import { MasterAgentPanel } from "@/lib/masterAgentPanel/MasterAgentPanel.compon
 import { initTileset } from "@/lib/pixelAgents/initTileset";
 import { OfficeState } from "@/lib/pixelAgents/officeState";
 
+interface ConvexDesk {
+	_id: string;
+	position: { x: number; y: number };
+	label?: string;
+	occupiedBy?: string;
+}
+
+interface ConvexAgent {
+	_id: string;
+	name: string;
+	type: string;
+	role: string;
+	status: string;
+	deskId?: string;
+}
+
 const EMPTY_TASKS: never[] = [];
 const EMPTY_TERMINAL: never[] = [];
 const EMPTY_REASONING: never[] = [];
@@ -104,7 +120,7 @@ function OfficeContent() {
 		const { agents, desks } = convexOffice;
 
 		// Build desk lookup by ID
-		const deskById = new Map(desks.map((d) => [d._id, d]));
+		const deskById = new Map<string, ConvexDesk>(desks.map((d: ConvexDesk) => [d._id, d]));
 
 		const activeConvexIds = new Set<string>();
 
@@ -175,7 +191,7 @@ function OfficeContent() {
 		if (selectedAgentId === null || !convexOffice) return null;
 		for (const [convexId, canvasId] of agentMapRef.current) {
 			if (canvasId === selectedAgentId) {
-				return convexOffice.agents.find((a) => a._id === convexId) ?? null;
+				return convexOffice.agents.find((a: ConvexAgent) => a._id === convexId) ?? null;
 			}
 		}
 		return null;

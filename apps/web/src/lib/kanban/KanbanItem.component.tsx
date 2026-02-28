@@ -1,7 +1,6 @@
-import type { DragEvent } from "react";
 import type { VariantProps } from "class-variance-authority";
+import { useMemo } from "react";
 
-import { useCallback, useState } from "react";
 import { cva } from "class-variance-authority";
 
 import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
@@ -70,18 +69,17 @@ const priorityBarVariants = cva("w-[3px]", {
 	},
 });
 
-export interface KanbanItemLabel {
-	text: string;
-	color: NonNullable<VariantProps<typeof kanbanLabelVariants>["color"]>;
-}
-
-/** Custom MIME type for kanban drag data — external drop targets (e.g. chat) can consume this. */
-export const KANBAN_DRAG_TYPE = "application/kanban-task";
+export const KANBAN_DRAG_TYPE = "kanban-item";
 
 export interface KanbanDragData {
 	id: string;
 	title: string;
 	sourceStatus: string;
+}
+
+export interface KanbanItemLabel {
+	text: string;
+	color: NonNullable<VariantProps<typeof kanbanLabelVariants>["color"]>;
 }
 
 export interface KanbanItemProps {
@@ -93,20 +91,26 @@ export interface KanbanItemProps {
 	subtasksTotal?: number;
 	assigneeInitials?: string;
 	assigneeColor?: string;
-	/** When true, the item is draggable. */
 	draggable?: boolean;
-	/** Status of the column this item belongs to (used in drag data). */
 	sourceStatus?: string;
 	className?: string;
 	onClick?: () => void;
 }
 
-const BAR_STYLES = [
-	{ height: "25%" },
-	{ height: "50%" },
-	{ height: "75%" },
-	{ height: "100%" },
-] as const;
+function PriorityBar({
+	i,
+	barCount,
+	priority,
+	active,
+}: {
+	i: number;
+	barCount: number;
+	priority: NonNullable<KanbanItemProps["priority"]>;
+	active: boolean;
+}) {
+	const style = useMemo(() => ({ height: `${((i + 1) / barCount) * 100}%` }), [i, barCount]);
+	return <div className={cn(priorityBarVariants({ level: priority, active }))} style={style} />;
+}
 
 function PriorityBars({ priority }: { priority: NonNullable<KanbanItemProps["priority"]> }) {
 	const barCount = 4;
@@ -124,15 +128,12 @@ function PriorityBars({ priority }: { priority: NonNullable<KanbanItemProps["pri
 	return (
 		<div className="flex items-end gap-[1.5px] h-3">
 			{Array.from({ length: barCount }, (_, i) => (
-				<div
+				<PriorityBar
 					key={i}
-					className={cn(
-						priorityBarVariants({
-							level: priority,
-							active: i < activeBars,
-						}),
-					)}
-					style={BAR_STYLES[i]}
+					i={i}
+					barCount={barCount}
+					priority={priority}
+					active={i < activeBars}
 				/>
 			))}
 		</div>
@@ -148,28 +149,11 @@ function KanbanItem({
 	subtasksTotal,
 	assigneeInitials,
 	assigneeColor,
-	draggable: isDraggable = false,
+	draggable = false,
 	sourceStatus,
 	className,
 	onClick,
 }: KanbanItemProps) {
-	const [isDragging, setIsDragging] = useState(false);
-
-	const handleDragStart = useCallback(
-		(e: DragEvent<HTMLDivElement>) => {
-			const data: KanbanDragData = { id, title, sourceStatus: sourceStatus ?? "" };
-			e.dataTransfer.setData(KANBAN_DRAG_TYPE, JSON.stringify(data));
-			e.dataTransfer.setData("text/plain", title);
-			e.dataTransfer.effectAllowed = "move";
-			setIsDragging(true);
-		},
-		[id, title, sourceStatus],
-	);
-
-	const handleDragEnd = useCallback(() => {
-		setIsDragging(false);
-	}, []);
-
 	const hasSubtasks =
 		subtasksTotal !== undefined && subtasksTotal > 0 && subtasksDone !== undefined;
 	const subtasksDoneAll = hasSubtasks && subtasksDone === subtasksTotal;
@@ -177,15 +161,17 @@ function KanbanItem({
 	return (
 		<div
 			data-slot="kanban-item"
-			draggable={isDraggable}
-			onDragStart={isDraggable ? handleDragStart : undefined}
-			onDragEnd={isDraggable ? handleDragEnd : undefined}
-			className={cn(
-				kanbanItemVariants({ priority }),
-				isDraggable && "cursor-grab active:cursor-grabbing",
-				isDragging && "opacity-40",
-				className,
-			)}
+			draggable={draggable}
+			onDragStart={
+				draggable
+					? (e) => {
+							const dragData: KanbanDragData = { id, title, sourceStatus: sourceStatus ?? "" };
+							e.dataTransfer.setData(KANBAN_DRAG_TYPE, JSON.stringify(dragData));
+							e.dataTransfer.effectAllowed = "move";
+						}
+					: undefined
+			}
+			className={cn(kanbanItemVariants({ priority }), className)}
 			onClick={onClick}
 		>
 			{/* Top row: ID + priority */}

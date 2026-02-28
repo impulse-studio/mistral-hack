@@ -1,5 +1,27 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import type { Doc } from "../_generated/dataModel";
+import type { QueryCtx } from "../_generated/server";
+import { agentLogFields } from "../schema";
+
+const agentLogWithScreenshot = v.object({
+	_id: v.id("agentLogs"),
+	_creationTime: v.number(),
+	...agentLogFields,
+	screenshotUrl: v.union(v.string(), v.null()),
+});
+
+async function resolveScreenshotUrls(ctx: QueryCtx, logs: Doc<"agentLogs">[]) {
+	return Promise.all(
+		logs.map(async (log) => {
+			if (log.screenshotId) {
+				const screenshotUrl = await ctx.storage.getUrl(log.screenshotId);
+				return { ...log, screenshotUrl };
+			}
+			return { ...log, screenshotUrl: null };
+		}),
+	);
+}
 
 // Stream logs for an agent (real-time via subscription)
 export const streamForAgent = query({
@@ -7,18 +29,16 @@ export const streamForAgent = query({
 		agentId: v.id("agents"),
 		limit: v.optional(v.number()),
 	},
+	returns: v.array(agentLogWithScreenshot),
 	handler: async (ctx, { agentId, limit }) => {
 		const q = ctx.db
 			.query("agentLogs")
 			.withIndex("by_agent_time", (q) => q.eq("agentId", agentId))
 			.order("desc");
 
-		if (limit) {
-			const logs = await q.take(limit);
-			return logs.reverse(); // return in chronological order
-		}
-
-		return await q.collect();
+		const logs = limit !== undefined ? await q.take(limit) : await q.collect();
+		const resolved = await resolveScreenshotUrls(ctx, logs);
+		return resolved.reverse(); // return in chronological order
 	},
 });
 
@@ -27,12 +47,14 @@ export const getRecent = query({
 	args: {
 		limit: v.optional(v.number()),
 	},
+	returns: v.array(agentLogWithScreenshot),
 	handler: async (ctx, { limit }) => {
 		const logs = await ctx.db
 			.query("agentLogs")
 			.order("desc")
 			.take(limit ?? 50);
 
-		return logs.reverse();
+		const resolved = await resolveScreenshotUrls(ctx, logs);
+		return resolved.reverse();
 	},
 });

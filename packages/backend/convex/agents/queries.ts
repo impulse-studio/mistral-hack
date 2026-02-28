@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalQuery } from "../_generated/server";
+import { logTypeValidator } from "../schema";
 
 // Get recent agent logs for progress checking
 export const getRecentLogs = internalQuery({
@@ -7,6 +8,13 @@ export const getRecentLogs = internalQuery({
 		agentId: v.id("agents"),
 		limit: v.number(),
 	},
+	returns: v.array(
+		v.object({
+			type: logTypeValidator,
+			content: v.string(),
+			timestamp: v.number(),
+		}),
+	),
 	handler: async (ctx, { agentId, limit }) => {
 		const logs = await ctx.db
 			.query("agentLogs")

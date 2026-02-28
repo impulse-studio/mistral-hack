@@ -11,6 +11,7 @@ export const create = mutation({
 		dependsOn: v.optional(v.array(v.id("tasks"))),
 		estimatedMinutes: v.optional(v.number()),
 	},
+	returns: v.id("tasks"),
 	handler: async (ctx, args) => {
 		return await ctx.db.insert("tasks", {
 			...args,
@@ -25,7 +26,11 @@ export const updateStatus = mutation({
 		taskId: v.id("tasks"),
 		status: taskStatusValidator,
 	},
+	returns: v.null(),
 	handler: async (ctx, { taskId, status }) => {
+		const task = await ctx.db.get(taskId);
+		if (!task || task.status === status) return;
+
 		const now = Date.now();
 		const patch: Record<string, unknown> = { status };
 
@@ -44,7 +49,11 @@ export const assign = mutation({
 		taskId: v.id("tasks"),
 		agentId: v.id("agents"),
 	},
+	returns: v.null(),
 	handler: async (ctx, { taskId, agentId }) => {
+		const task = await ctx.db.get(taskId);
+		if (task?.assignedTo === agentId) return;
+
 		await ctx.db.patch(taskId, {
 			assignedTo: agentId,
 			status: "todo",
@@ -61,7 +70,11 @@ export const complete = internalMutation({
 		result: v.optional(v.string()),
 		error: v.optional(v.string()),
 	},
+	returns: v.null(),
 	handler: async (ctx, { taskId, result, error }) => {
+		const task = await ctx.db.get(taskId);
+		if (!task || task.status === "done" || task.status === "failed") return;
+
 		const status = error ? "failed" : "done";
 		await ctx.db.patch(taskId, {
 			status,
@@ -71,8 +84,7 @@ export const complete = internalMutation({
 		});
 
 		// Unassign the agent
-		const task = await ctx.db.get(taskId);
-		if (task?.assignedTo) {
+		if (task.assignedTo) {
 			await ctx.db.patch(task.assignedTo, {
 				currentTaskId: undefined,
 				status: error ? "failed" : "completed",
@@ -89,6 +101,7 @@ export const update = mutation({
 		description: v.optional(v.string()),
 		estimatedMinutes: v.optional(v.number()),
 	},
+	returns: v.null(),
 	handler: async (ctx, { taskId, ...fields }) => {
 		const patch: Record<string, unknown> = {};
 		if (fields.title !== undefined) patch.title = fields.title;
@@ -103,6 +116,7 @@ export const update = mutation({
 
 export const remove = mutation({
 	args: { taskId: v.id("tasks") },
+	returns: v.null(),
 	handler: async (ctx, { taskId }) => {
 		await ctx.db.delete(taskId);
 	},
@@ -116,6 +130,7 @@ export const createInternal = internalMutation({
 		createdBy: v.union(v.literal("user"), v.literal("manager")),
 		estimatedMinutes: v.optional(v.number()),
 	},
+	returns: v.id("tasks"),
 	handler: async (ctx, args) => {
 		return await ctx.db.insert("tasks", {
 			...args,
@@ -130,7 +145,11 @@ export const assignInternal = internalMutation({
 		taskId: v.id("tasks"),
 		agentId: v.id("agents"),
 	},
+	returns: v.null(),
 	handler: async (ctx, { taskId, agentId }) => {
+		const task = await ctx.db.get(taskId);
+		if (task?.assignedTo === agentId) return;
+
 		await ctx.db.patch(taskId, {
 			assignedTo: agentId,
 			status: "todo",
@@ -146,7 +165,11 @@ export const updateStatusInternal = internalMutation({
 		taskId: v.id("tasks"),
 		status: taskStatusValidator,
 	},
+	returns: v.null(),
 	handler: async (ctx, { taskId, status }) => {
+		const task = await ctx.db.get(taskId);
+		if (!task || task.status === status) return;
+
 		const now = Date.now();
 		const patch: Record<string, unknown> = { status };
 

@@ -22,7 +22,7 @@ export const saveAndSchedule = internalMutation({
 			content: text,
 			role: "user",
 			channel: "telegram",
-			metadata: { telegramChatId: chatId, telegramFrom: from },
+			metadata: { telegramChatId: String(chatId), telegramFrom: from },
 			createdAt: Date.now(),
 		});
 
@@ -83,7 +83,7 @@ export const forwardToManager = internalAction({
 							role: "manager",
 							channel: "telegram",
 							metadata: {
-								telegramChatId: chatId,
+								telegramChatId: String(chatId),
 								threadId,
 							},
 						});
