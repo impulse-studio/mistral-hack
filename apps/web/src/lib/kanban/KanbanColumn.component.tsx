@@ -18,6 +18,8 @@ export interface KanbanColumnProps {
 	items: KanbanItemProps[];
 	accentColor?: string;
 	readOnly?: boolean;
+	/** When true, items are draggable even in readOnly mode (for external drop targets). */
+	allowDragOut?: boolean;
 	onAddItem?: () => void;
 	onItemClick?: (id: string) => void;
 	/** Called when a task is dropped onto this column. */
@@ -31,6 +33,7 @@ function KanbanColumn({
 	items,
 	accentColor,
 	readOnly = false,
+	allowDragOut = false,
 	onAddItem,
 	onItemClick,
 	onTaskDrop,
@@ -137,7 +140,7 @@ function KanbanColumn({
 							<KanbanItem
 								key={item.id}
 								{...item}
-								draggable={!readOnly}
+								draggable={!readOnly || allowDragOut}
 								sourceStatus={status}
 								onClick={() => onItemClick?.(item.id)}
 							/>

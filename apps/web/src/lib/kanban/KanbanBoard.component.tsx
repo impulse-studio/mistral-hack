@@ -42,6 +42,8 @@ interface KanbanBoardProps {
 	showFilterSummary?: boolean;
 	/** When true, items cannot be dragged. Defaults to true. */
 	readOnly?: boolean;
+	/** When true, items are draggable even in readOnly mode (for dragging to external targets like chat). */
+	allowDragOut?: boolean;
 	onTaskClick?: (id: string) => void;
 	/** Called when a task is moved via DnD. Only fires when readOnly=false. */
 	onTaskMove?: (taskId: string, fromStatus: KanbanTaskStatus, toStatus: KanbanTaskStatus) => void;
@@ -149,6 +151,7 @@ function KanbanBoard({
 	title = "Kanban Board",
 	showFilterSummary = true,
 	readOnly = true,
+	allowDragOut = false,
 	onTaskClick,
 	onTaskMove,
 	className,
@@ -232,6 +235,7 @@ function KanbanBoard({
 							items={groupedByStatus.get(column.status) || EMPTY_ITEMS}
 							accentColor={column.accentColor}
 							readOnly={readOnly}
+							allowDragOut={allowDragOut}
 							onItemClick={onTaskClick}
 							onTaskDrop={!readOnly ? handleTaskDrop : undefined}
 						/>

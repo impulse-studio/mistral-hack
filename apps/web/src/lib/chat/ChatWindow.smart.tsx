@@ -3,6 +3,8 @@ import { api } from "@mistral-hack/backend/convex/_generated/api";
 import { useMutation } from "convex/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import type { KanbanDragData } from "@/lib/kanban/KanbanItem.component";
+
 import type { ChatWindowMessage } from "./ChatWindow.component";
 import { ChatWindow } from "./ChatWindow.component";
 
@@ -11,6 +13,8 @@ const THREAD_STORAGE_KEY = "chat-thread-id";
 interface ChatWindowSmartProps {
 	threadId?: string | null;
 	onThreadCreated?: (threadId: string) => void;
+	/** When true, accepts kanban task drops and auto-sends them as chat messages. */
+	acceptTaskDrop?: boolean;
 	variant?: "standalone" | "panel";
 	title?: string;
 	className?: string;
@@ -29,6 +33,7 @@ function chatWindowMapMessage(m: UIMessage): ChatWindowMessage {
 function ChatWindowSmart({
 	threadId: controlledThreadId,
 	onThreadCreated,
+	acceptTaskDrop = false,
 	variant,
 	title,
 	className,
@@ -83,11 +88,21 @@ function ChatWindowSmart({
 		}
 	}
 
+	const handleTaskDrop = useCallback(
+		(data: KanbanDragData) => {
+			const prompt = `[Task: ${data.title}] (${data.id}, status: ${data.sourceStatus})`;
+			handleChatSmartSend(prompt);
+		},
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- handleChatSmartSend is stable via closure
+		[chatActiveThreadId, chatIsLoading],
+	);
+
 	return (
 		<ChatWindow
 			messages={messages}
 			onSend={handleChatSmartSend}
 			isLoading={chatIsLoading}
+			onTaskDrop={acceptTaskDrop ? handleTaskDrop : undefined}
 			variant={variant}
 			title={title}
 			className={className}

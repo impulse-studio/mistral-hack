@@ -73,7 +73,7 @@ function ChatInput({ onSend, disabled = false, className }: ChatInputProps) {
 					aria-label="Stop recording"
 					onClick={stopRecording}
 					className={cn(
-						"inline-flex size-8 shrink-0 items-center justify-center border-2",
+						"inline-flex shrink-0 items-center justify-center border-2 p-2",
 						"border-red-500 bg-red-500/15 text-red-500 hover:bg-red-500/25",
 						"active:translate-x-px active:translate-y-px active:inset-shadow-pressed",
 						"transition-all duration-150",

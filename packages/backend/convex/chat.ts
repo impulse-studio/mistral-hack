@@ -9,7 +9,7 @@ import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
 import { components, internal } from "./_generated/api";
-import { internalAction, mutation, query } from "./_generated/server";
+import { internalAction, internalMutation, mutation, query } from "./_generated/server";
 import { managerAgent } from "./agent";
 
 export const createNewThread = mutation({
@@ -73,5 +73,66 @@ export const generateResponseAsync = internalAction({
 			{ promptMessageId },
 			{ saveStreamDeltas: true },
 		);
+	},
+});
+
+// ── Voice-specific internals ────────────────────────────
+
+/** Save a user message to the agent thread + messages table (no async generation). */
+export const saveUserMessage = mutation({
+	args: {
+		threadId: v.string(),
+		prompt: v.string(),
+		channel: v.optional(v.union(v.literal("web"), v.literal("telegram"))),
+	},
+	handler: async (ctx, { threadId, prompt, channel }) => {
+		const { messageId } = await saveMessage(ctx, components.agent, {
+			threadId,
+			prompt,
+		});
+
+		await ctx.db.insert("messages", {
+			content: prompt,
+			role: "user",
+			channel: channel ?? "web",
+			createdAt: Date.now(),
+		});
+
+		return messageId;
+	},
+});
+
+/** Run managerAgent.generateText synchronously and return the reply text. */
+export const generateTextResponse = internalAction({
+	args: {
+		threadId: v.string(),
+		promptMessageId: v.string(),
+	},
+	handler: async (ctx, { threadId, promptMessageId }) => {
+		const result = await managerAgent.generateText(ctx, { threadId }, { promptMessageId });
+
+		// Persist agent reply to messages table so it appears in chat history
+		await ctx.runMutation(internal.chat.saveAgentReply, {
+			content: result.text,
+			channel: "web",
+		});
+
+		return result.text;
+	},
+});
+
+/** Persist an agent reply to the messages table (called from actions). */
+export const saveAgentReply = internalMutation({
+	args: {
+		content: v.string(),
+		channel: v.union(v.literal("web"), v.literal("telegram")),
+	},
+	handler: async (ctx, { content, channel }) => {
+		await ctx.db.insert("messages", {
+			content,
+			role: "manager",
+			channel,
+			createdAt: Date.now(),
+		});
 	},
 });

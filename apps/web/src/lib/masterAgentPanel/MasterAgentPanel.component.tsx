@@ -79,7 +79,7 @@ function MasterAgentPanel({ className }: MasterAgentPanelProps) {
 		<div className={cn("flex h-full gap-4", className)}>
 			{/* Left: Manager Chat */}
 			<div className="flex h-full w-[420px] shrink-0 flex-col">
-				<ChatWindowSmart variant="panel" title="Manager" />
+				<ChatWindowSmart variant="panel" title="Manager" acceptTaskDrop />
 			</div>
 
 			{/* Right: Kanban Board */}
@@ -89,6 +89,7 @@ function MasterAgentPanel({ className }: MasterAgentPanelProps) {
 					tasks={tasks}
 					filters={KANBAN_FILTERS}
 					readOnly
+					allowDragOut
 					className="h-full"
 				/>
 			</div>
