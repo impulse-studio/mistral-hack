@@ -2,50 +2,66 @@ import { v } from "convex/values";
 import { mutation, internalMutation } from "../_generated/server";
 import { sandboxStatusValidator } from "../schema";
 
-// Create or get sandbox record
+// Create or get sandbox record for a specific agent
 export const ensureSandbox = mutation({
 	args: {
 		daytonaId: v.string(),
+		agentId: v.optional(v.id("agents")),
+		name: v.optional(v.string()),
 	},
-	handler: async (ctx, { daytonaId }) => {
-		// Check if sandbox already exists
-		const existing = await ctx.db.query("sandbox").collect();
-		if (existing.length > 0 && existing[0]) {
-			// BUG 5 FIX: Update daytonaId on existing record after recreation
-			if (existing[0].daytonaId !== daytonaId) {
-				await ctx.db.patch(existing[0]._id, { daytonaId });
+	handler: async (ctx, { daytonaId, agentId, name }) => {
+		// If agentId provided, look up by agent
+		if (agentId) {
+			const existing = await ctx.db
+				.query("sandbox")
+				.withIndex("by_agent", (q) => q.eq("agentId", agentId))
+				.first();
+			if (existing) {
+				if (existing.daytonaId !== daytonaId) {
+					await ctx.db.patch(existing._id, { daytonaId });
+				}
+				return existing._id;
 			}
-			return existing[0]._id;
 		}
 
 		return await ctx.db.insert("sandbox", {
 			daytonaId,
+			agentId,
+			name,
 			status: "creating",
-			autoStopInterval: 15, // minutes
+			autoStopInterval: 15,
 			lastActivity: Date.now(),
 		});
 	},
 });
 
-// Internal version for use by actions (lifecycle, execute, etc.)
+// Internal version for use by actions
 export const ensureSandboxInternal = internalMutation({
 	args: {
 		daytonaId: v.string(),
+		agentId: v.optional(v.id("agents")),
+		name: v.optional(v.string()),
 	},
-	handler: async (ctx, { daytonaId }) => {
-		const existing = await ctx.db.query("sandbox").collect();
-		if (existing.length > 0 && existing[0]) {
-			// BUG 5 FIX: Update daytonaId on existing record after recreation
-			if (existing[0].daytonaId !== daytonaId) {
-				await ctx.db.patch(existing[0]._id, { daytonaId });
+	handler: async (ctx, { daytonaId, agentId, name }) => {
+		if (agentId) {
+			const existing = await ctx.db
+				.query("sandbox")
+				.withIndex("by_agent", (q) => q.eq("agentId", agentId))
+				.first();
+			if (existing) {
+				if (existing.daytonaId !== daytonaId) {
+					await ctx.db.patch(existing._id, { daytonaId });
+				}
+				return existing._id;
 			}
-			return existing[0]._id;
 		}
 
 		return await ctx.db.insert("sandbox", {
 			daytonaId,
+			agentId,
+			name,
 			status: "creating",
-			autoStopInterval: 15, // minutes
+			autoStopInterval: 15,
 			lastActivity: Date.now(),
 		});
 	},

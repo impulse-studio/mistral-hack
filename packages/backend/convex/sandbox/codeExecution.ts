@@ -12,7 +12,7 @@ export const runCode = internalAction({
 		timeout: v.optional(v.number()),
 	},
 	handler: async (ctx, { code, agentId, timeout }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 
 		await recordAndLog(
 			ctx,
@@ -38,7 +38,7 @@ export const writeFile = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { path, content, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 
 		await withRetry(() => sandbox.fs.uploadFile(Buffer.from(content), path));
 
@@ -61,7 +61,7 @@ export const readFile = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { path, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 
 		const buffer = await withRetry(() => sandbox.fs.downloadFile(path));
 		const content = buffer.toString("utf-8");
@@ -85,7 +85,7 @@ export const listFiles = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { path, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 
 		const entries = await withRetry(() => sandbox.fs.listFiles(path));
 
@@ -114,7 +114,7 @@ export const createFolder = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { path, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 
 		await withRetry(() => sandbox.fs.createFolder(path, "755"));
 
@@ -131,7 +131,7 @@ export const deleteFile = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { path, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 
 		await withRetry(() => sandbox.fs.deleteFile(path));
 
@@ -149,7 +149,7 @@ export const searchFiles = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { path, pattern, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 
 		const result = await withRetry(() => sandbox.fs.searchFiles(path, pattern));
 

@@ -77,9 +77,10 @@ function ChatWindowSmart({
 		try {
 			let currentThreadId = chatActiveThreadId;
 			if (!currentThreadId) {
-				currentThreadId = await createThread();
-				setAndPersistThreadId(currentThreadId);
-				onThreadCreated?.(currentThreadId);
+				const newId = await createThread();
+				currentThreadId = newId;
+				setAndPersistThreadId(newId);
+				onThreadCreated?.(newId);
 			}
 
 			await sendMessage({ threadId: currentThreadId, prompt: text });

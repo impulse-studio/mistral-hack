@@ -1,6 +1,5 @@
 import { api } from "@mistral-hack/backend/convex/_generated/api";
 import { useQuery } from "convex/react";
-
 import { useMemo } from "react";
 
 import { cn } from "@/lib/utils";

@@ -49,15 +49,19 @@ export const logTypeValidator = v.union(
 );
 
 export default defineSchema({
-	// Sandbox state — shared persistent Daytona computer
+	// Sandbox state — one per agent, with shared Daytona volume
 	sandbox: defineTable({
+		agentId: v.optional(v.id("agents")), // null = legacy/shared
+		name: v.optional(v.string()), // human label (e.g. agent name)
 		daytonaId: v.string(),
 		status: sandboxStatusValidator,
 		autoStopInterval: v.number(), // minutes before auto-stop
 		lastActivity: v.number(), // timestamp of last agent activity
 		diskUsage: v.optional(v.string()),
 		error: v.optional(v.string()),
-	}).index("by_status", ["status"]),
+	})
+		.index("by_status", ["status"])
+		.index("by_agent", ["agentId"]),
 
 	// Agent definitions — Manager + spawned workers
 	agents: defineTable({

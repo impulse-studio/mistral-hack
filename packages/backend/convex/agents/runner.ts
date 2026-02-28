@@ -16,7 +16,7 @@ async function runComputerUseTask(
 	task: TaskRecord,
 ): Promise<string> {
 	// 1. Ensure Computer Use environment is started (Xvfb + xfce4 + VNC)
-	await ctx.runAction(internal.sandbox.lifecycle.ensureComputerUseStarted);
+	await ctx.runAction(internal.sandbox.lifecycle.ensureComputerUseStarted, { agentId });
 
 	await ctx.runMutation(internal.logs.mutations.append, {
 		agentId,
@@ -111,7 +111,10 @@ export const runSubAgent = internalAction({
 		agentId: v.id("agents"),
 		taskId: v.id("tasks"),
 	},
-	handler: async (ctx, { agentId, taskId }) => {
+	handler: async (
+		ctx,
+		{ agentId, taskId },
+	): Promise<{ success: boolean; result?: string; error?: string }> => {
 		// 1. Get records
 		const agent = await ctx.runQuery(internal.office.queries.getAgentInternal, { agentId });
 		const task = await ctx.runQuery(internal.tasks.queries.getInternal, {
@@ -140,8 +143,11 @@ export const runSubAgent = internalAction({
 		try {
 			let result: string;
 
-			// Ensure sandbox is running before any work
-			await ctx.runAction(internal.sandbox.lifecycle.ensureRunning);
+			// Ensure per-agent sandbox is running (creates one if needed, with shared volume)
+			await ctx.runAction(internal.sandbox.lifecycle.ensureRunning, {
+				agentId,
+				name: agent.name,
+			});
 
 			if (agent.role === "coder") {
 				// Step 1: Use Vibe headless to generate the code

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { VariantProps } from "class-variance-authority";
 
 import { cva } from "class-variance-authority";
@@ -6,7 +6,7 @@ import { cva } from "class-variance-authority";
 import { PixelText } from "@/lib/pixel/PixelText";
 import { cn } from "@/lib/utils";
 
-const gridPatternStyle: React.CSSProperties = {
+const EMPTY_STATE_GRID_STYLE: CSSProperties = {
 	backgroundImage:
 		"linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)",
 	backgroundSize: "60px 60px",
@@ -55,7 +55,7 @@ function KanbanEmptyState({
 			{variant === "board" && (
 				<div className="pointer-events-none absolute inset-0 overflow-hidden">
 					{/* Grid pattern */}
-					<div className="absolute inset-0 opacity-20" style={gridPatternStyle} />
+					<div className="absolute inset-0 opacity-20" style={EMPTY_STATE_GRID_STYLE} />
 					{/* Orange glow — hard-edged, no blur */}
 					<div className="absolute left-1/2 top-1/2 h-60 w-60 -translate-x-1/2 -translate-y-1/2 bg-brand-accent/8" />
 				</div>

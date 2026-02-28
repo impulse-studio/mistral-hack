@@ -6,7 +6,7 @@ import { internal } from "../_generated/api";
 import { runCommandStreaming } from "./streamLogs";
 import { getDaytona, escapeShellArg, withRetry } from "./helpers";
 
-// Run Mistral Vibe headless CLI inside the Daytona sandbox
+// Run Mistral Vibe headless CLI inside the agent's Daytona sandbox
 export const runVibeHeadless = internalAction({
 	args: {
 		agentId: v.id("agents"),
@@ -20,9 +20,12 @@ export const runVibeHeadless = internalAction({
 			status: "working",
 		});
 
-		const sandboxRecord = await ctx.runQuery(internal.sandbox.queries.getInternal);
+		// Resolve this agent's sandbox
+		const sandboxRecord = await ctx.runQuery(internal.sandbox.queries.getByAgentInternal, {
+			agentId,
+		});
 		if (!sandboxRecord || sandboxRecord.status !== "running") {
-			throw new Error("Sandbox is not running");
+			throw new Error(`Sandbox for agent ${agentId} is not running`);
 		}
 
 		const daytona = getDaytona();

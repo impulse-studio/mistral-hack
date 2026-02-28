@@ -92,6 +92,14 @@
 			}
 		},
 		{
+			"files": ["**/routes/proto/**"],
+			"rules": {
+				"react-perf/jsx-no-new-object-as-prop": "off",
+				"react-perf/jsx-no-new-array-as-prop": "off",
+				"react-perf/jsx-no-jsx-as-prop": "off"
+			}
+		},
+		{
 			"files": ["**/*.ts"],
 			"rules": {
 				"mistral-hack/tsx-pascal-case": [

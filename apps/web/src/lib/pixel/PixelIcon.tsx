@@ -1,9 +1,7 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { VariantProps } from "class-variance-authority";
 
 import { cva } from "class-variance-authority";
-
-import { useMemo } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -68,8 +66,8 @@ function PixelIcon({
 			imageRendering: "pixelated" as const,
 			backgroundImage: `url(${src})`,
 			backgroundPosition: `-${spriteX * tilePx}px -${spriteY * tilePx}px`,
-			backgroundSize: "auto" as const,
-			backgroundRepeat: "no-repeat" as const,
+			backgroundSize: "auto",
+			backgroundRepeat: "no-repeat",
 		}),
 		[src, spriteX, spriteY, tilePx],
 	);

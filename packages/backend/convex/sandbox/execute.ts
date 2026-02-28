@@ -4,11 +4,11 @@ import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { runCommandStreaming } from "./streamLogs";
-import { getDaytona, getRunning, withRetry } from "./helpers";
+import { getRunning, withRetry } from "./helpers";
 
 const COMMAND_TIMEOUT_SECONDS = 300;
 
-// Execute a command in the Daytona sandbox
+// Execute a command in the agent's Daytona sandbox
 export const runCommand = internalAction({
 	args: {
 		command: v.string(),
@@ -16,7 +16,7 @@ export const runCommand = internalAction({
 		stream: v.optional(v.boolean()),
 	},
 	handler: async (ctx, { command, agentId, stream }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 
 		const useStreaming = (stream ?? true) && !!agentId;
 
@@ -70,21 +70,13 @@ export const runCommand = internalAction({
 });
 
 // Run a command as a background process using a session.
-// Unlike `runCommand`, this fires the command in an async session so it survives
-// even if the caller moves on. Ideal for long-running daemons (e.g. `firefox`).
 export const runBackground = internalAction({
 	args: {
 		command: v.string(),
 		agentId: v.optional(v.id("agents")),
 	},
-	handler: async (ctx, { command, agentId }) => {
-		const sandboxRecord = await ctx.runQuery(internal.sandbox.queries.getInternal);
-		if (!sandboxRecord || sandboxRecord.status !== "running") {
-			throw new Error("Sandbox is not running");
-		}
-
-		const daytona = getDaytona();
-		const sandbox = await withRetry(() => daytona.findOne({ idOrName: sandboxRecord.daytonaId }));
+	handler: async (ctx, { command, agentId }): Promise<{ sessionId: string; cmdId: string }> => {
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 
 		const sessionId = `bg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 

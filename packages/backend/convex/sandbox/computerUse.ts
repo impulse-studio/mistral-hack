@@ -9,7 +9,7 @@ import { getRunning, recordAndLog, recordAndLogScreenshot, withRetry } from "./h
 export const startComputerUse = internalAction({
 	args: { agentId: v.optional(v.id("agents")) },
 	handler: async (ctx, { agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 		const result = await withRetry(() => sandbox.computerUse.start());
 
 		await recordAndLog(
@@ -27,7 +27,7 @@ export const startComputerUse = internalAction({
 export const stopComputerUse = internalAction({
 	args: { agentId: v.optional(v.id("agents")) },
 	handler: async (ctx, { agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 		const result = await withRetry(() => sandbox.computerUse.stop());
 
 		await recordAndLog(
@@ -43,9 +43,9 @@ export const stopComputerUse = internalAction({
 });
 
 export const getComputerUseStatus = internalAction({
-	args: {},
-	handler: async (ctx) => {
-		const { sandbox } = await getRunning(ctx);
+	args: { agentId: v.optional(v.id("agents")) },
+	handler: async (ctx, { agentId }) => {
+		const { sandbox } = await getRunning(ctx, agentId);
 		const result = await withRetry(() => sandbox.computerUse.getStatus());
 		return { status: result.status };
 	},
@@ -59,7 +59,7 @@ export const takeScreenshot = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { showCursor, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 		const result = await withRetry(() =>
 			sandbox.computerUse.screenshot.takeFullScreen(showCursor ?? false),
 		);
@@ -91,7 +91,7 @@ export const takeScreenshotRegion = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { x, y, width, height, showCursor, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 		const result = await withRetry(() =>
 			sandbox.computerUse.screenshot.takeRegion({ x, y, width, height }, showCursor ?? false),
 		);
@@ -122,7 +122,7 @@ export const takeCompressedScreenshot = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { format, quality, scale, showCursor, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 		const result = await withRetry(() =>
 			sandbox.computerUse.screenshot.takeCompressed({
 				showCursor,
@@ -160,7 +160,7 @@ export const mouseClick = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { x, y, button, double: dbl, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 		const result = await sandbox.computerUse.mouse.click(x, y, button, dbl);
 
 		await recordAndLog(
@@ -182,7 +182,7 @@ export const mouseMove = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { x, y, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 		const result = await sandbox.computerUse.mouse.move(x, y);
 
 		await recordAndLog(ctx, sandboxRecord._id, agentId, "command", `Mouse move to (${x}, ${y})`);
@@ -201,7 +201,7 @@ export const mouseDrag = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { startX, startY, endX, endY, button, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 		const result = await sandbox.computerUse.mouse.drag(startX, startY, endX, endY, button);
 
 		await recordAndLog(
@@ -225,7 +225,7 @@ export const mouseScroll = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { x, y, direction, amount, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 		const result = await sandbox.computerUse.mouse.scroll(x, y, direction, amount);
 
 		await recordAndLog(
@@ -242,8 +242,8 @@ export const mouseScroll = internalAction({
 
 export const getMousePosition = internalAction({
 	args: { agentId: v.optional(v.id("agents")) },
-	handler: async (ctx) => {
-		const { sandbox } = await getRunning(ctx);
+	handler: async (ctx, { agentId }) => {
+		const { sandbox } = await getRunning(ctx, agentId);
 		const result = await sandbox.computerUse.mouse.getPosition();
 		return { x: result.x, y: result.y };
 	},
@@ -258,7 +258,7 @@ export const keyboardType = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { text, delay, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 		await sandbox.computerUse.keyboard.type(text, delay);
 
 		await recordAndLog(
@@ -280,7 +280,7 @@ export const keyboardPress = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { key, modifiers, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 		await sandbox.computerUse.keyboard.press(key, modifiers);
 
 		await recordAndLog(
@@ -301,7 +301,7 @@ export const keyboardHotkey = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { keys, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 		await sandbox.computerUse.keyboard.hotkey(keys);
 
 		await recordAndLog(ctx, sandboxRecord._id, agentId, "command", `Keyboard hotkey: ${keys}`);
@@ -313,9 +313,9 @@ export const keyboardHotkey = internalAction({
 // --- Display ---
 
 export const getDisplayInfo = internalAction({
-	args: {},
-	handler: async (ctx) => {
-		const { sandbox } = await getRunning(ctx);
+	args: { agentId: v.optional(v.id("agents")) },
+	handler: async (ctx, { agentId }) => {
+		const { sandbox } = await getRunning(ctx, agentId);
 		const result = await sandbox.computerUse.display.getInfo();
 		return { displays: result.displays };
 	},
@@ -323,8 +323,8 @@ export const getDisplayInfo = internalAction({
 
 export const getWindows = internalAction({
 	args: { agentId: v.optional(v.id("agents")) },
-	handler: async (ctx) => {
-		const { sandbox } = await getRunning(ctx);
+	handler: async (ctx, { agentId }) => {
+		const { sandbox } = await getRunning(ctx, agentId);
 		const result = await sandbox.computerUse.display.getWindows();
 		return { windows: result.windows };
 	},
@@ -338,7 +338,7 @@ export const startRecording = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { label, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 		const result = await sandbox.computerUse.recording.start(label);
 
 		await recordAndLog(
@@ -365,7 +365,7 @@ export const stopRecording = internalAction({
 		agentId: v.optional(v.id("agents")),
 	},
 	handler: async (ctx, { id, agentId }) => {
-		const { sandbox, sandboxRecord } = await getRunning(ctx);
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 		const result = await sandbox.computerUse.recording.stop(id);
 
 		await recordAndLog(
@@ -388,9 +388,9 @@ export const stopRecording = internalAction({
 });
 
 export const listRecordings = internalAction({
-	args: {},
-	handler: async (ctx) => {
-		const { sandbox } = await getRunning(ctx);
+	args: { agentId: v.optional(v.id("agents")) },
+	handler: async (ctx, { agentId }) => {
+		const { sandbox } = await getRunning(ctx, agentId);
 		const result = await sandbox.computerUse.recording.list();
 		return { recordings: result.recordings };
 	},

@@ -1,3 +1,4 @@
+import type React from "react";
 import type { ToasterProps } from "sonner";
 
 import {
@@ -10,26 +11,22 @@ import {
 import { useTheme } from "next-themes";
 import { Toaster as Sonner } from "sonner";
 
-const toasterIcons = {
+const TOASTER_ICONS = {
 	success: <CircleCheckIcon className="size-4" />,
 	info: <InfoIcon className="size-4" />,
 	warning: <TriangleAlertIcon className="size-4" />,
 	error: <OctagonXIcon className="size-4" />,
 	loading: <Loader2Icon className="size-4 animate-spin" />,
-};
+} as const;
 
-const toasterStyle = {
+const TOASTER_STYLE = {
 	"--normal-bg": "var(--popover)",
 	"--normal-text": "var(--popover-foreground)",
 	"--normal-border": "var(--border)",
 	"--border-radius": "var(--radius)",
 } as React.CSSProperties;
 
-const toasterOptions = {
-	classNames: {
-		toast: "cn-toast",
-	},
-};
+const TOAST_OPTIONS = { classNames: { toast: "cn-toast" } } as const;
 
 const Toaster = ({ ...props }: ToasterProps) => {
 	const { theme = "system" } = useTheme();
@@ -38,9 +35,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
 		<Sonner
 			theme={theme as ToasterProps["theme"]}
 			className="toaster group"
-			icons={toasterIcons}
-			style={toasterStyle}
-			toastOptions={toasterOptions}
+			icons={TOASTER_ICONS}
+			style={TOASTER_STYLE}
+			toastOptions={TOAST_OPTIONS}
 			{...props}
 		/>
 	);

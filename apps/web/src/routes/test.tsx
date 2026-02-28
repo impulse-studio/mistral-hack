@@ -2,7 +2,7 @@ import { useUIMessages, useSmoothText, type UIMessage } from "@convex-dev/agent/
 import { api } from "@mistral-hack/backend/convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
-import { Send, Loader, Monitor, Users, Plus, Reload, Radio } from "pixelarticons/react";
+import { Send, Loader, Monitor, Users, Plus, Reload, Circle } from "pixelarticons/react";
 import { useRef, useEffect, useState } from "react";
 import { Streamdown } from "streamdown";
 
@@ -36,7 +36,6 @@ function ManagerChat() {
 
 	const { results: messages } = useUIMessages(
 		api.chat.listMessages,
-		// @ts-expect-error — useUIMessages overload doesn't handle conditional skip properly
 		threadId ? { threadId } : "skip",
 		{ initialNumItems: 50, stream: true },
 	);
@@ -158,11 +157,36 @@ function StatusDot({ status }: { status: string }) {
 	);
 }
 
+interface ConvexDesk {
+	_id: string;
+	position: { x: number; y: number };
+	label?: string;
+	occupiedBy?: string;
+}
+
+interface ConvexAgent {
+	_id: string;
+	name: string;
+	type: string;
+	role: string;
+	status: string;
+	deskId?: string;
+}
+
+interface ConvexTask {
+	_id: string;
+	title: string;
+	description?: string;
+	status: string;
+	assignedTo?: string;
+}
+
 // ── Office State Panel ────────────────────────────────────────
 
 function OfficeState() {
 	const officeState = useQuery(api.office.queries.getOfficeState);
 	const sandboxStatus = useQuery(api.sandbox.queries.getStatus);
+	const allSandboxes = useQuery(api.sandbox.queries.getAllSandboxes);
 	const initDesks = useMutation(api.office.mutations.initDesks);
 	const [isIniting, setIsIniting] = useState(false);
 
@@ -205,25 +229,53 @@ function OfficeState() {
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="overflow-y-auto h-[calc(100%-3.5rem)] p-4 space-y-4">
-				{/* Sandbox Status */}
+				{/* Sandbox Status — per-agent sandboxes */}
 				<div className="rounded border p-3">
 					<h3 className="text-xs font-semibold mb-2 flex items-center gap-2">
-						<Radio className="h-3 w-3" />
-						Sandbox
+						<Circle className="h-3 w-3" />
+						Sandboxes
+						{sandboxStatus && "count" in sandboxStatus && (
+							<span className="text-muted-foreground font-normal">
+								({sandboxStatus.runningCount}/{sandboxStatus.count} running)
+							</span>
+						)}
 					</h3>
-					{sandboxStatus ? (
-						<div className="text-xs space-y-1">
+					{allSandboxes && allSandboxes.length > 0 ? (
+						<div className="space-y-2">
+							{allSandboxes.map(
+								(sb: {
+									_id: string;
+									status: string;
+									agentName: string | null;
+									agentRole: string | null;
+									name?: string | null;
+									diskUsage?: string | null;
+									error?: string | null;
+								}) => (
+									<div key={sb._id} className="flex items-center justify-between text-xs">
+										<div className="flex items-center gap-2">
+											<StatusDot status={sb.status} />
+											<span className="font-medium">
+												{sb.agentName ?? sb.name ?? sb._id.slice(-6)}
+											</span>
+										</div>
+										<div className="flex items-center gap-2 text-muted-foreground">
+											{sb.agentRole && <span>{sb.agentRole}</span>}
+											<span className="capitalize">{sb.status}</span>
+										</div>
+									</div>
+								),
+							)}
+						</div>
+					) : sandboxStatus && sandboxStatus.status !== "none" ? (
+						<div className="text-xs">
 							<div className="flex items-center gap-2">
 								<StatusDot status={sandboxStatus.status} />
 								<span className="capitalize">{sandboxStatus.status}</span>
 							</div>
-							{sandboxStatus.diskUsage && (
-								<p className="text-muted-foreground">Disk: {sandboxStatus.diskUsage}</p>
-							)}
-							{sandboxStatus.error && <p className="text-red-400">{sandboxStatus.error}</p>}
 						</div>
 					) : (
-						<p className="text-xs text-muted-foreground">No sandbox configured</p>
+						<p className="text-xs text-muted-foreground">No sandboxes provisioned</p>
 					)}
 				</div>
 
@@ -231,13 +283,18 @@ function OfficeState() {
 				<div className="rounded border p-3">
 					<h3 className="text-xs font-semibold mb-2">
 						Active Agents (
-						{agents.filter((a) => a.status !== "completed" && a.status !== "despawning").length})
+						{
+							agents.filter(
+								(a: ConvexAgent) => a.status !== "completed" && a.status !== "despawning",
+							).length
+						}
+						)
 					</h3>
 					{agents.length === 0 ? (
 						<p className="text-xs text-muted-foreground">No agents spawned</p>
 					) : (
 						<div className="space-y-2">
-							{agents.map((agent) => (
+							{agents.map((agent: ConvexAgent) => (
 								<div key={agent._id} className="flex items-center justify-between text-xs">
 									<div className="flex items-center gap-2">
 										<StatusDot status={agent.status} />
@@ -259,8 +316,8 @@ function OfficeState() {
 						</p>
 					) : (
 						<div className="grid grid-cols-4 gap-2">
-							{desks.map((desk) => {
-								const occupant = agents.find((a) => a._id === desk.occupiedBy);
+							{desks.map((desk: ConvexDesk) => {
+								const occupant = agents.find((a: ConvexAgent) => a._id === desk.occupiedBy);
 								return (
 									<div
 										key={desk._id}
@@ -409,7 +466,7 @@ function TasksBoard() {
 										<p className="text-xs text-muted-foreground pl-2">—</p>
 									) : (
 										<div className="space-y-1">
-											{tasks.map((task) => (
+											{tasks.map((task: ConvexTask) => (
 												<button
 													type="button"
 													key={task._id}

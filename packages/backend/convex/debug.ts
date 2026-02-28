@@ -8,8 +8,8 @@ import { internal } from "./_generated/api";
 
 export const ensureSandboxRunning = action({
 	args: {},
-	handler: async (ctx) => {
-		return await ctx.runAction(internal.sandbox.lifecycle.ensureRunning);
+	handler: async (ctx): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.lifecycle.ensureRunning, {});
 	},
 });
 
@@ -25,22 +25,22 @@ export const stopSandbox = action({
 
 export const startComputerUse = action({
 	args: {},
-	handler: async (ctx) => {
+	handler: async (ctx): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.computerUse.startComputerUse, {});
 	},
 });
 
 export const stopComputerUse = action({
 	args: {},
-	handler: async (ctx) => {
+	handler: async (ctx): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.computerUse.stopComputerUse, {});
 	},
 });
 
 export const getComputerUseStatus = action({
 	args: {},
-	handler: async (ctx) => {
-		return await ctx.runAction(internal.sandbox.computerUse.getComputerUseStatus);
+	handler: async (ctx): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.computerUse.getComputerUseStatus, {});
 	},
 });
 
@@ -48,7 +48,7 @@ export const getComputerUseStatus = action({
 
 export const takeScreenshot = action({
 	args: { showCursor: v.optional(v.boolean()) },
-	handler: async (ctx, { showCursor }) => {
+	handler: async (ctx, { showCursor }): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.computerUse.takeScreenshot, {
 			showCursor: showCursor ?? true,
 		});
@@ -60,7 +60,7 @@ export const takeCompressedScreenshot = action({
 		quality: v.optional(v.number()),
 		scale: v.optional(v.number()),
 	},
-	handler: async (ctx, { quality, scale }) => {
+	handler: async (ctx, { quality, scale }): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.computerUse.takeCompressedScreenshot, {
 			format: "jpeg",
 			quality: quality ?? 60,
@@ -79,14 +79,14 @@ export const mouseClick = action({
 		button: v.optional(v.string()),
 		double: v.optional(v.boolean()),
 	},
-	handler: async (ctx, args) => {
+	handler: async (ctx, args): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.computerUse.mouseClick, args);
 	},
 });
 
 export const mouseMove = action({
 	args: { x: v.number(), y: v.number() },
-	handler: async (ctx, args) => {
+	handler: async (ctx, args): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.computerUse.mouseMove, args);
 	},
 });
@@ -98,14 +98,14 @@ export const mouseScroll = action({
 		direction: v.union(v.literal("up"), v.literal("down")),
 		amount: v.optional(v.number()),
 	},
-	handler: async (ctx, args) => {
+	handler: async (ctx, args): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.computerUse.mouseScroll, args);
 	},
 });
 
 export const getMousePosition = action({
 	args: {},
-	handler: async (ctx) => {
+	handler: async (ctx): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.computerUse.getMousePosition, {});
 	},
 });
@@ -114,7 +114,7 @@ export const getMousePosition = action({
 
 export const keyboardType = action({
 	args: { text: v.string(), delay: v.optional(v.number()) },
-	handler: async (ctx, args) => {
+	handler: async (ctx, args): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.computerUse.keyboardType, args);
 	},
 });
@@ -124,14 +124,14 @@ export const keyboardPress = action({
 		key: v.string(),
 		modifiers: v.optional(v.array(v.string())),
 	},
-	handler: async (ctx, args) => {
+	handler: async (ctx, args): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.computerUse.keyboardPress, args);
 	},
 });
 
 export const keyboardHotkey = action({
 	args: { keys: v.string() },
-	handler: async (ctx, args) => {
+	handler: async (ctx, args): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.computerUse.keyboardHotkey, args);
 	},
 });
@@ -140,7 +140,7 @@ export const keyboardHotkey = action({
 
 export const runCommand = action({
 	args: { command: v.string() },
-	handler: async (ctx, { command }) => {
+	handler: async (ctx, { command }): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.execute.runCommand, { command });
 	},
 });
@@ -149,14 +149,14 @@ export const runCommand = action({
 
 export const getDisplayInfo = action({
 	args: {},
-	handler: async (ctx) => {
-		return await ctx.runAction(internal.sandbox.computerUse.getDisplayInfo);
+	handler: async (ctx): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.computerUse.getDisplayInfo, {});
 	},
 });
 
 export const getWindows = action({
 	args: {},
-	handler: async (ctx) => {
+	handler: async (ctx): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.computerUse.getWindows, {});
 	},
 });
@@ -169,7 +169,7 @@ export const runVibe = action({
 		prompt: v.string(),
 		workingDir: v.optional(v.string()),
 	},
-	handler: async (ctx, args) => {
+	handler: async (ctx, args): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.vibe.runVibeHeadless, args);
 	},
 });
@@ -178,21 +178,21 @@ export const runVibe = action({
 
 export const writeFile = action({
 	args: { path: v.string(), content: v.string() },
-	handler: async (ctx, { path, content }) => {
+	handler: async (ctx, { path, content }): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.codeExecution.writeFile, { path, content });
 	},
 });
 
 export const readFile = action({
 	args: { path: v.string() },
-	handler: async (ctx, { path }) => {
+	handler: async (ctx, { path }): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.codeExecution.readFile, { path });
 	},
 });
 
 export const listFiles = action({
 	args: { path: v.string() },
-	handler: async (ctx, { path }) => {
+	handler: async (ctx, { path }): Promise<unknown> => {
 		return await ctx.runAction(internal.sandbox.codeExecution.listFiles, { path });
 	},
 });
@@ -204,7 +204,7 @@ export const runSubAgent = action({
 		agentId: v.id("agents"),
 		taskId: v.id("tasks"),
 	},
-	handler: async (ctx, args) => {
+	handler: async (ctx, args): Promise<unknown> => {
 		return await ctx.runAction(internal.agents.runner.runSubAgent, args);
 	},
 });

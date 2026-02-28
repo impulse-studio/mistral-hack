@@ -26,10 +26,25 @@ export type SandboxWithRecord = {
 	sandboxRecord: { _id: Id<"sandbox">; daytonaId: string; status: string };
 };
 
-export async function getRunning(ctx: { runQuery: CallableFunction }): Promise<SandboxWithRecord> {
-	const sandboxRecord = await ctx.runQuery(internal.sandbox.queries.getInternal);
+/**
+ * Get a running sandbox for a specific agent.
+ * Falls back to legacy singleton lookup if no agentId provided.
+ */
+export async function getRunning(
+	ctx: { runQuery: CallableFunction },
+	agentId?: Id<"agents">,
+): Promise<SandboxWithRecord> {
+	let sandboxRecord;
+	if (agentId) {
+		sandboxRecord = await ctx.runQuery(internal.sandbox.queries.getByAgentInternal, { agentId });
+	} else {
+		sandboxRecord = await ctx.runQuery(internal.sandbox.queries.getInternal);
+	}
+
 	if (!sandboxRecord || sandboxRecord.status !== "running") {
-		throw new Error("Sandbox is not running");
+		throw new Error(
+			agentId ? `Sandbox for agent ${agentId} is not running` : "Sandbox is not running",
+		);
 	}
 
 	const daytona = getDaytona();

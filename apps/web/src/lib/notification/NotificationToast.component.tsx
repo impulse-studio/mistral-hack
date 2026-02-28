@@ -1,3 +1,4 @@
+import type React from "react";
 import { toast, Toaster } from "sonner";
 
 import { PixelBadge } from "@/lib/pixel/PixelBadge";
@@ -72,11 +73,17 @@ function notificationToast(options: NotificationToastOptions): string | number {
 	return toast.custom(() => <NotificationToastContent {...rest} />, { duration });
 }
 
-const toasterOptions = { unstyled: true };
-const toasterStyle = { "--offset": "16px" } as React.CSSProperties;
+const NOTIFICATION_TOAST_OPTIONS = { unstyled: true } as const;
+const NOTIFICATION_TOAST_STYLE = { "--offset": "16px" } as React.CSSProperties;
 
 function NotificationToaster() {
-	return <Toaster position="bottom-right" toastOptions={toasterOptions} style={toasterStyle} />;
+	return (
+		<Toaster
+			position="bottom-right"
+			toastOptions={NOTIFICATION_TOAST_OPTIONS}
+			style={NOTIFICATION_TOAST_STYLE}
+		/>
+	);
 }
 
 export { notificationToast, NotificationToaster };

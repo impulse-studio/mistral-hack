@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation } from "../_generated/server";
+import { internal } from "../_generated/api";
 
 // Workpool callback: fires after a sub-agent finishes
 export const onSubAgentComplete = internalMutation({
@@ -25,8 +26,7 @@ export const onSubAgentComplete = internalMutation({
 			await ctx.db.patch(agent.deskId, { occupiedBy: undefined });
 		}
 
-		// TODO: notify Manager thread about completion
-		// This would send a message to the Manager's durable agent thread
-		// so it can decide what to do next
+		// Stop the agent's sandbox (preserves disk via shared volume)
+		await ctx.scheduler.runAfter(0, internal.sandbox.lifecycle.stopAgentSandbox, { agentId });
 	},
 });
