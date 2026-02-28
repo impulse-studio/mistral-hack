@@ -6,6 +6,14 @@ import { cva } from "class-variance-authority";
 import { PixelText } from "@/lib/pixel/PixelText";
 import { cn } from "@/lib/utils";
 
+const gridPatternStyle: React.CSSProperties = {
+	backgroundImage:
+		"linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)",
+	backgroundSize: "60px 60px",
+	maskImage: "radial-gradient(ellipse at center, black 0%, transparent 70%)",
+	WebkitMaskImage: "radial-gradient(ellipse at center, black 0%, transparent 70%)",
+};
+
 const kanbanEmptyStateVariants = cva("flex flex-col items-center justify-center text-center", {
 	variants: {
 		variant: {
@@ -47,16 +55,7 @@ function KanbanEmptyState({
 			{variant === "board" && (
 				<div className="pointer-events-none absolute inset-0 overflow-hidden">
 					{/* Grid pattern */}
-					<div
-						className="absolute inset-0 opacity-20"
-						style={{
-							backgroundImage:
-								"linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)",
-							backgroundSize: "60px 60px",
-							maskImage: "radial-gradient(ellipse at center, black 0%, transparent 70%)",
-							WebkitMaskImage: "radial-gradient(ellipse at center, black 0%, transparent 70%)",
-						}}
-					/>
+					<div className="absolute inset-0 opacity-20" style={gridPatternStyle} />
 					{/* Orange glow — hard-edged, no blur */}
 					<div className="absolute left-1/2 top-1/2 h-60 w-60 -translate-x-1/2 -translate-y-1/2 bg-brand-accent/8" />
 				</div>

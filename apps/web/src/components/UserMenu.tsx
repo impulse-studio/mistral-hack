@@ -14,12 +14,14 @@ import { authClient } from "@/lib/auth-client";
 
 import { Button } from "./ui/button";
 
+const triggerButton = <Button variant="outline" />;
+
 export function UserMenu() {
 	const user = useQuery(api.auth.getCurrentUser);
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger render={<Button variant="outline" />}>{user?.name}</DropdownMenuTrigger>
+			<DropdownMenuTrigger render={triggerButton}>{user?.name}</DropdownMenuTrigger>
 			<DropdownMenuContent className="bg-card">
 				<DropdownMenuGroup>
 					<DropdownMenuLabel>My Account</DropdownMenuLabel>

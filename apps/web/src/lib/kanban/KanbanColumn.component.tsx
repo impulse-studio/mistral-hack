@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import { PixelBadge } from "@/lib/pixel/PixelBadge";
 import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
 import { PixelDivider } from "@/lib/pixel/PixelDivider";
@@ -29,6 +31,11 @@ function KanbanColumn({
 	onItemClick,
 	className,
 }: KanbanColumnProps) {
+	const accentStyle = useMemo(
+		() => (accentColor ? { borderTopColor: `var(--color-${accentColor})` } : undefined),
+		[accentColor],
+	);
+
 	return (
 		<div
 			data-slot="kanban-column"
@@ -36,9 +43,7 @@ function KanbanColumn({
 			className={cn("min-w-[280px] max-w-[320px] flex flex-col", className)}
 		>
 			{/* Top accent bar */}
-			{accentColor && (
-				<div className="border-t-[3px]" style={{ borderTopColor: `var(--color-${accentColor})` }} />
-			)}
+			{accentColor && <div className="border-t-[3px]" style={accentStyle} />}
 
 			<PixelBorderBox className={cn("flex flex-col flex-1", accentColor && "border-t-0")}>
 				{/* Header */}

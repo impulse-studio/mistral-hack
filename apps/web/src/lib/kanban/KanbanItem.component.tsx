@@ -86,6 +86,13 @@ export interface KanbanItemProps {
 	onClick?: () => void;
 }
 
+const BAR_STYLES = [
+	{ height: "25%" },
+	{ height: "50%" },
+	{ height: "75%" },
+	{ height: "100%" },
+] as const;
+
 function PriorityBars({ priority }: { priority: NonNullable<KanbanItemProps["priority"]> }) {
 	const barCount = 4;
 	const activeBars =
@@ -110,7 +117,7 @@ function PriorityBars({ priority }: { priority: NonNullable<KanbanItemProps["pri
 							active: i < activeBars,
 						}),
 					)}
-					style={{ height: `${((i + 1) / barCount) * 100}%` }}
+					style={BAR_STYLES[i]}
 				/>
 			))}
 		</div>

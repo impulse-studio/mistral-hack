@@ -7,6 +7,8 @@ import { KanbanColumn } from "./KanbanColumn.component";
 import { KanbanEmptyState } from "./EmptyState.component";
 import type { KanbanItemLabel, KanbanItemProps } from "./KanbanItem.component";
 
+const EMPTY_ITEMS: KanbanItemProps[] = [];
+
 type KanbanTaskStatus = "backlog" | "todo" | "in_progress" | "review" | "done" | "failed";
 type KanbanTaskPriority = NonNullable<KanbanItemProps["priority"]>;
 
@@ -207,7 +209,7 @@ function KanbanBoardReadonly({
 							key={column.status}
 							title={column.title}
 							status={column.status}
-							items={groupedByStatus.get(column.status) ?? []}
+							items={groupedByStatus.get(column.status) || EMPTY_ITEMS}
 							accentColor={column.accentColor}
 							readOnly
 							onItemClick={onTaskClick}

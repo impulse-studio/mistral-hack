@@ -1,6 +1,8 @@
 import { api } from "@mistral-hack/backend/convex/_generated/api";
 import { useQuery } from "convex/react";
 
+import { useMemo } from "react";
+
 import { cn } from "@/lib/utils";
 
 import { ChatWindowSmart } from "../chat/ChatWindow.smart";
@@ -65,9 +67,13 @@ interface MasterAgentPanelProps {
 
 function MasterAgentPanel({ className }: MasterAgentPanelProps) {
 	const kanbanData = useQuery(api.tasks.queries.getKanban);
-	const tasks = kanbanData
-		? mapKanbanToTasks(kanbanData as Record<string, Array<Record<string, unknown>>>)
-		: [];
+	const tasks = useMemo(
+		() =>
+			kanbanData
+				? mapKanbanToTasks(kanbanData as Record<string, Array<Record<string, unknown>>>)
+				: [],
+		[kanbanData],
+	);
 
 	return (
 		<div className={cn("flex h-full gap-4", className)}>

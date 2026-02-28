@@ -72,20 +72,11 @@ function notificationToast(options: NotificationToastOptions): string | number {
 	return toast.custom(() => <NotificationToastContent {...rest} />, { duration });
 }
 
+const toasterOptions = { unstyled: true };
+const toasterStyle = { "--offset": "16px" } as React.CSSProperties;
+
 function NotificationToaster() {
-	return (
-		<Toaster
-			position="bottom-right"
-			toastOptions={{
-				unstyled: true,
-			}}
-			style={
-				{
-					"--offset": "16px",
-				} as React.CSSProperties
-			}
-		/>
-	);
+	return <Toaster position="bottom-right" toastOptions={toasterOptions} style={toasterStyle} />;
 }
 
 export { notificationToast, NotificationToaster };

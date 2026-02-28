@@ -3,6 +3,8 @@ import { PixelGlow } from "@/lib/pixel/PixelGlow";
 import { PixelProgress } from "@/lib/pixel/PixelProgress";
 import { PixelText } from "@/lib/pixel/PixelText";
 import { PixelTooltip } from "@/lib/pixel/PixelTooltip";
+import { useMemo } from "react";
+
 import { cn } from "@/lib/utils";
 
 const STATUS_CONFIG = {
@@ -41,30 +43,33 @@ function ManagerSandboxStatusCompact({
 }: Omit<ManagerSandboxStatusProps, "variant">) {
 	const config = STATUS_CONFIG[status];
 
-	const tooltipContent = (
-		<div className="flex flex-col gap-1">
-			<PixelText variant="label">{config.label}</PixelText>
-			{uptime && (
-				<PixelText variant="id" color="muted">
-					Uptime: {uptime}
-				</PixelText>
-			)}
-			{region && (
-				<PixelText variant="id" color="muted">
-					Region: {region}
-				</PixelText>
-			)}
-			{cpu !== undefined && (
-				<PixelText variant="id" color="muted">
-					CPU: {cpu}%
-				</PixelText>
-			)}
-			{memory !== undefined && (
-				<PixelText variant="id" color="muted">
-					MEM: {memory}%
-				</PixelText>
-			)}
-		</div>
+	const tooltipContent = useMemo(
+		() => (
+			<div className="flex flex-col gap-1">
+				<PixelText variant="label">{config.label}</PixelText>
+				{uptime && (
+					<PixelText variant="id" color="muted">
+						Uptime: {uptime}
+					</PixelText>
+				)}
+				{region && (
+					<PixelText variant="id" color="muted">
+						Region: {region}
+					</PixelText>
+				)}
+				{cpu !== undefined && (
+					<PixelText variant="id" color="muted">
+						CPU: {cpu}%
+					</PixelText>
+				)}
+				{memory !== undefined && (
+					<PixelText variant="id" color="muted">
+						MEM: {memory}%
+					</PixelText>
+				)}
+			</div>
+		),
+		[config.label, uptime, region, cpu, memory],
 	);
 
 	return (

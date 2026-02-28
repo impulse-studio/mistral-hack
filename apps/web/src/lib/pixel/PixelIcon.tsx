@@ -3,6 +3,8 @@ import type { VariantProps } from "class-variance-authority";
 
 import { cva } from "class-variance-authority";
 
+import { useMemo } from "react";
+
 import { cn } from "@/lib/utils";
 
 const pixelIconVariants = cva("inline-flex shrink-0 items-center justify-center", {
@@ -61,19 +63,32 @@ function PixelIcon({
 
 	const tilePx = TILE_PX[size];
 
+	const spriteStyle = useMemo(
+		() => ({
+			imageRendering: "pixelated" as const,
+			backgroundImage: `url(${src})`,
+			backgroundPosition: `-${spriteX * tilePx}px -${spriteY * tilePx}px`,
+			backgroundSize: "auto" as const,
+			backgroundRepeat: "no-repeat" as const,
+		}),
+		[src, spriteX, spriteY, tilePx],
+	);
+
+	const svgStyle = useMemo(
+		() => ({
+			imageRendering: "pixelated" as const,
+			...(color ? { color } : undefined),
+		}),
+		[color],
+	);
+
 	// Sprite sheet mode
 	if (src) {
 		return (
 			<div
 				data-slot="pixel-icon"
 				className={cn(pixelIconVariants({ size }), className)}
-				style={{
-					imageRendering: "pixelated",
-					backgroundImage: `url(${src})`,
-					backgroundPosition: `-${spriteX * tilePx}px -${spriteY * tilePx}px`,
-					backgroundSize: "auto",
-					backgroundRepeat: "no-repeat",
-				}}
+				style={spriteStyle}
 				{...accessibilityProps}
 			/>
 		);
@@ -84,10 +99,7 @@ function PixelIcon({
 		<span
 			data-slot="pixel-icon"
 			className={cn(pixelIconVariants({ size }), "[&>svg]:size-full", className)}
-			style={{
-				imageRendering: "pixelated",
-				...(color ? { color } : undefined),
-			}}
+			style={svgStyle}
 			{...accessibilityProps}
 		>
 			{children}
