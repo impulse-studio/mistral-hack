@@ -7,7 +7,14 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
 	envDir: "../../",
-	plugins: [tsconfigPaths(), tailwindcss(), tanstackStart(), nitro(), viteReact()],
+	plugins: [
+		tsconfigPaths(),
+		tailwindcss(),
+		tanstackStart(),
+		// nitro bundles a different vite version; cast to fix Plugin type mismatch
+		...(nitro() as never[]),
+		viteReact(),
+	],
 	server: {
 		port: 3003,
 		host: "0.0.0.0",
