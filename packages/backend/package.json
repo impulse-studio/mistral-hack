@@ -4,6 +4,10 @@
   "description": "",
   "license": "ISC",
   "author": "",
+  "exports": {
+    "./convex/_generated/api": "./convex/_generated/api.js",
+    "./convex/_generated/*": "./convex/_generated/*"
+  },
   "scripts": {
     "dev": "convex dev",
     "dev:setup": "convex dev --configure --until-success"
