@@ -29,6 +29,8 @@ jobs:
 
       - name: Build Storybook
         run: bun run --cwd apps/web build-storybook
+        env:
+          STORYBOOK_BASE: /mistral-hack/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

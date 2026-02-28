@@ -16,6 +16,9 @@ export function createStorybookConfig(
 		addons: [getAbsolutePath("@storybook/addon-a11y"), getAbsolutePath("@storybook/addon-docs")],
 		framework: getAbsolutePath("@storybook/react-vite"),
 		viteFinal: (viteConfig) => {
+			if (process.env.STORYBOOK_BASE) {
+				viteConfig.base = process.env.STORYBOOK_BASE;
+			}
 			viteConfig.resolve ??= {};
 			viteConfig.resolve.alias = {
 				...viteConfig.resolve.alias,
