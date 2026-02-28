@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Card Variants — AI Office Kanban</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ========================================
+     RESET & BASE
+     ======================================== */
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  :root {
+    /* Backgrounds */
+    --bg-base: #0A0A0B;
+    --bg-surface: #111113;
+    --bg-elevated: #1A1A1D;
+    --bg-hover: #1F1F22;
+    --bg-active: #252528;
+
+    /* Borders */
+    --border-subtle: #2A2A2E;
+    --border-hover: #3A3A3E;
+    --border-focus: #4A4A4E;
+
+    /* Text */
+    --text-primary: #FAFAFA;
+    --text-secondary: #A0A0A8;
+    --text-tertiary: #6B6B73;
+    --text-quaternary: #505058;
+
+    /* Accents */
+    --mistral-orange: #FF7000;
+    --mistral-orange-dim: rgba(255, 112, 0, 0.12);
+    --mistral-orange-subtle: rgba(255, 112, 0, 0.08);
+    --mistral-red: #FD3F29;
+    --mistral-red-dim: rgba(253, 63, 41, 0.12);
+    --mistral-yellow: #FFCB00;
+    --mistral-yellow-dim: rgba(255, 203, 0, 0.12);
+    --success: #22C55E;
+    --success-dim: rgba(34, 197, 94, 0.12);
+    --info: #3B82F6;
+    --info-dim: rgba(59, 130, 246, 0.12);
+
+    /* Labels */
+    --label-red: #EF4444;
+    --label-red-bg: rgba(239, 68, 68, 0.12);
+    --label-orange: #F97316;
+    --label-orange-bg: rgba(249, 115, 22, 0.12);
+    --label-yellow: #EAB308;
+    --label-yellow-bg: rgba(234, 179, 8, 0.12);
+    --label-green: #22C55E;
+    --label-green-bg: rgba(34, 197, 94, 0.12);
+    --label-blue: #3B82F6;
+    --label-blue-bg: rgba(59, 130, 246, 0.12);
+    --label-purple: #A855F7;
+    --label-purple-bg: rgba(168, 85, 247, 0.12);
+    --label-pink: #EC4899;
+    --label-pink-bg: rgba(236, 72, 153, 0.12);
+    --label-gray: #6B7280;
+    --label-gray-bg: rgba(107, 114, 128, 0.12);
+
+    /* Sizing */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-normal: 200ms ease;
+    --transition-slow: 300ms ease;
+  }
+
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    padding: 48px 0;
+  }
+
+  /* ========================================
+     PAGE LAYOUT
+     ======================================== */
+  .page-header {
+    max-width: 1200px;
+    margin: 0 auto 48px;
+    padding: 0 48px;
+  }
+
+  .page-header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+
+  .page-header p {
+    font-size: 13px;
+    color: var(--text-tertiary);
+  }
+
+  .page-header .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 4px 10px;
+    background: var(--mistral-orange-subtle);
+    border: 1px solid rgba(255, 112, 0, 0.15);
+    border-radius: var(--radius-sm);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--mistral-orange);
+    font-weight: 500;
+  }
+
+  .page-header .badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--mistral-orange);
+  }
+
+  .gallery {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
+  }
+
+  /* ========================================
+     SECTION LAYOUT
+     ======================================== */
+  .section {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .section-header h2 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+  }
+
+  .section-header span {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 400;
+  }
+
+  .section-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-subtle);
+    margin-left: 4px;
+  }
+
+  .card-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .card-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .card-label {
+    font-size: 11px;
+    color: var(--text-quaternary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-left: 2px;
+  }
+
+  /* ========================================
+     TASK CARD BASE
+     ======================================== */
+  .task-card {
+    width: 280px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+    cursor: pointer;
+    position: relative;
+  }
+
+  .task-card:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-elevated);
+  }
+
+  /* ---- Card Header ---- */
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .card-status {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Status icons */
+  .status-backlog .card-status svg { color: var(--text-tertiary); }
+  .status-todo .card-status svg { color: var(--text-secondary); }
+  .status-in-progress .card-status svg { color: var(--mistral-orange); }
+  .status-review .card-status svg { color: var(--mistral-yellow); }
+  .status-done .card-status svg { color: var(--success); }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.4;
+    flex: 1;
+    letter-spacing: -0.005em;
+  }
+
+  .card-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 400;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  /* ---- Priority Icons ---- */
+  .priority-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .priority-urgent svg { color: var(--mistral-red); }
+  .priority-high svg { color: var(--mistral-orange); }
+  .priority-medium svg { color: var(--mistral-yellow); }
+  .priority-low svg { color: var(--text-tertiary); }
+
+  /* ---- Labels ---- */
+  .card-labels {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .label-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 18px;
+    white-space: nowrap;
+  }
+
+  .label-red { background: var(--label-red-bg); color: var(--label-red); }
+  .label-orange { background: var(--label-orange-bg); color: var(--label-orange); }
+  .label-yellow { background: var(--label-yellow-bg); color: var(--label-yellow); }
+  .label-green { background: var(--label-green-bg); color: var(--label-green); }
+  .label-blue { background: var(--label-blue-bg); color: var(--label-blue); }
+  .label-purple { background: var(--label-purple-bg); color: var(--label-purple); }
+  .label-pink { background: var(--label-pink-bg); color: var(--label-pink); }
+  .label-gray { background: var(--label-gray-bg); color: var(--label-gray); }
+
+  /* ---- Card Footer ---- */
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .card-footer-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-footer-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ---- Avatar ---- */
+  .avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-primary);
+    position: relative;
+  }
+
+  .avatar-a { background: linear-gradient(135deg, #6366F1, #8B5CF6); }
+  .avatar-b { background: linear-gradient(135deg, #EC4899, #F43F5E); }
+  .avatar-c { background: linear-gradient(135deg, #F97316, #FBBF24); }
+  .avatar-d { background: linear-gradient(135deg, #10B981, #34D399); }
+  .avatar-e { background: linear-gradient(135deg, #3B82F6, #60A5FA); }
+
+  .avatar-group {
+    display: flex;
+  }
+
+  .avatar-group .avatar {
+    margin-left: -6px;
+    border: 2px solid var(--bg-surface);
+  }
+
+  .avatar-group .avatar:first-child {
+    margin-left: 0;
+  }
+
+  /* ---- Subtask Progress ---- */
+  .subtask-progress {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .progress-bar-track {
+    flex: 1;
+    height: 3px;
+    background: var(--border-subtle);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 300ms ease;
+  }
+
+  .progress-bar-fill.low { background: var(--mistral-red); }
+  .progress-bar-fill.mid { background: var(--mistral-orange); }
+  .progress-bar-fill.high { background: var(--mistral-yellow); }
+  .progress-bar-fill.done { background: var(--success); }
+
+  .subtask-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ---- Due Date ---- */
+  .due-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+  }
+
+  .due-date svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .due-overdue {
+    color: var(--mistral-red);
+    background: var(--mistral-red-dim);
+  }
+
+  .due-today {
+    color: var(--mistral-orange);
+    background: var(--mistral-orange-dim);
+  }
+
+  .due-upcoming {
+    color: var(--text-tertiary);
+    background: transparent;
+  }
+
+  /* ---- Attachment count ---- */
+  .attachment-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+
+  .attachment-count svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .comment-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+
+  .comment-count svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* ========================================
+     DRAGGING VARIANT
+     ======================================== */
+  .task-card.is-dragging {
+    transform: rotate(-2deg) scale(1.03);
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.5),
+      0 4px 12px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(255, 112, 0, 0.15);
+    border-color: rgba(255, 112, 0, 0.25);
+    background: var(--bg-elevated);
+    z-index: 100;
+    cursor: grabbing;
+    opacity: 0.97;
+  }
+
+  /* ========================================
+     DROP TARGET PLACEHOLDER
+     ======================================== */
+  .task-card.is-drop-target {
+    background: transparent;
+    border: 2px dashed rgba(255, 112, 0, 0.35);
+    box-shadow: none;
+    cursor: default;
+    opacity: 1;
+  }
+
+  .task-card.is-drop-target .drop-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 56px;
+    color: var(--mistral-orange);
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0.5;
+    letter-spacing: 0.02em;
+  }
+
+  .task-card.is-drop-target .drop-inner svg {
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+    opacity: 0.6;
+  }
+
+  /* ========================================
+     COMPACT VARIANT
+     ======================================== */
+  .task-card.compact {
+    padding: 8px 10px;
+    gap: 0;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .task-card.compact .card-header {
+    flex: 1;
+    align-items: center;
+  }
+
+  .task-card.compact .card-title {
+    font-size: 13px;
+  }
+
+  /* ========================================
+     IMAGE PREVIEW VARIANT
+     ======================================== */
+  .card-image-preview {
+    width: 100%;
+    height: 140px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-bottom: 2px;
+    position: relative;
+  }
+
+  .card-image-preview .preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* SVG placeholder for generated preview images */
+  .card-image-preview .preview-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-image-preview .preview-placeholder::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 30% 40%, rgba(255, 112, 0, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 70% 60%, rgba(59, 130, 246, 0.06) 0%, transparent 50%);
+  }
+
+  .card-image-preview .preview-placeholder svg {
+    width: 32px;
+    height: 32px;
+    color: var(--text-quaternary);
+    position: relative;
+    z-index: 1;
+  }
+
+  .card-image-preview .file-badge {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    padding: 2px 6px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    border-radius: var(--radius-sm);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  /* ========================================
+     ANIMATIONS
+     ======================================== */
+  @keyframes subtlePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .due-overdue svg {
+    animation: subtlePulse 2s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .card-image-preview .preview-placeholder::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.02) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 4s ease-in-out infinite;
+  }
+
+  /* ========================================
+     RESPONSIVE
+     ======================================== */
+  @media (max-width: 768px) {
+    body { padding: 24px 0; }
+    .gallery { padding: 0 20px; }
+    .page-header { padding: 0 20px; }
+    .card-row { flex-direction: column; }
+    .task-card { width: 100%; max-width: 320px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Task Card Variants</h1>
+  <p>All visual states and variants for kanban task cards. Dark theme, Mistral palette.</p>
+  <div class="badge">Agent 2 &mdash; Design Sprint</div>
+</div>
+
+<div class="gallery">
+
+  <!-- ==========================================
+       SECTION 1: Default Cards
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <h2>Default Cards</h2>
+      <span>Title, assignee, priority, labels &mdash; across all statuses</span>
+    </div>
+    <div class="card-row">
+
+      <!-- Backlog -->
+      <div class="card-wrapper">
+        <div class="card-label">Backlog</div>
+        <div class="task-card status-backlog">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" fill="currentColor" opacity="0.5"/></svg>
+            </div>
+            <span class="card-title">Research competitor pricing models</span>
+            <span class="card-id">TSK-42</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-blue">Research</span>
+            <span class="label-chip label-gray">Low Priority</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-low">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M3 8h10M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/></svg>
+              </div>
+              <span class="comment-count">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v5a2 2 0 01-2 2H6l-3 2.5V11H4a2 2 0 01-2-2V4z" stroke="currentColor" stroke-width="1.2"/></svg>
+                3
+              </span>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar avatar-c">M</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Todo -->
+      <div class="card-wrapper">
+        <div class="card-label">Todo</div>
+        <div class="task-card status-todo">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/></svg>
+            </div>
+            <span class="card-title">Set up CI/CD pipeline for staging</span>
+            <span class="card-id">TSK-87</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-purple">DevOps</span>
+            <span class="label-chip label-orange">Infrastructure</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-high">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v7M5 6l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </div>
+              <span class="attachment-count">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M8.5 2.5l-5 5a2.83 2.83 0 004 4l5-5a1.42 1.42 0 00-2-2l-5 5a.71.71 0 001 1l4-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                2
+              </span>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar avatar-a">S</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- In Progress -->
+      <div class="card-wrapper">
+        <div class="card-label">In Progress</div>
+        <div class="task-card status-in-progress">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M8 3a5 5 0 010 10" fill="currentColor" opacity="0.8"/></svg>
+            </div>
+            <span class="card-title">Implement real-time notification system</span>
+            <span class="card-id">TSK-156</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-green">Feature</span>
+            <span class="label-chip label-blue">Backend</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-urgent">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2l6 12H2L8 2z" fill="currentColor"/><path d="M8 7v3M8 11.5v.5" stroke="#0A0A0B" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </div>
+              <span class="comment-count">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v5a2 2 0 01-2 2H6l-3 2.5V11H4a2 2 0 01-2-2V4z" stroke="currentColor" stroke-width="1.2"/></svg>
+                7
+              </span>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar-group">
+                <div class="avatar avatar-b">A</div>
+                <div class="avatar avatar-d">J</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Review -->
+      <div class="card-wrapper">
+        <div class="card-label">Review</div>
+        <div class="task-card status-review">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" fill="currentColor" opacity="0.3"/><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/></svg>
+            </div>
+            <span class="card-title">Update user onboarding flow copy</span>
+            <span class="card-id">TSK-201</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-pink">Design</span>
+            <span class="label-chip label-yellow">UX</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-medium">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 6h10M3 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar avatar-e">K</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Done -->
+      <div class="card-wrapper">
+        <div class="card-label">Done</div>
+        <div class="task-card status-done">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" fill="currentColor" opacity="0.15"/><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 8l2 2 3.5-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <span class="card-title">Fix dark mode contrast issues</span>
+            <span class="card-id">TSK-134</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-red">Bug</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-high">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v7M5 6l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar avatar-b">A</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==========================================
+       SECTION 2: Subtask Progress
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <h2>Subtask Progress</h2>
+      <span>Cards with progress bars at various completion levels</span>
+    </div>
+    <div class="card-row">
+
+      <!-- 1/6 (Low) -->
+      <div class="card-wrapper">
+        <div class="card-label">Early (1/6)</div>
+        <div class="task-card status-in-progress">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M8 3a5 5 0 010 10" fill="currentColor" opacity="0.8"/></svg>
+            </div>
+            <span class="card-title">Migrate database schema to v3</span>
+            <span class="card-id">TSK-98</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-purple">DevOps</span>
+          </div>
+          <div class="subtask-progress">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill low" style="width: 16.6%"></div>
+            </div>
+            <span class="subtask-count">1/6</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-high">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v7M5 6l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar avatar-a">S</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3/5 (Mid) -->
+      <div class="card-wrapper">
+        <div class="card-label">In Progress (3/5)</div>
+        <div class="task-card status-in-progress">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M8 3a5 5 0 010 10" fill="currentColor" opacity="0.8"/></svg>
+            </div>
+            <span class="card-title">Build search indexing pipeline</span>
+            <span class="card-id">TSK-112</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-green">Feature</span>
+            <span class="label-chip label-blue">Backend</span>
+          </div>
+          <div class="subtask-progress">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill mid" style="width: 60%"></div>
+            </div>
+            <span class="subtask-count">3/5</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-medium">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 6h10M3 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </div>
+              <span class="comment-count">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v5a2 2 0 01-2 2H6l-3 2.5V11H4a2 2 0 01-2-2V4z" stroke="currentColor" stroke-width="1.2"/></svg>
+                4
+              </span>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar-group">
+                <div class="avatar avatar-d">J</div>
+                <div class="avatar avatar-e">K</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7/8 (High) -->
+      <div class="card-wrapper">
+        <div class="card-label">Almost Done (7/8)</div>
+        <div class="task-card status-review">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" fill="currentColor" opacity="0.3"/><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/></svg>
+            </div>
+            <span class="card-title">Write API documentation</span>
+            <span class="card-id">TSK-77</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-yellow">Docs</span>
+          </div>
+          <div class="subtask-progress">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill high" style="width: 87.5%"></div>
+            </div>
+            <span class="subtask-count">7/8</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-low">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M3 8h10M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/></svg>
+              </div>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar avatar-c">M</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4/4 (Complete) -->
+      <div class="card-wrapper">
+        <div class="card-label">Complete (4/4)</div>
+        <div class="task-card status-done">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" fill="currentColor" opacity="0.15"/><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 8l2 2 3.5-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <span class="card-title">Audit auth token refresh logic</span>
+            <span class="card-id">TSK-63</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-red">Security</span>
+          </div>
+          <div class="subtask-progress">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill done" style="width: 100%"></div>
+            </div>
+            <span class="subtask-count">4/4</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-urgent">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2l6 12H2L8 2z" fill="currentColor"/><path d="M8 7v3M8 11.5v.5" stroke="#0A0A0B" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar avatar-b">A</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==========================================
+       SECTION 3: Due Dates
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <h2>Due Date Variants</h2>
+      <span>Overdue, due today, and upcoming due date treatments</span>
+    </div>
+    <div class="card-row">
+
+      <!-- Overdue -->
+      <div class="card-wrapper">
+        <div class="card-label">Overdue</div>
+        <div class="task-card status-in-progress">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M8 3a5 5 0 010 10" fill="currentColor" opacity="0.8"/></svg>
+            </div>
+            <span class="card-title">Fix payment webhook retry logic</span>
+            <span class="card-id">TSK-189</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-red">Bug</span>
+            <span class="label-chip label-orange">Payments</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-urgent">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2l6 12H2L8 2z" fill="currentColor"/><path d="M8 7v3M8 11.5v.5" stroke="#0A0A0B" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </div>
+              <span class="due-date due-overdue">
+                <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 5v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Feb 24
+              </span>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar avatar-b">A</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Due Today -->
+      <div class="card-wrapper">
+        <div class="card-label">Due Today</div>
+        <div class="task-card status-in-progress">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M8 3a5 5 0 010 10" fill="currentColor" opacity="0.8"/></svg>
+            </div>
+            <span class="card-title">Deploy monitoring dashboard v2</span>
+            <span class="card-id">TSK-204</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-purple">DevOps</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-high">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v7M5 6l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </div>
+              <span class="due-date due-today">
+                <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 5v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Today
+              </span>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar-group">
+                <div class="avatar avatar-a">S</div>
+                <div class="avatar avatar-d">J</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upcoming -->
+      <div class="card-wrapper">
+        <div class="card-label">Upcoming</div>
+        <div class="task-card status-todo">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/></svg>
+            </div>
+            <span class="card-title">Design email template system</span>
+            <span class="card-id">TSK-215</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-pink">Design</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-medium">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 6h10M3 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </div>
+              <span class="due-date due-upcoming">
+                <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 5v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Mar 7
+              </span>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar avatar-e">K</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==========================================
+       SECTION 4: Interaction States
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <h2>Interaction States</h2>
+      <span>Dragging, drop target placeholder</span>
+    </div>
+    <div class="card-row">
+
+      <!-- Dragging -->
+      <div class="card-wrapper">
+        <div class="card-label">Being Dragged</div>
+        <div class="task-card status-in-progress is-dragging">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M8 3a5 5 0 010 10" fill="currentColor" opacity="0.8"/></svg>
+            </div>
+            <span class="card-title">Implement real-time notification system</span>
+            <span class="card-id">TSK-156</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-green">Feature</span>
+            <span class="label-chip label-blue">Backend</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-urgent">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2l6 12H2L8 2z" fill="currentColor"/><path d="M8 7v3M8 11.5v.5" stroke="#0A0A0B" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar-group">
+                <div class="avatar avatar-b">A</div>
+                <div class="avatar avatar-d">J</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Drop Target -->
+      <div class="card-wrapper">
+        <div class="card-label">Drop Target</div>
+        <div class="task-card is-drop-target">
+          <div class="drop-inner">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Drop here
+          </div>
+        </div>
+      </div>
+
+      <!-- Hover state (normal card with note) -->
+      <div class="card-wrapper">
+        <div class="card-label">Hover State (hover me)</div>
+        <div class="task-card status-todo">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/></svg>
+            </div>
+            <span class="card-title">Add keyboard shortcuts to editor</span>
+            <span class="card-id">TSK-178</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-green">Feature</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-medium">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 6h10M3 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar avatar-a">S</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==========================================
+       SECTION 5: Compact Variant
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <h2>Compact Cards</h2>
+      <span>Minimal form factor &mdash; title and priority only</span>
+    </div>
+    <div class="card-row">
+
+      <div class="card-wrapper">
+        <div class="card-label">Urgent</div>
+        <div class="task-card compact status-in-progress">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M8 3a5 5 0 010 10" fill="currentColor" opacity="0.8"/></svg>
+            </div>
+            <span class="card-title">Hotfix: auth token expiry</span>
+          </div>
+          <div class="priority-icon priority-urgent">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2l6 12H2L8 2z" fill="currentColor"/><path d="M8 7v3M8 11.5v.5" stroke="#0A0A0B" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-wrapper">
+        <div class="card-label">High</div>
+        <div class="task-card compact status-todo">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/></svg>
+            </div>
+            <span class="card-title">Update rate limiter config</span>
+          </div>
+          <div class="priority-icon priority-high">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v7M5 6l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-wrapper">
+        <div class="card-label">Medium</div>
+        <div class="task-card compact status-review">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" fill="currentColor" opacity="0.3"/><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/></svg>
+            </div>
+            <span class="card-title">Refactor logger middleware</span>
+          </div>
+          <div class="priority-icon priority-medium">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 6h10M3 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-wrapper">
+        <div class="card-label">Low</div>
+        <div class="task-card compact status-done">
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" fill="currentColor" opacity="0.15"/><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 8l2 2 3.5-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <span class="card-title">Update changelog for v2.4</span>
+          </div>
+          <div class="priority-icon priority-low">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M3 8h10M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/></svg>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==========================================
+       SECTION 6: Image / Attachment Preview
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <h2>Attachment Preview</h2>
+      <span>Cards with image or file attachment thumbnails</span>
+    </div>
+    <div class="card-row">
+
+      <!-- Design mockup preview -->
+      <div class="card-wrapper">
+        <div class="card-label">Design Mockup</div>
+        <div class="task-card status-review">
+          <div class="card-image-preview">
+            <div class="preview-placeholder">
+              <!-- Decorative SVG as placeholder for design mockup -->
+              <svg viewBox="0 0 80 80" fill="none" style="width:64px;height:64px;">
+                <rect x="8" y="12" width="64" height="44" rx="4" stroke="#3A3A3E" stroke-width="1.5"/>
+                <rect x="14" y="20" width="24" height="16" rx="2" fill="rgba(255,112,0,0.15)" stroke="rgba(255,112,0,0.3)" stroke-width="1"/>
+                <rect x="42" y="20" width="24" height="6" rx="1.5" fill="rgba(59,130,246,0.15)" stroke="rgba(59,130,246,0.2)" stroke-width="1"/>
+                <rect x="42" y="30" width="18" height="6" rx="1.5" fill="rgba(107,107,115,0.1)" stroke="rgba(107,107,115,0.15)" stroke-width="1"/>
+                <circle cx="26" cy="28" r="4" fill="rgba(255,112,0,0.25)"/>
+                <rect x="14" y="42" width="52" height="4" rx="2" fill="rgba(107,107,115,0.1)"/>
+                <rect x="14" y="49" width="36" height="4" rx="2" fill="rgba(107,107,115,0.07)"/>
+                <rect x="8" y="60" width="64" height="8" rx="2" fill="rgba(26,26,29,0.8)"/>
+              </svg>
+            </div>
+            <span class="file-badge">PNG</span>
+          </div>
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" fill="currentColor" opacity="0.3"/><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/></svg>
+            </div>
+            <span class="card-title">Review landing page hero mockup</span>
+            <span class="card-id">TSK-220</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-pink">Design</span>
+            <span class="label-chip label-yellow">Review</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-high">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v7M5 6l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </div>
+              <span class="attachment-count">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M8.5 2.5l-5 5a2.83 2.83 0 004 4l5-5a1.42 1.42 0 00-2-2l-5 5a.71.71 0 001 1l4-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                3
+              </span>
+              <span class="comment-count">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v5a2 2 0 01-2 2H6l-3 2.5V11H4a2 2 0 01-2-2V4z" stroke="currentColor" stroke-width="1.2"/></svg>
+                5
+              </span>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar avatar-e">K</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Figma file preview -->
+      <div class="card-wrapper">
+        <div class="card-label">Figma File</div>
+        <div class="task-card status-in-progress">
+          <div class="card-image-preview">
+            <div class="preview-placeholder" style="background: linear-gradient(135deg, #1A1024 0%, #1E1535 50%, #261A45 100%);">
+              <!-- Figma-like decorative placeholder -->
+              <svg viewBox="0 0 80 80" fill="none" style="width:64px;height:64px;">
+                <rect x="20" y="10" width="16" height="16" rx="8" fill="rgba(168,85,247,0.2)" stroke="rgba(168,85,247,0.35)" stroke-width="1"/>
+                <rect x="20" y="30" width="16" height="16" rx="2" fill="rgba(59,130,246,0.2)" stroke="rgba(59,130,246,0.35)" stroke-width="1"/>
+                <rect x="20" y="50" width="16" height="16" rx="2" fill="rgba(34,197,94,0.2)" stroke="rgba(34,197,94,0.35)" stroke-width="1"/>
+                <rect x="44" y="10" width="16" height="16" rx="2" fill="rgba(255,112,0,0.2)" stroke="rgba(255,112,0,0.35)" stroke-width="1"/>
+                <circle cx="52" cy="38" r="8" fill="rgba(236,72,153,0.15)" stroke="rgba(236,72,153,0.3)" stroke-width="1"/>
+                <rect x="44" y="50" width="16" height="16" rx="4" fill="rgba(255,203,0,0.15)" stroke="rgba(255,203,0,0.25)" stroke-width="1"/>
+              </svg>
+            </div>
+            <span class="file-badge">FIG</span>
+          </div>
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M8 3a5 5 0 010 10" fill="currentColor" opacity="0.8"/></svg>
+            </div>
+            <span class="card-title">Update component library tokens</span>
+            <span class="card-id">TSK-233</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-purple">Design System</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-medium">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 6h10M3 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </div>
+              <span class="attachment-count">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M8.5 2.5l-5 5a2.83 2.83 0 004 4l5-5a1.42 1.42 0 00-2-2l-5 5a.71.71 0 001 1l4-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                1
+              </span>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar-group">
+                <div class="avatar avatar-b">A</div>
+                <div class="avatar avatar-c">M</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PDF/document preview -->
+      <div class="card-wrapper">
+        <div class="card-label">Document</div>
+        <div class="task-card status-todo">
+          <div class="card-image-preview">
+            <div class="preview-placeholder" style="background: linear-gradient(135deg, #141420 0%, #1A1A2E 50%, #16213E 100%);">
+              <!-- Document-like placeholder -->
+              <svg viewBox="0 0 80 80" fill="none" style="width:56px;height:56px;">
+                <rect x="18" y="6" width="44" height="58" rx="3" fill="rgba(250,250,250,0.03)" stroke="#2A2A2E" stroke-width="1.2"/>
+                <path d="M48 6v12h14" stroke="#2A2A2E" stroke-width="1.2" stroke-linecap="round"/>
+                <rect x="26" y="24" width="28" height="3" rx="1.5" fill="rgba(250,250,250,0.08)"/>
+                <rect x="26" y="31" width="24" height="3" rx="1.5" fill="rgba(250,250,250,0.05)"/>
+                <rect x="26" y="38" width="28" height="3" rx="1.5" fill="rgba(250,250,250,0.05)"/>
+                <rect x="26" y="45" width="20" height="3" rx="1.5" fill="rgba(250,250,250,0.05)"/>
+                <rect x="26" y="52" width="26" height="3" rx="1.5" fill="rgba(250,250,250,0.04)"/>
+              </svg>
+            </div>
+            <span class="file-badge">PDF</span>
+          </div>
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/></svg>
+            </div>
+            <span class="card-title">Review Q1 architecture proposal</span>
+            <span class="card-id">TSK-241</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-gray">Documentation</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-low">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M3 8h10M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/></svg>
+              </div>
+              <span class="attachment-count">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M8.5 2.5l-5 5a2.83 2.83 0 004 4l5-5a1.42 1.42 0 00-2-2l-5 5a.71.71 0 001 1l4-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                1
+              </span>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar avatar-d">J</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==========================================
+       SECTION 7: Combined Rich Card
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <h2>Rich Combination</h2>
+      <span>Maximum density &mdash; all metadata visible on a single card</span>
+    </div>
+    <div class="card-row">
+
+      <div class="card-wrapper">
+        <div class="card-label">Everything</div>
+        <div class="task-card status-in-progress" style="width: 300px;">
+          <div class="card-image-preview">
+            <div class="preview-placeholder" style="background: linear-gradient(135deg, #0F1922 0%, #12232E 50%, #162D3A 100%);">
+              <svg viewBox="0 0 120 60" fill="none" style="width:100px;height:50px;">
+                <rect x="4" y="4" width="32" height="52" rx="4" fill="rgba(59,130,246,0.1)" stroke="rgba(59,130,246,0.2)" stroke-width="1"/>
+                <rect x="10" y="10" width="20" height="12" rx="2" fill="rgba(59,130,246,0.15)"/>
+                <rect x="10" y="26" width="20" height="3" rx="1.5" fill="rgba(250,250,250,0.06)"/>
+                <rect x="10" y="32" width="14" height="3" rx="1.5" fill="rgba(250,250,250,0.04)"/>
+                <rect x="44" y="4" width="72" height="52" rx="4" fill="rgba(255,112,0,0.05)" stroke="rgba(255,112,0,0.12)" stroke-width="1"/>
+                <rect x="50" y="12" width="40" height="4" rx="2" fill="rgba(250,250,250,0.08)"/>
+                <rect x="50" y="20" width="60" height="3" rx="1.5" fill="rgba(250,250,250,0.05)"/>
+                <rect x="50" y="26" width="54" height="3" rx="1.5" fill="rgba(250,250,250,0.05)"/>
+                <rect x="50" y="32" width="48" height="3" rx="1.5" fill="rgba(250,250,250,0.04)"/>
+                <circle cx="56" cy="46" r="4" fill="rgba(255,112,0,0.15)" stroke="rgba(255,112,0,0.25)" stroke-width="0.8"/>
+                <circle cx="68" cy="46" r="4" fill="rgba(34,197,94,0.15)" stroke="rgba(34,197,94,0.25)" stroke-width="0.8"/>
+                <rect x="80" y="42" width="24" height="8" rx="4" fill="rgba(168,85,247,0.1)" stroke="rgba(168,85,247,0.2)" stroke-width="0.8"/>
+              </svg>
+            </div>
+            <span class="file-badge">FIGMA</span>
+          </div>
+          <div class="card-header">
+            <div class="card-status">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M8 3a5 5 0 010 10" fill="currentColor" opacity="0.8"/></svg>
+            </div>
+            <span class="card-title">Redesign settings dashboard with new nav</span>
+            <span class="card-id">TSK-256</span>
+          </div>
+          <div class="card-labels">
+            <span class="label-chip label-pink">Design</span>
+            <span class="label-chip label-green">Feature</span>
+            <span class="label-chip label-blue">Frontend</span>
+          </div>
+          <div class="subtask-progress">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill mid" style="width: 50%"></div>
+            </div>
+            <span class="subtask-count">4/8</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-footer-left">
+              <div class="priority-icon priority-high">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v7M5 6l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </div>
+              <span class="due-date due-today">
+                <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 5v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Today
+              </span>
+              <span class="attachment-count">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M8.5 2.5l-5 5a2.83 2.83 0 004 4l5-5a1.42 1.42 0 00-2-2l-5 5a.71.71 0 001 1l4-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                4
+              </span>
+              <span class="comment-count">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v5a2 2 0 01-2 2H6l-3 2.5V11H4a2 2 0 01-2-2V4z" stroke="currentColor" stroke-width="1.2"/></svg>
+                12
+              </span>
+            </div>
+            <div class="card-footer-right">
+              <div class="avatar-group">
+                <div class="avatar avatar-e">K</div>
+                <div class="avatar avatar-b">A</div>
+                <div class="avatar avatar-a">S</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

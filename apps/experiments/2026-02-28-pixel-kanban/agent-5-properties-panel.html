@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>Agent 5 — Properties Panel — Character Stats Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Mistral Pixel Palette */
+  --bg-deep:     #0D0D11;
+  --bg-surface:  #14141A;
+  --bg-elevated: #1C1C24;
+  --bg-inset:    #111118;
+  --border:      #2E2E3A;
+  --border-hover:#3E3E4E;
+  --text-primary:#E8E8F0;
+  --text-secondary:#9898A8;
+  --text-muted:  #5E5E6E;
+  --orange:      #FF7000;
+  --orange-dim:  #CC5A00;
+  --red:         #FD3F29;
+  --yellow:      #FFCB00;
+  --green:       #22C55E;
+  --blue:        #3B82F6;
+  --purple:      #A855F7;
+  --pixel-white: #F0F0FF;
+
+  /* Pixel grid */
+  --px: 2px;
+}
+
+html {
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  font-smooth: never;
+  image-rendering: pixelated;
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 40px;
+  overflow-x: hidden;
+}
+
+/* Scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+}
+
+/* ============================================================
+   LAYOUT — Two panels side by side for showcase
+   ============================================================ */
+.showcase {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+}
+
+.showcase-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 12px;
+  letter-spacing: 1px;
+}
+
+/* ============================================================
+   PIXEL WINDOW FRAME
+   ============================================================ */
+.pixel-window {
+  background: var(--bg-surface);
+  border: 3px solid var(--border);
+  position: relative;
+  width: 380px;
+  /* Pixel double-line effect */
+  box-shadow:
+    inset 0 0 0 1px rgba(240,240,255,0.04),
+    0 0 0 1px #0D0D11,
+    4px 4px 0 0 rgba(0,0,0,0.4),
+    0 0 30px rgba(255,112,0,0.04);
+}
+
+.pixel-window--wide {
+  width: 440px;
+}
+
+/* Title bar */
+.window-titlebar {
+  background: var(--bg-elevated);
+  border-bottom: 3px solid var(--border);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  user-select: none;
+}
+
+.window-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--orange);
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.window-title .pixel-deco {
+  color: var(--yellow);
+  font-size: 10px;
+}
+
+.window-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.window-btn {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: var(--bg-surface);
+  transition: all 0.1s steps(2);
+}
+
+.window-btn:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.window-btn--close:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* Window body */
+.window-body {
+  padding: 0;
+  overflow-y: auto;
+}
+
+/* Pixel scrollbar */
+.window-body::-webkit-scrollbar {
+  width: 8px;
+}
+.window-body::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+  border-left: 2px solid var(--border);
+}
+.window-body::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border: 1px solid var(--border);
+}
+.window-body::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ============================================================
+   SECTION HEADERS
+   ============================================================ */
+.section-header {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  padding: 12px 16px 6px;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-top: 2px solid var(--border);
+}
+
+.section-header:first-child {
+  border-top: none;
+}
+
+.section-header .deco {
+  color: var(--border-hover);
+}
+
+/* ============================================================
+   STAT ROW — Core layout for each property
+   ============================================================ */
+.stat-row {
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(46,46,58,0.5);
+  transition: background 0.05s steps(1);
+}
+
+.stat-row:hover {
+  background: rgba(255,112,0,0.03);
+}
+
+.stat-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-secondary);
+  min-width: 70px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.stat-value {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ============================================================
+   QUEST TITLE (top area)
+   ============================================================ */
+.quest-title-area {
+  padding: 16px;
+  border-bottom: 3px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,112,0,0.04) 0%, transparent 100%);
+}
+
+.quest-id {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quest-id .hash {
+  color: var(--orange-dim);
+}
+
+.quest-title-input {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pixel-white);
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  padding: 4px 0;
+  caret-color: var(--orange);
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.1s steps(1);
+}
+
+.quest-title-input:focus {
+  border-bottom-color: var(--orange);
+}
+
+.quest-title-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   STATUS DROPDOWN (pixel style)
+   ============================================================ */
+.status-dropdown {
+  position: relative;
+  display: inline-flex;
+}
+
+.status-btn {
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-primary);
+  transition: all 0.05s steps(1);
+  min-width: 160px;
+}
+
+.status-btn:hover {
+  border-color: var(--border-hover);
+  background: rgba(255,255,255,0.02);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(0,0,0,0.3);
+  flex-shrink: 0;
+}
+
+.status-dot--backlog   { background: var(--text-muted); }
+.status-dot--todo      { background: var(--pixel-white); }
+.status-dot--progress  { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
+.status-dot--review    { background: var(--yellow); }
+.status-dot--done      { background: var(--green); }
+
+.status-arrow {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 8px;
+}
+
+/* Dropdown menu */
+.status-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border-hover);
+  z-index: 100;
+  display: none;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.7), 0 0 0 1px var(--bg-deep);
+}
+
+.status-dropdown.open .status-menu {
+  display: block;
+}
+
+.status-option {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-secondary);
+  transition: all 0.05s steps(1);
+}
+
+.status-option:hover {
+  background: rgba(255,112,0,0.1);
+  color: var(--text-primary);
+}
+
+.status-option.active {
+  color: var(--orange);
+}
+
+.status-option.active::before {
+  content: '▶';
+  font-size: 6px;
+  color: var(--orange);
+  margin-right: 2px;
+}
+
+.status-icon {
+  font-size: 10px;
+  width: 16px;
+  text-align: center;
+}
+
+/* ============================================================
+   AGENT DISPLAY
+   ============================================================ */
+.agent-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.agent-sprite {
+  width: 32px;
+  height: 32px;
+  background: var(--bg-deep);
+  border: 2px solid var(--border);
+  position: relative;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* Pixel art sprite drawn with CSS */
+.agent-sprite canvas {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+.agent-sprite-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* Pixel character using box-shadows */
+.pixel-char {
+  width: 2px;
+  height: 2px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.pixel-char--agent1 {
+  box-shadow:
+    /* Hair */
+    10px 4px var(--orange), 12px 4px var(--orange), 14px 4px var(--orange), 16px 4px var(--orange), 18px 4px var(--orange), 20px 4px var(--orange),
+    8px 6px var(--orange), 10px 6px var(--orange), 12px 6px #cc5a00, 14px 6px #cc5a00, 16px 6px #cc5a00, 18px 6px var(--orange), 20px 6px var(--orange), 22px 6px var(--orange),
+    /* Face */
+    10px 8px #f0c090, 12px 8px #f0c090, 14px 8px #f0c090, 16px 8px #f0c090, 18px 8px #f0c090, 20px 8px #f0c090,
+    10px 10px #f0c090, 12px 10px #2a2a3a, 14px 10px #f0c090, 16px 10px #f0c090, 18px 10px #2a2a3a, 20px 10px #f0c090,
+    10px 12px #f0c090, 12px 12px #f0c090, 14px 12px #f0c090, 16px 12px #f0c090, 18px 12px #f0c090, 20px 12px #f0c090,
+    12px 14px #f0c090, 14px 14px #e0a080, 16px 14px #e0a080, 18px 14px #f0c090,
+    /* Body */
+    8px 16px var(--blue), 10px 16px var(--blue), 12px 16px var(--blue), 14px 16px var(--blue), 16px 16px var(--blue), 18px 16px var(--blue), 20px 16px var(--blue), 22px 16px var(--blue),
+    8px 18px var(--blue), 10px 18px var(--blue), 12px 18px #2a6cd6, 14px 18px #2a6cd6, 16px 18px #2a6cd6, 18px 18px #2a6cd6, 20px 18px var(--blue), 22px 18px var(--blue),
+    8px 20px var(--blue), 10px 20px var(--blue), 12px 20px var(--blue), 14px 20px var(--blue), 16px 20px var(--blue), 18px 20px var(--blue), 20px 20px var(--blue), 22px 20px var(--blue),
+    /* Legs */
+    10px 22px #3a3a4e, 12px 22px #3a3a4e, 14px 22px var(--bg-deep), 16px 22px var(--bg-deep), 18px 22px #3a3a4e, 20px 22px #3a3a4e,
+    10px 24px #3a3a4e, 12px 24px #3a3a4e, 18px 24px #3a3a4e, 20px 24px #3a3a4e,
+    /* Feet */
+    8px 26px #555568, 10px 26px #555568, 12px 26px #555568, 18px 26px #555568, 20px 26px #555568, 22px 26px #555568;
+}
+
+.agent-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.agent-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--pixel-white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.class-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  padding: 3px 6px;
+  border: 2px solid;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.class-badge--coder {
+  color: var(--blue);
+  border-color: var(--blue);
+  background: rgba(59,130,246,0.1);
+}
+
+.class-badge--researcher {
+  color: var(--purple);
+  border-color: var(--purple);
+  background: rgba(168,85,247,0.1);
+}
+
+.class-badge--designer {
+  color: var(--yellow);
+  border-color: var(--yellow);
+  background: rgba(255,203,0,0.1);
+}
+
+.class-badge--devops {
+  color: var(--green);
+  border-color: var(--green);
+  background: rgba(34,197,94,0.1);
+}
+
+.level-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--yellow);
+  background: rgba(255,203,0,0.1);
+  border: 1px solid rgba(255,203,0,0.3);
+  padding: 2px 5px;
+  letter-spacing: 0.5px;
+}
+
+/* Agent XP mini-bar */
+.agent-xp-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  position: relative;
+  margin-top: 2px;
+  overflow: hidden;
+}
+
+.agent-xp-fill {
+  height: 100%;
+  background: var(--orange);
+  position: relative;
+}
+
+.agent-xp-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 4px,
+    rgba(0,0,0,0.3) 4px,
+    rgba(0,0,0,0.3) 5px
+  );
+}
+
+.agent-xp-text {
+  position: absolute;
+  top: -1px;
+  right: 2px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 4px;
+  color: var(--text-muted);
+  line-height: 8px;
+}
+
+/* ============================================================
+   PRIORITY SELECTOR — Icon buttons
+   ============================================================ */
+.priority-selector {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.priority-btn {
+  width: 36px;
+  height: 32px;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.05s steps(1);
+  position: relative;
+}
+
+.priority-btn:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.priority-btn.active {
+  border-color: currentColor;
+  background: rgba(255,255,255,0.05);
+}
+
+.priority-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 25%;
+  right: 25%;
+  height: 2px;
+  background: currentColor;
+}
+
+.priority-btn--urgent {
+  color: var(--red);
+}
+.priority-btn--urgent.active {
+  background: rgba(253,63,41,0.1);
+  box-shadow: 0 0 8px rgba(253,63,41,0.3);
+  animation: urgentPulse 2s ease-in-out infinite;
+}
+
+.priority-btn--high {
+  color: var(--orange);
+}
+.priority-btn--high.active {
+  background: rgba(255,112,0,0.1);
+}
+
+.priority-btn--medium {
+  color: var(--yellow);
+}
+.priority-btn--medium.active {
+  background: rgba(255,203,0,0.1);
+}
+
+.priority-btn--low {
+  color: var(--text-secondary);
+}
+.priority-btn--low.active {
+  background: rgba(152,152,168,0.1);
+}
+
+.priority-btn--none {
+  color: var(--text-muted);
+}
+
+.priority-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  margin-left: 6px;
+  color: var(--text-secondary);
+}
+
+@keyframes urgentPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(253,63,41,0.3); }
+  50%      { box-shadow: 0 0 16px rgba(253,63,41,0.5); }
+}
+
+/* Pixel skull icon */
+.icon-skull { font-size: 14px; }
+.icon-arrows-up { font-size: 12px; font-weight: 700; }
+.icon-arrow { font-size: 14px; }
+.icon-feather { font-size: 12px; }
+.icon-dash { font-size: 14px; letter-spacing: 2px; }
+
+/* ============================================================
+   LABELS — Pixel tag chips
+   ============================================================ */
+.labels-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  align-items: center;
+}
+
+.label-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  padding: 4px 8px;
+  border: 2px solid;
+  cursor: default;
+  letter-spacing: 0.5px;
+  transition: all 0.05s steps(1);
+}
+
+.label-chip .remove {
+  cursor: pointer;
+  opacity: 0.5;
+  font-size: 8px;
+  margin-left: 2px;
+  transition: opacity 0.05s steps(1);
+}
+
+.label-chip:hover .remove {
+  opacity: 1;
+}
+
+.label-chip--frontend {
+  color: var(--blue);
+  border-color: rgba(59,130,246,0.5);
+  background: rgba(59,130,246,0.1);
+}
+
+.label-chip--urgent {
+  color: var(--red);
+  border-color: rgba(253,63,41,0.5);
+  background: rgba(253,63,41,0.1);
+}
+
+.label-chip--design {
+  color: var(--purple);
+  border-color: rgba(168,85,247,0.5);
+  background: rgba(168,85,247,0.1);
+}
+
+.label-chip--bug {
+  color: var(--red);
+  border-color: rgba(253,63,41,0.5);
+  background: rgba(253,63,41,0.1);
+}
+
+.label-chip--feature {
+  color: var(--green);
+  border-color: rgba(34,197,94,0.5);
+  background: rgba(34,197,94,0.1);
+}
+
+.label-chip--api {
+  color: var(--yellow);
+  border-color: rgba(255,203,0,0.5);
+  background: rgba(255,203,0,0.1);
+}
+
+.label-chip--perf {
+  color: var(--orange);
+  border-color: rgba(255,112,0,0.5);
+  background: rgba(255,112,0,0.1);
+}
+
+.add-label-btn {
+  width: 24px;
+  height: 22px;
+  background: var(--bg-elevated);
+  border: 2px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 12px;
+  transition: all 0.05s steps(1);
+}
+
+.add-label-btn:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+  border-style: solid;
+}
+
+/* ============================================================
+   DUE DATE
+   ============================================================ */
+.due-date-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.calendar-icon {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.due-date-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.due-countdown {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--yellow);
+  padding: 2px 6px;
+  border: 1px solid rgba(255,203,0,0.3);
+  background: rgba(255,203,0,0.08);
+  margin-left: auto;
+}
+
+.due-countdown--overdue {
+  color: var(--red);
+  border-color: rgba(253,63,41,0.3);
+  background: rgba(253,63,41,0.08);
+  animation: overdueBlink 1.5s steps(2) infinite;
+}
+
+@keyframes overdueBlink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+/* ============================================================
+   XP REWARD
+   ============================================================ */
+.xp-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.xp-star {
+  font-size: 16px;
+  color: var(--yellow);
+  animation: starGlow 3s ease-in-out infinite;
+}
+
+@keyframes starGlow {
+  0%, 100% { text-shadow: 0 0 4px rgba(255,203,0,0.3); }
+  50%      { text-shadow: 0 0 10px rgba(255,203,0,0.6); }
+}
+
+.xp-input {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: var(--yellow);
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  padding: 4px 8px;
+  width: 70px;
+  text-align: right;
+  caret-color: var(--yellow);
+  outline: none;
+  transition: border-color 0.05s steps(1);
+}
+
+.xp-input:focus {
+  border-color: var(--yellow);
+}
+
+.xp-unit {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   STAT BARS — RPG style ████░░
+   ============================================================ */
+.stat-bar-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-bar {
+  flex: 1;
+  height: 14px;
+  background: var(--bg-deep);
+  border: 2px solid var(--border);
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.stat-bar-fill {
+  height: 100%;
+  position: relative;
+  transition: width 0.3s steps(10);
+}
+
+/* Segmented look + top shine */
+.stat-bar-fill::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: rgba(255,255,255,0.15);
+}
+
+.stat-bar-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 6px,
+    rgba(0,0,0,0.35) 6px,
+    rgba(0,0,0,0.35) 8px
+  );
+}
+
+.stat-bar-fill--hp     { background: var(--green); }
+.stat-bar-fill--mp     { background: var(--blue); }
+.stat-bar-fill--xp     { background: var(--orange); }
+.stat-bar-fill--atk    { background: var(--red); }
+.stat-bar-fill--def    { background: var(--purple); }
+.stat-bar-fill--spd    { background: var(--yellow); }
+
+.stat-bar-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-secondary);
+  min-width: 32px;
+  text-align: right;
+}
+
+/* ASCII bar rendering */
+.ascii-bar {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0px;
+  line-height: 1;
+}
+
+.ascii-bar .filled {
+  color: var(--orange);
+}
+
+.ascii-bar .empty {
+  color: var(--border);
+}
+
+.ascii-bar-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-left: 6px;
+  min-width: 30px;
+}
+
+/* ============================================================
+   SUBTASKS — Pixel checkboxes
+   ============================================================ */
+.subtasks-list {
+  padding: 4px 16px 12px;
+}
+
+.subtask-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(46,46,58,0.3);
+  cursor: pointer;
+  transition: all 0.05s steps(1);
+}
+
+.subtask-item:last-child {
+  border-bottom: none;
+}
+
+.subtask-item:hover {
+  background: rgba(255,112,0,0.02);
+  padding-left: 4px;
+}
+
+.pixel-checkbox {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: transparent;
+  background: var(--bg-deep);
+  flex-shrink: 0;
+  transition: all 0.05s steps(1);
+}
+
+.subtask-item.checked .pixel-checkbox {
+  color: var(--green);
+  border-color: var(--green);
+  background: rgba(34,197,94,0.1);
+}
+
+.subtask-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.subtask-item.checked .subtask-text {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--text-muted);
+}
+
+.subtask-xp {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--yellow);
+  opacity: 0.6;
+}
+
+.subtask-item.checked .subtask-xp {
+  opacity: 0.3;
+}
+
+.add-subtask-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  transition: color 0.05s steps(1);
+  margin-top: 4px;
+}
+
+.add-subtask-btn:hover {
+  color: var(--orange);
+}
+
+.add-subtask-btn .plus {
+  width: 14px;
+  height: 14px;
+  border: 2px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  transition: all 0.05s steps(1);
+}
+
+.add-subtask-btn:hover .plus {
+  border-color: var(--orange);
+  border-style: solid;
+  color: var(--orange);
+}
+
+/* ============================================================
+   PROGRESS BAR — HP Bar style
+   ============================================================ */
+.progress-area {
+  padding: 12px 16px;
+  border-top: 2px solid var(--border);
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.progress-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progress-label .heart {
+  color: var(--red);
+  font-size: 10px;
+}
+
+.progress-pct {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--green);
+}
+
+.hp-bar {
+  height: 20px;
+  background: var(--bg-deep);
+  border: 2px solid var(--border);
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  overflow: hidden;
+}
+
+.hp-segment {
+  flex: 1;
+  background: var(--border);
+  transition: background 0.1s steps(1);
+  position: relative;
+}
+
+.hp-segment.filled {
+  background: var(--green);
+}
+
+.hp-segment.filled::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: rgba(255,255,255,0.15);
+}
+
+.hp-segment.partial {
+  background: linear-gradient(90deg, var(--green) 50%, var(--border) 50%);
+}
+
+.progress-sub-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* ============================================================
+   FOOTER BUTTONS
+   ============================================================ */
+.panel-footer {
+  padding: 12px 16px;
+  border-top: 3px solid var(--border);
+  display: flex;
+  gap: 8px;
+  background: var(--bg-elevated);
+}
+
+.pixel-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  padding: 8px 14px;
+  border: 2px solid;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.5px;
+  transition: all 0.05s steps(1);
+  position: relative;
+}
+
+.pixel-btn:hover {
+  transform: translateY(-1px);
+}
+
+.pixel-btn:active {
+  transform: translateY(1px);
+}
+
+.pixel-btn--primary {
+  color: var(--bg-deep);
+  background: var(--orange);
+  border-color: var(--orange);
+}
+
+.pixel-btn--primary:hover {
+  background: #ff8a2e;
+  border-color: #ff8a2e;
+}
+
+.pixel-btn--secondary {
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border-color: var(--border);
+}
+
+.pixel-btn--secondary:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.pixel-btn--danger {
+  color: var(--red);
+  background: rgba(253,63,41,0.08);
+  border-color: rgba(253,63,41,0.4);
+}
+
+.pixel-btn--danger:hover {
+  background: rgba(253,63,41,0.15);
+  border-color: var(--red);
+}
+
+.btn-spacer {
+  flex: 1;
+}
+
+/* ============================================================
+   DECORATIVE ELEMENTS
+   ============================================================ */
+.pixel-divider {
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--border) 0px,
+    var(--border) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  margin: 0 16px;
+}
+
+.corner-deco {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+}
+
+.corner-deco--tl {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--orange);
+  border-left: 2px solid var(--orange);
+}
+
+.corner-deco--tr {
+  top: -1px;
+  right: -1px;
+  border-top: 2px solid var(--orange);
+  border-right: 2px solid var(--orange);
+}
+
+.corner-deco--bl {
+  bottom: -1px;
+  left: -1px;
+  border-bottom: 2px solid var(--orange);
+  border-left: 2px solid var(--orange);
+}
+
+.corner-deco--br {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid var(--orange);
+  border-right: 2px solid var(--orange);
+}
+
+/* ============================================================
+   SECOND PANEL VARIANT — Compact / Alternate quest
+   ============================================================ */
+
+/* Stat row with ASCII bar inline */
+.stat-row--inline-bar {
+  padding: 8px 16px;
+}
+
+/* Created / Updated metadata */
+.meta-row {
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.meta-row .meta-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  min-width: 56px;
+  color: var(--text-muted);
+}
+
+.meta-row .meta-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes pixelFadeIn {
+  0%   { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.stat-row, .subtask-item {
+  animation: pixelFadeIn 0.2s steps(4) both;
+}
+
+.stat-row:nth-child(1)  { animation-delay: 0.02s; }
+.stat-row:nth-child(2)  { animation-delay: 0.04s; }
+.stat-row:nth-child(3)  { animation-delay: 0.06s; }
+.stat-row:nth-child(4)  { animation-delay: 0.08s; }
+.stat-row:nth-child(5)  { animation-delay: 0.10s; }
+.stat-row:nth-child(6)  { animation-delay: 0.12s; }
+.stat-row:nth-child(7)  { animation-delay: 0.14s; }
+
+.subtask-item:nth-child(1) { animation-delay: 0.16s; }
+.subtask-item:nth-child(2) { animation-delay: 0.18s; }
+.subtask-item:nth-child(3) { animation-delay: 0.20s; }
+.subtask-item:nth-child(4) { animation-delay: 0.22s; }
+.subtask-item:nth-child(5) { animation-delay: 0.24s; }
+
+/* Tooltip */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  padding: 4px 8px;
+  white-space: nowrap;
+  z-index: 200;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+}
+
+/* ============================================================
+   RESPONSIVE — keep centered
+   ============================================================ */
+@media (max-width: 960px) {
+  .showcase {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="showcase">
+
+  <!-- =========================================================
+       PANEL 1 — Full Properties Panel (Active Quest)
+       ========================================================= -->
+  <div>
+    <div class="pixel-window pixel-window--wide">
+      <!-- Corner decorations -->
+      <div class="corner-deco corner-deco--tl"></div>
+      <div class="corner-deco corner-deco--tr"></div>
+      <div class="corner-deco corner-deco--bl"></div>
+      <div class="corner-deco corner-deco--br"></div>
+
+      <!-- Title Bar -->
+      <div class="window-titlebar">
+        <div class="window-title">
+          <span class="pixel-deco">&#9876;</span>
+          QUEST STATS
+          <span class="pixel-deco">&#9876;</span>
+        </div>
+        <div class="window-controls">
+          <div class="window-btn" title="Minimize">&#8722;</div>
+          <div class="window-btn" title="Maximize">&#9633;</div>
+          <div class="window-btn window-btn--close" title="Close">&#10005;</div>
+        </div>
+      </div>
+
+      <div class="window-body">
+
+        <!-- Quest Title -->
+        <div class="quest-title-area">
+          <div class="quest-id">
+            <span class="hash">#</span>QST-247
+            <span style="margin-left:auto; color:var(--orange); font-size:6px;">&#9733; EPIC</span>
+          </div>
+          <input class="quest-title-input" type="text" value="Implement pixel-art agent renderer" />
+        </div>
+
+        <!-- ── CORE STATS ── -->
+        <div class="section-header">
+          <span class="deco">&#9670;</span>
+          CORE STATS
+          <span class="deco">&#9670;</span>
+        </div>
+
+        <!-- Status -->
+        <div class="stat-row">
+          <div class="stat-label">STATUS</div>
+          <div class="stat-value">
+            <div class="status-dropdown" id="statusDropdown">
+              <button class="status-btn" onclick="toggleDropdown()">
+                <span class="status-dot status-dot--progress"></span>
+                IN PROGRESS
+                <span class="status-arrow">&#9660;</span>
+              </button>
+              <div class="status-menu">
+                <div class="status-option" onclick="selectStatus(this, 'backlog')">
+                  <span class="status-dot status-dot--backlog"></span>
+                  <span class="status-icon">&#128220;</span>
+                  BACKLOG
+                </div>
+                <div class="status-option" onclick="selectStatus(this, 'todo')">
+                  <span class="status-dot status-dot--todo"></span>
+                  <span class="status-icon">&#9876;</span>
+                  TODO
+                </div>
+                <div class="status-option active" onclick="selectStatus(this, 'progress')">
+                  <span class="status-dot status-dot--progress"></span>
+                  <span class="status-icon">&#128293;</span>
+                  IN PROGRESS
+                </div>
+                <div class="status-option" onclick="selectStatus(this, 'review')">
+                  <span class="status-dot status-dot--review"></span>
+                  <span class="status-icon">&#128065;</span>
+                  REVIEW
+                </div>
+                <div class="status-option" onclick="selectStatus(this, 'done')">
+                  <span class="status-dot status-dot--done"></span>
+                  <span class="status-icon">&#11088;</span>
+                  DONE
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Priority -->
+        <div class="stat-row">
+          <div class="stat-label">PRIORITY</div>
+          <div class="stat-value">
+            <div class="priority-selector">
+              <div class="priority-btn priority-btn--urgent" data-tooltip="BOSS FIGHT" onclick="selectPriority(this)">
+                <span class="icon-skull">&#9760;</span>
+              </div>
+              <div class="priority-btn priority-btn--high active" data-tooltip="ELITE" onclick="selectPriority(this)">
+                <span class="icon-arrows-up">&#9650;&#9650;</span>
+              </div>
+              <div class="priority-btn priority-btn--medium" data-tooltip="STANDARD" onclick="selectPriority(this)">
+                <span class="icon-arrow">&#9650;</span>
+              </div>
+              <div class="priority-btn priority-btn--low" data-tooltip="SIDE QUEST" onclick="selectPriority(this)">
+                <span class="icon-feather">&#10048;</span>
+              </div>
+              <div class="priority-btn priority-btn--none" data-tooltip="MISC" onclick="selectPriority(this)">
+                <span class="icon-dash">&#8211;</span>
+              </div>
+            </div>
+            <span class="priority-label">HIGH</span>
+          </div>
+        </div>
+
+        <!-- Agent -->
+        <div class="stat-row">
+          <div class="stat-label">AGENT</div>
+          <div class="stat-value">
+            <div class="agent-display">
+              <div class="agent-sprite">
+                <div class="agent-sprite-inner">
+                  <div class="pixel-char pixel-char--agent1"></div>
+                </div>
+              </div>
+              <div class="agent-info">
+                <div class="agent-name">Agent-03 Pixel</div>
+                <div class="agent-meta">
+                  <span class="class-badge class-badge--coder">CODER</span>
+                  <span class="level-badge">LV.7</span>
+                </div>
+                <div class="agent-xp-bar">
+                  <div class="agent-xp-fill" style="width:62%"></div>
+                  <span class="agent-xp-text">1,860 / 3,000 XP</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── QUEST DETAILS ── -->
+        <div class="section-header">
+          <span class="deco">&#9670;</span>
+          QUEST DETAILS
+          <span class="deco">&#9670;</span>
+        </div>
+
+        <!-- Labels -->
+        <div class="stat-row">
+          <div class="stat-label">LABELS</div>
+          <div class="stat-value">
+            <div class="labels-area">
+              <span class="label-chip label-chip--frontend">FRONTEND <span class="remove" onclick="this.parentElement.remove()">&#10005;</span></span>
+              <span class="label-chip label-chip--design">PIXEL-ART <span class="remove" onclick="this.parentElement.remove()">&#10005;</span></span>
+              <span class="label-chip label-chip--feature">FEATURE <span class="remove" onclick="this.parentElement.remove()">&#10005;</span></span>
+              <div class="add-label-btn" data-tooltip="ADD LABEL">+</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Due Date -->
+        <div class="stat-row">
+          <div class="stat-label">DUE</div>
+          <div class="stat-value">
+            <div class="due-date-display">
+              <span class="calendar-icon">&#9203;</span>
+              <span class="due-date-text">2026-03-05</span>
+              <span class="due-countdown">5 DAYS</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- XP Reward -->
+        <div class="stat-row">
+          <div class="stat-label">XP</div>
+          <div class="stat-value">
+            <div class="xp-display">
+              <span class="xp-star">&#9733;</span>
+              <input class="xp-input" type="number" value="250" min="0" step="10" />
+              <span class="xp-unit">XP</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── POWER STATS (ASCII bars) ── -->
+        <div class="section-header">
+          <span class="deco">&#9670;</span>
+          POWER STATS
+          <span class="deco">&#9670;</span>
+        </div>
+
+        <div class="stat-row stat-row--inline-bar">
+          <div class="stat-label" style="color:var(--red);">STR</div>
+          <div class="stat-value">
+            <div class="stat-bar-area">
+              <div class="stat-bar">
+                <div class="stat-bar-fill stat-bar-fill--atk" style="width:67%"></div>
+              </div>
+              <span class="stat-bar-text" style="color:var(--red);">67%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-row stat-row--inline-bar">
+          <div class="stat-label" style="color:var(--blue);">DEF</div>
+          <div class="stat-value">
+            <div class="stat-bar-area">
+              <div class="stat-bar">
+                <div class="stat-bar-fill stat-bar-fill--mp" style="width:42%"></div>
+              </div>
+              <span class="stat-bar-text" style="color:var(--blue);">42%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-row stat-row--inline-bar">
+          <div class="stat-label" style="color:var(--yellow);">SPD</div>
+          <div class="stat-value">
+            <div class="stat-bar-area">
+              <div class="stat-bar">
+                <div class="stat-bar-fill stat-bar-fill--spd" style="width:83%"></div>
+              </div>
+              <span class="stat-bar-text" style="color:var(--yellow);">83%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-row stat-row--inline-bar">
+          <div class="stat-label" style="color:var(--purple);">MAG</div>
+          <div class="stat-value">
+            <div class="stat-bar-area">
+              <div class="stat-bar">
+                <div class="stat-bar-fill stat-bar-fill--def" style="width:58%"></div>
+              </div>
+              <span class="stat-bar-text" style="color:var(--purple);">58%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-row stat-row--inline-bar">
+          <div class="stat-label" style="color:var(--green);">VIT</div>
+          <div class="stat-value">
+            <div class="stat-bar-area">
+              <div class="stat-bar">
+                <div class="stat-bar-fill stat-bar-fill--hp" style="width:75%"></div>
+              </div>
+              <span class="stat-bar-text" style="color:var(--green);">75%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-row stat-row--inline-bar">
+          <div class="stat-label" style="color:var(--orange);">XP</div>
+          <div class="stat-value">
+            <div class="stat-bar-area">
+              <div class="stat-bar">
+                <div class="stat-bar-fill stat-bar-fill--xp" style="width:54%"></div>
+              </div>
+              <span class="stat-bar-text" style="color:var(--orange);">54%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── SUBTASKS ── -->
+        <div class="section-header">
+          <span class="deco">&#9670;</span>
+          SUBTASKS
+          <span class="deco" style="margin-left:4px;">4/6</span>
+        </div>
+
+        <div class="subtasks-list">
+          <div class="subtask-item checked" onclick="toggleSubtask(this)">
+            <div class="pixel-checkbox">&#9632;</div>
+            <span class="subtask-text">Set up Canvas 2D renderer</span>
+            <span class="subtask-xp">+30 XP</span>
+          </div>
+          <div class="subtask-item checked" onclick="toggleSubtask(this)">
+            <div class="pixel-checkbox">&#9632;</div>
+            <span class="subtask-text">Create sprite sheet parser</span>
+            <span class="subtask-xp">+40 XP</span>
+          </div>
+          <div class="subtask-item checked" onclick="toggleSubtask(this)">
+            <div class="pixel-checkbox">&#9632;</div>
+            <span class="subtask-text">Implement walk animation</span>
+            <span class="subtask-xp">+50 XP</span>
+          </div>
+          <div class="subtask-item checked" onclick="toggleSubtask(this)">
+            <div class="pixel-checkbox">&#9632;</div>
+            <span class="subtask-text">Add idle animation states</span>
+            <span class="subtask-xp">+30 XP</span>
+          </div>
+          <div class="subtask-item" onclick="toggleSubtask(this)">
+            <div class="pixel-checkbox">&#9633;</div>
+            <span class="subtask-text">Speech bubble overlay system</span>
+            <span class="subtask-xp">+40 XP</span>
+          </div>
+          <div class="subtask-item" onclick="toggleSubtask(this)">
+            <div class="pixel-checkbox">&#9633;</div>
+            <span class="subtask-text">Desk interaction triggers</span>
+            <span class="subtask-xp">+60 XP</span>
+          </div>
+          <div class="add-subtask-btn">
+            <div class="plus">+</div>
+            Add subtask...
+          </div>
+        </div>
+
+        <!-- Progress HP Bar -->
+        <div class="progress-area">
+          <div class="progress-header">
+            <div class="progress-label">
+              <span class="heart">&#9829;</span>
+              QUEST HP
+            </div>
+            <div class="progress-pct">67%</div>
+          </div>
+          <div class="hp-bar" id="hpBar1">
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment"></div>
+            <div class="hp-segment"></div>
+            <div class="hp-segment"></div>
+            <div class="hp-segment"></div>
+          </div>
+          <div class="progress-sub-text">4 of 6 subtasks complete</div>
+        </div>
+
+        <!-- Metadata -->
+        <div style="border-top: 2px solid var(--border); padding: 8px 0;">
+          <div class="meta-row">
+            <span class="meta-label">CREATED</span>
+            <span class="meta-value">2026-02-24 09:15 AM</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">UPDATED</span>
+            <span class="meta-value">2026-02-28 02:34 PM</span>
+          </div>
+        </div>
+
+      </div><!-- /window-body -->
+
+      <!-- Footer -->
+      <div class="panel-footer">
+        <button class="pixel-btn pixel-btn--secondary">
+          &#128279; COPY LINK
+        </button>
+        <div class="btn-spacer"></div>
+        <button class="pixel-btn pixel-btn--danger">
+          &#9760; DELETE
+        </button>
+      </div>
+
+    </div><!-- /pixel-window -->
+    <div class="showcase-label">ACTIVE QUEST &mdash; FULL PANEL</div>
+  </div>
+
+
+  <!-- =========================================================
+       PANEL 2 — Compact Variant (Completed Quest)
+       ========================================================= -->
+  <div>
+    <div class="pixel-window">
+      <div class="corner-deco corner-deco--tl" style="border-color: var(--green);"></div>
+      <div class="corner-deco corner-deco--tr" style="border-color: var(--green);"></div>
+      <div class="corner-deco corner-deco--bl" style="border-color: var(--green);"></div>
+      <div class="corner-deco corner-deco--br" style="border-color: var(--green);"></div>
+
+      <div class="window-titlebar">
+        <div class="window-title" style="color: var(--green);">
+          <span class="pixel-deco" style="color: var(--green);">&#9733;</span>
+          QUEST STATS
+          <span class="pixel-deco" style="color: var(--green);">&#9733;</span>
+        </div>
+        <div class="window-controls">
+          <div class="window-btn">&#8722;</div>
+          <div class="window-btn">&#9633;</div>
+          <div class="window-btn window-btn--close">&#10005;</div>
+        </div>
+      </div>
+
+      <div class="window-body">
+
+        <!-- Quest Title -->
+        <div class="quest-title-area" style="background: linear-gradient(180deg, rgba(34,197,94,0.04) 0%, transparent 100%);">
+          <div class="quest-id">
+            <span class="hash" style="color:var(--green);">#</span>QST-189
+            <span style="margin-left:auto; color:var(--green); font-size:6px;">&#10003; VICTORY</span>
+          </div>
+          <input class="quest-title-input" type="text" value="Fix auth token refresh loop" readonly style="opacity: 0.7;" />
+        </div>
+
+        <!-- Status -->
+        <div class="section-header" style="border-top:none;">
+          <span class="deco">&#9670;</span>
+          CORE STATS
+          <span class="deco">&#9670;</span>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-label">STATUS</div>
+          <div class="stat-value">
+            <div class="status-dropdown">
+              <button class="status-btn" style="pointer-events:none;">
+                <span class="status-dot status-dot--done"></span>
+                DONE
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Priority -->
+        <div class="stat-row">
+          <div class="stat-label">PRIORITY</div>
+          <div class="stat-value">
+            <div class="priority-selector">
+              <div class="priority-btn priority-btn--urgent active">
+                <span class="icon-skull">&#9760;</span>
+              </div>
+              <div class="priority-btn priority-btn--high">
+                <span class="icon-arrows-up">&#9650;&#9650;</span>
+              </div>
+              <div class="priority-btn priority-btn--medium">
+                <span class="icon-arrow">&#9650;</span>
+              </div>
+              <div class="priority-btn priority-btn--low">
+                <span class="icon-feather">&#10048;</span>
+              </div>
+              <div class="priority-btn priority-btn--none">
+                <span class="icon-dash">&#8211;</span>
+              </div>
+            </div>
+            <span class="priority-label" style="color:var(--red);">URGENT</span>
+          </div>
+        </div>
+
+        <!-- Agent -->
+        <div class="stat-row">
+          <div class="stat-label">AGENT</div>
+          <div class="stat-value">
+            <div class="agent-display">
+              <div class="agent-sprite" style="border-color: var(--purple);">
+                <div class="agent-sprite-inner">
+                  <div class="pixel-char" style="
+                    box-shadow:
+                      10px 4px var(--purple), 12px 4px var(--purple), 14px 4px var(--purple), 16px 4px var(--purple), 18px 4px var(--purple), 20px 4px var(--purple),
+                      8px 6px var(--purple), 10px 6px #7c3aed, 12px 6px #7c3aed, 14px 6px #7c3aed, 16px 6px #7c3aed, 18px 6px #7c3aed, 20px 6px var(--purple), 22px 6px var(--purple),
+                      10px 8px #f0c090, 12px 8px #f0c090, 14px 8px #f0c090, 16px 8px #f0c090, 18px 8px #f0c090, 20px 8px #f0c090,
+                      10px 10px #f0c090, 12px 10px #2a2a3a, 14px 10px #f0c090, 16px 10px #f0c090, 18px 10px #2a2a3a, 20px 10px #f0c090,
+                      10px 12px #f0c090, 12px 12px #f0c090, 14px 12px #f0c090, 16px 12px #f0c090, 18px 12px #f0c090, 20px 12px #f0c090,
+                      12px 14px #f0c090, 14px 14px #e0a080, 16px 14px #e0a080, 18px 14px #f0c090,
+                      8px 16px var(--green), 10px 16px var(--green), 12px 16px var(--green), 14px 16px var(--green), 16px 16px var(--green), 18px 16px var(--green), 20px 16px var(--green), 22px 16px var(--green),
+                      8px 18px var(--green), 10px 18px #1a9e4a, 12px 18px #1a9e4a, 14px 18px #1a9e4a, 16px 18px #1a9e4a, 18px 18px #1a9e4a, 20px 18px #1a9e4a, 22px 18px var(--green),
+                      8px 20px var(--green), 10px 20px var(--green), 12px 20px var(--green), 14px 20px var(--green), 16px 20px var(--green), 18px 20px var(--green), 20px 20px var(--green), 22px 20px var(--green),
+                      10px 22px #3a3a4e, 12px 22px #3a3a4e, 18px 22px #3a3a4e, 20px 22px #3a3a4e,
+                      10px 24px #3a3a4e, 12px 24px #3a3a4e, 18px 24px #3a3a4e, 20px 24px #3a3a4e,
+                      8px 26px #555568, 10px 26px #555568, 12px 26px #555568, 18px 26px #555568, 20px 26px #555568, 22px 26px #555568;
+                  "></div>
+                </div>
+              </div>
+              <div class="agent-info">
+                <div class="agent-name">Agent-01 Sage</div>
+                <div class="agent-meta">
+                  <span class="class-badge class-badge--devops">DEVOPS</span>
+                  <span class="level-badge">LV.12</span>
+                </div>
+                <div class="agent-xp-bar">
+                  <div class="agent-xp-fill" style="width:88%"></div>
+                  <span class="agent-xp-text">4,400 / 5,000 XP</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Labels -->
+        <div class="section-header">
+          <span class="deco">&#9670;</span>
+          QUEST DETAILS
+          <span class="deco">&#9670;</span>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-label">LABELS</div>
+          <div class="stat-value">
+            <div class="labels-area">
+              <span class="label-chip label-chip--bug">BUG <span class="remove" onclick="this.parentElement.remove()">&#10005;</span></span>
+              <span class="label-chip label-chip--api">AUTH <span class="remove" onclick="this.parentElement.remove()">&#10005;</span></span>
+              <span class="label-chip label-chip--perf">HOTFIX <span class="remove" onclick="this.parentElement.remove()">&#10005;</span></span>
+              <div class="add-label-btn" data-tooltip="ADD LABEL">+</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Due Date — Overdue -->
+        <div class="stat-row">
+          <div class="stat-label">DUE</div>
+          <div class="stat-value">
+            <div class="due-date-display">
+              <span class="calendar-icon">&#9203;</span>
+              <span class="due-date-text" style="text-decoration:line-through; color:var(--text-muted);">2026-02-26</span>
+              <span class="due-countdown" style="color:var(--green); border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.08);">COMPLETED</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- XP Reward -->
+        <div class="stat-row">
+          <div class="stat-label">XP</div>
+          <div class="stat-value">
+            <div class="xp-display">
+              <span class="xp-star">&#9733;</span>
+              <input class="xp-input" type="number" value="500" min="0" step="10" readonly />
+              <span class="xp-unit">XP</span>
+              <span style="font-family:'Press Start 2P',monospace; font-size:7px; color:var(--green); margin-left:4px;">&#10003; EARNED</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Power Stats -->
+        <div class="section-header">
+          <span class="deco">&#9670;</span>
+          POWER STATS
+          <span class="deco">&#9670;</span>
+        </div>
+
+        <div class="stat-row stat-row--inline-bar">
+          <div class="stat-label" style="color:var(--red);">ATK</div>
+          <div class="stat-value">
+            <div class="ascii-bar">
+              <span class="filled" style="color:var(--red);">&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;</span><span class="empty">&#9617;</span>
+            </div>
+            <span class="ascii-bar-pct">92%</span>
+          </div>
+        </div>
+
+        <div class="stat-row stat-row--inline-bar">
+          <div class="stat-label" style="color:var(--blue);">DEF</div>
+          <div class="stat-value">
+            <div class="ascii-bar">
+              <span class="filled" style="color:var(--blue);">&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;</span><span class="empty">&#9617;&#9617;&#9617;</span>
+            </div>
+            <span class="ascii-bar-pct">75%</span>
+          </div>
+        </div>
+
+        <div class="stat-row stat-row--inline-bar">
+          <div class="stat-label" style="color:var(--green);">HP</div>
+          <div class="stat-value">
+            <div class="ascii-bar">
+              <span class="filled" style="color:var(--green);">&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;</span>
+            </div>
+            <span class="ascii-bar-pct">100%</span>
+          </div>
+        </div>
+
+        <!-- Subtasks (all done) -->
+        <div class="section-header">
+          <span class="deco">&#9670;</span>
+          SUBTASKS
+          <span class="deco" style="color:var(--green); margin-left:4px;">3/3 &#10003;</span>
+        </div>
+
+        <div class="subtasks-list">
+          <div class="subtask-item checked" onclick="toggleSubtask(this)">
+            <div class="pixel-checkbox">&#9632;</div>
+            <span class="subtask-text">Identify token refresh race condition</span>
+            <span class="subtask-xp">+100 XP</span>
+          </div>
+          <div class="subtask-item checked" onclick="toggleSubtask(this)">
+            <div class="pixel-checkbox">&#9632;</div>
+            <span class="subtask-text">Add mutex lock to refresh endpoint</span>
+            <span class="subtask-xp">+200 XP</span>
+          </div>
+          <div class="subtask-item checked" onclick="toggleSubtask(this)">
+            <div class="pixel-checkbox">&#9632;</div>
+            <span class="subtask-text">Write regression test suite</span>
+            <span class="subtask-xp">+200 XP</span>
+          </div>
+        </div>
+
+        <!-- Progress HP Bar — Full -->
+        <div class="progress-area">
+          <div class="progress-header">
+            <div class="progress-label">
+              <span class="heart" style="color:var(--green);">&#9829;</span>
+              QUEST HP
+            </div>
+            <div class="progress-pct" style="color:var(--green);">100%</div>
+          </div>
+          <div class="hp-bar">
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+            <div class="hp-segment filled"></div>
+          </div>
+          <div class="progress-sub-text" style="color:var(--green);">&#9733; QUEST COMPLETE &#9733;</div>
+        </div>
+
+        <!-- Metadata -->
+        <div style="border-top: 2px solid var(--border); padding: 8px 0;">
+          <div class="meta-row">
+            <span class="meta-label">CREATED</span>
+            <span class="meta-value">2026-02-20 11:00 AM</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">CLOSED</span>
+            <span class="meta-value" style="color:var(--green);">2026-02-27 05:42 PM</span>
+          </div>
+        </div>
+
+      </div><!-- /window-body -->
+
+      <!-- Footer -->
+      <div class="panel-footer">
+        <button class="pixel-btn pixel-btn--secondary">
+          &#128279; COPY LINK
+        </button>
+        <div class="btn-spacer"></div>
+        <button class="pixel-btn pixel-btn--danger">
+          &#9760; DELETE
+        </button>
+      </div>
+
+    </div><!-- /pixel-window -->
+    <div class="showcase-label">COMPLETED QUEST &mdash; VICTORY</div>
+  </div>
+
+</div><!-- /showcase -->
+
+
+<script>
+// ── Status Dropdown ──
+function toggleDropdown() {
+  const dd = document.getElementById('statusDropdown');
+  dd.classList.toggle('open');
+}
+
+function selectStatus(el, status) {
+  const dd = document.getElementById('statusDropdown');
+  const btn = dd.querySelector('.status-btn');
+  const options = dd.querySelectorAll('.status-option');
+
+  // Remove active from all
+  options.forEach(o => o.classList.remove('active'));
+  el.classList.add('active');
+
+  // Status label map
+  const labels = {
+    backlog: 'BACKLOG',
+    todo: 'TODO',
+    progress: 'IN PROGRESS',
+    review: 'REVIEW',
+    done: 'DONE'
+  };
+
+  // Update button
+  const dot = btn.querySelector('.status-dot');
+  dot.className = 'status-dot status-dot--' + status;
+  btn.childNodes[2].textContent = '\n                ' + labels[status] + '\n                ';
+
+  dd.classList.remove('open');
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', (e) => {
+  const dd = document.getElementById('statusDropdown');
+  if (dd && !dd.contains(e.target)) {
+    dd.classList.remove('open');
+  }
+});
+
+// ── Priority Selector ──
+function selectPriority(el) {
+  const selector = el.parentElement;
+  selector.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+
+  // Update label
+  const label = selector.parentElement.querySelector('.priority-label');
+  if (label) {
+    const names = ['URGENT', 'HIGH', 'MEDIUM', 'LOW', 'NONE'];
+    const colors = ['var(--red)', 'var(--orange)', 'var(--yellow)', 'var(--text-secondary)', 'var(--text-muted)'];
+    const btns = Array.from(selector.children);
+    const idx = btns.indexOf(el);
+    label.textContent = names[idx] || '';
+    label.style.color = colors[idx] || '';
+  }
+}
+
+// ── Subtask Toggle ──
+function toggleSubtask(el) {
+  el.classList.toggle('checked');
+  const cb = el.querySelector('.pixel-checkbox');
+  if (el.classList.contains('checked')) {
+    cb.innerHTML = '&#9632;';
+  } else {
+    cb.innerHTML = '&#9633;';
+  }
+  updateProgress();
+}
+
+// ── Update HP Progress ──
+function updateProgress() {
+  // Only for the first panel
+  const panel1 = document.querySelector('.pixel-window--wide');
+  if (!panel1) return;
+
+  const subtasks = panel1.querySelectorAll('.subtask-item');
+  const checked = panel1.querySelectorAll('.subtask-item.checked');
+  const total = subtasks.length;
+  const done = checked.length;
+  const pct = Math.round((done / total) * 100);
+
+  // Update progress text
+  const pctEl = panel1.querySelector('.progress-pct');
+  if (pctEl) pctEl.textContent = pct + '%';
+
+  const subText = panel1.querySelector('.progress-sub-text');
+  if (subText) subText.textContent = done + ' of ' + total + ' subtasks complete';
+
+  // Update HP bar segments
+  const segments = panel1.querySelectorAll('#hpBar1 .hp-segment');
+  const fillCount = Math.round((done / total) * segments.length);
+  segments.forEach((seg, i) => {
+    seg.classList.toggle('filled', i < fillCount);
+  });
+
+  // Update section header count
+  const headers = panel1.querySelectorAll('.section-header');
+  headers.forEach(h => {
+    const deco = h.querySelectorAll('.deco');
+    if (deco.length > 1 && h.textContent.includes('SUBTASKS')) {
+      deco[1].textContent = done + '/' + total;
+      if (done === total) {
+        deco[1].style.color = 'var(--green)';
+        deco[1].textContent += ' \u2713';
+      } else {
+        deco[1].style.color = '';
+      }
+    }
+  });
+}
+</script>
+
+</body>
+</html>

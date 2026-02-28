@@ -1,0 +1,2040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent 7: Badge & Icon System — Pixel Sprite Sheet</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════════ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  /* Mistral Pixel Palette */
+  --bg-deep:    #0D0D11;
+  --bg-surface: #14141A;
+  --bg-elevated:#1C1C24;
+  --border:     #2E2E3A;
+  --border-hover:#3E3E4E;
+  --text-primary:#E8E8F0;
+  --text-secondary:#9898A8;
+  --text-muted:  #5E5E6E;
+  --orange:      #FF7000;
+  --red:         #FD3F29;
+  --yellow:      #FFCB00;
+  --green:       #22C55E;
+  --blue:        #3B82F6;
+  --purple:      #A855F7;
+  --white:       #F0F0FF;
+  --pink:        #EC4899;
+  --cyan:        #06B6D4;
+
+  /* Pixel scale */
+  --px: 3px;
+}
+
+html {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  image-rendering: pixelated;
+}
+
+body {
+  min-height: 100vh;
+  padding: 24px;
+  overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════
+   SCANLINE OVERLAY
+   ═══════════════════════════════════════════ */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+}
+
+/* ═══════════════════════════════════════════
+   PIXEL FONT HELPERS
+   ═══════════════════════════════════════════ */
+.pixel-font {
+  font-family: 'Press Start 2P', monospace;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+}
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ═══════════════════════════════════════════
+   PAGE HEADER
+   ═══════════════════════════════════════════ */
+.page-header {
+  text-align: center;
+  margin-bottom: 32px;
+  padding: 20px;
+  background: var(--bg-surface);
+  border: 3px solid var(--border);
+  box-shadow:
+    inset 2px 2px 0 rgba(240,240,255,0.05),
+    inset -2px -2px 0 rgba(0,0,0,0.3),
+    6px 6px 0 rgba(0,0,0,0.4);
+  position: relative;
+}
+.page-header::before {
+  content: '────────────────────────────────────────────';
+  display: block;
+  color: var(--border);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.page-header::after {
+  content: '────────────────────────────────────────────';
+  display: block;
+  color: var(--border);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  letter-spacing: 2px;
+  margin-top: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.page-header h1 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: var(--orange);
+  text-shadow: 3px 3px 0 rgba(0,0,0,0.5);
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+.page-header p {
+  color: var(--text-secondary);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  line-height: 1.8;
+}
+
+/* ═══════════════════════════════════════════
+   PIXEL WINDOW FRAME
+   ═══════════════════════════════════════════ */
+.pixel-window {
+  background: var(--bg-surface);
+  border: 3px solid var(--border);
+  margin-bottom: 24px;
+  box-shadow:
+    inset 1px 1px 0 rgba(240,240,255,0.04),
+    inset -1px -1px 0 rgba(0,0,0,0.2),
+    4px 4px 0 rgba(0,0,0,0.35);
+}
+.pixel-window .title-bar {
+  background: var(--bg-elevated);
+  border-bottom: 2px solid var(--border);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pixel-window .title-bar .title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pixel-window .title-bar .title .dot {
+  width: 6px; height: 6px;
+  display: inline-block;
+}
+.pixel-window .title-bar .controls {
+  display: flex;
+  gap: 6px;
+}
+.pixel-window .title-bar .controls span {
+  display: block;
+  width: 12px; height: 12px;
+  border: 2px solid var(--border-hover);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  text-align: center;
+  line-height: 8px;
+  color: var(--text-muted);
+}
+.pixel-window .window-body {
+  padding: 16px;
+}
+
+/* ═══════════════════════════════════════════
+   SECTION LABELS
+   ═══════════════════════════════════════════ */
+.section-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+}
+
+/* ═══════════════════════════════════════════
+   SPRITE GRID
+   ═══════════════════════════════════════════ */
+.sprite-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+.sprite-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  min-width: 80px;
+}
+.sprite-item .sprite-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ═══════════════════════════════════════════
+   16x16 PIXEL ICON SYSTEM (CSS Grid Drawings)
+   Each icon is a 16x16 grid rendered at 3x scale
+   ═══════════════════════════════════════════ */
+.pixel-icon {
+  width: 48px;
+  height: 48px;
+  position: relative;
+  image-rendering: pixelated;
+}
+/* Individual pixels drawn with box-shadow on a 1px element scaled up */
+.pixel-icon .pixels {
+  position: absolute;
+  top: 0; left: 0;
+  width: var(--px);
+  height: var(--px);
+}
+
+/* ═══════════════════════════════════════════
+   STATUS ICONS — 16x16 pixel art
+   ═══════════════════════════════════════════ */
+
+/* BACKLOG — Scroll icon */
+.icon-backlog {
+  width: 48px; height: 48px;
+  background:
+    /* scroll body */
+    linear-gradient(var(--text-muted), var(--text-muted)) 12px 6px / 24px 30px no-repeat,
+    /* top curl */
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 9px 3px / 30px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 6px 6px / 6px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 36px 6px / 6px 3px no-repeat,
+    /* bottom curl */
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 9px 36px / 30px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 6px 33px / 6px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 36px 33px / 6px 3px no-repeat,
+    /* text lines */
+    linear-gradient(var(--bg-surface), var(--bg-surface)) 18px 12px / 12px 3px no-repeat,
+    linear-gradient(var(--bg-surface), var(--bg-surface)) 18px 18px / 15px 3px no-repeat,
+    linear-gradient(var(--bg-surface), var(--bg-surface)) 18px 24px / 9px 3px no-repeat;
+  image-rendering: pixelated;
+}
+
+/* TODO — Sword icon */
+.icon-todo {
+  width: 48px; height: 48px;
+  background:
+    /* blade */
+    linear-gradient(var(--white), var(--white)) 21px 3px / 6px 3px no-repeat,
+    linear-gradient(var(--white), var(--white)) 21px 6px / 6px 24px no-repeat,
+    linear-gradient(#ccc, #ccc) 18px 6px / 3px 24px no-repeat,
+    /* guard */
+    linear-gradient(var(--yellow), var(--yellow)) 12px 30px / 24px 3px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 15px 33px / 18px 3px no-repeat,
+    /* handle */
+    linear-gradient(#8B5E34, #8B5E34) 21px 36px / 6px 9px no-repeat,
+    /* pommel */
+    linear-gradient(var(--yellow), var(--yellow)) 18px 42px / 12px 3px no-repeat;
+  image-rendering: pixelated;
+}
+
+/* IN PROGRESS — Fire/gear icon */
+.icon-inprogress {
+  width: 48px; height: 48px;
+  position: relative;
+  background:
+    /* gear body */
+    linear-gradient(var(--orange), var(--orange)) 15px 15px / 18px 18px no-repeat,
+    /* gear teeth */
+    linear-gradient(var(--orange), var(--orange)) 21px 9px / 6px 6px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 21px 33px / 6px 6px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 9px 21px / 6px 6px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 33px 21px / 6px 6px no-repeat,
+    /* center hole */
+    linear-gradient(var(--bg-surface), var(--bg-surface)) 21px 21px / 6px 6px no-repeat;
+  image-rendering: pixelated;
+  animation: spin-step 1s steps(4) infinite;
+}
+@keyframes spin-step {
+  0%   { transform: rotate(0deg); }
+  25%  { transform: rotate(90deg); }
+  50%  { transform: rotate(180deg); }
+  75%  { transform: rotate(270deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* REVIEW — Eye icon */
+.icon-review {
+  width: 48px; height: 48px;
+  background:
+    /* eye shape */
+    linear-gradient(var(--yellow), var(--yellow)) 15px 15px / 18px 18px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 9px 18px / 6px 12px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 33px 18px / 6px 12px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 6px 21px / 3px 6px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 39px 21px / 3px 6px no-repeat,
+    /* pupil */
+    linear-gradient(var(--bg-deep), var(--bg-deep)) 21px 21px / 6px 6px no-repeat,
+    /* iris */
+    linear-gradient(var(--blue), var(--blue)) 18px 18px / 12px 12px no-repeat,
+    linear-gradient(var(--bg-deep), var(--bg-deep)) 21px 21px / 6px 6px no-repeat,
+    /* highlight */
+    linear-gradient(var(--white), var(--white)) 18px 18px / 3px 3px no-repeat;
+  image-rendering: pixelated;
+}
+
+/* DONE — Star/trophy icon */
+.icon-done {
+  width: 48px; height: 48px;
+  background:
+    /* star points */
+    linear-gradient(var(--green), var(--green)) 21px 3px / 6px 6px no-repeat,
+    linear-gradient(var(--green), var(--green)) 18px 9px / 12px 3px no-repeat,
+    linear-gradient(var(--green), var(--green)) 6px 12px / 36px 6px no-repeat,
+    linear-gradient(var(--green), var(--green)) 9px 18px / 30px 3px no-repeat,
+    linear-gradient(var(--green), var(--green)) 12px 21px / 24px 3px no-repeat,
+    linear-gradient(var(--green), var(--green)) 12px 24px / 9px 3px no-repeat,
+    linear-gradient(var(--green), var(--green)) 27px 24px / 9px 3px no-repeat,
+    linear-gradient(var(--green), var(--green)) 9px 27px / 6px 3px no-repeat,
+    linear-gradient(var(--green), var(--green)) 33px 27px / 6px 3px no-repeat,
+    linear-gradient(var(--green), var(--green)) 6px 30px / 3px 3px no-repeat,
+    linear-gradient(var(--green), var(--green)) 39px 30px / 3px 3px no-repeat;
+  image-rendering: pixelated;
+}
+
+/* ═══════════════════════════════════════════
+   PRIORITY ICONS — 16x16 pixel art
+   ═══════════════════════════════════════════ */
+
+/* URGENT — Skull */
+.icon-urgent {
+  width: 48px; height: 48px;
+  background:
+    /* cranium */
+    linear-gradient(var(--red), var(--red)) 12px 6px / 24px 6px no-repeat,
+    linear-gradient(var(--red), var(--red)) 9px 9px / 30px 12px no-repeat,
+    linear-gradient(var(--red), var(--red)) 12px 21px / 24px 3px no-repeat,
+    /* eyes */
+    linear-gradient(var(--bg-deep), var(--bg-deep)) 15px 12px / 6px 6px no-repeat,
+    linear-gradient(var(--bg-deep), var(--bg-deep)) 27px 12px / 6px 6px no-repeat,
+    /* nose */
+    linear-gradient(var(--bg-deep), var(--bg-deep)) 21px 18px / 6px 3px no-repeat,
+    /* jaw */
+    linear-gradient(var(--red), var(--red)) 15px 24px / 18px 6px no-repeat,
+    /* teeth */
+    linear-gradient(var(--bg-deep), var(--bg-deep)) 18px 24px / 3px 6px no-repeat,
+    linear-gradient(var(--bg-deep), var(--bg-deep)) 24px 24px / 3px 6px no-repeat,
+    linear-gradient(var(--bg-deep), var(--bg-deep)) 30px 24px / 3px 6px no-repeat;
+  image-rendering: pixelated;
+  animation: pulse-urgent 1s steps(2) infinite;
+}
+@keyframes pulse-urgent {
+  0%, 100% { filter: drop-shadow(0 0 4px var(--red)); }
+  50% { filter: drop-shadow(0 0 8px var(--red)) brightness(1.2); }
+}
+
+/* HIGH — Double arrow up */
+.icon-high {
+  width: 48px; height: 48px;
+  background:
+    /* top arrow */
+    linear-gradient(var(--orange), var(--orange)) 21px 3px / 6px 3px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 18px 6px / 12px 3px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 15px 9px / 18px 3px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 12px 12px / 24px 3px no-repeat,
+    /* bottom arrow */
+    linear-gradient(var(--orange), var(--orange)) 21px 18px / 6px 3px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 18px 21px / 12px 3px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 15px 24px / 18px 3px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 12px 27px / 24px 3px no-repeat;
+  image-rendering: pixelated;
+}
+
+/* MEDIUM — Single arrow */
+.icon-medium {
+  width: 48px; height: 48px;
+  background:
+    linear-gradient(var(--yellow), var(--yellow)) 21px 9px / 6px 3px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 18px 12px / 12px 3px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 15px 15px / 18px 3px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 12px 18px / 24px 3px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 9px 21px / 30px 3px no-repeat,
+    /* shaft */
+    linear-gradient(var(--yellow), var(--yellow)) 21px 24px / 6px 12px no-repeat;
+  image-rendering: pixelated;
+}
+
+/* LOW — Feather */
+.icon-low {
+  width: 48px; height: 48px;
+  background:
+    /* quill tip */
+    linear-gradient(var(--text-muted), var(--text-muted)) 33px 6px / 3px 3px no-repeat,
+    /* feather body */
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 30px 9px / 6px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 27px 12px / 9px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 24px 15px / 9px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 21px 18px / 9px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 18px 21px / 9px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 15px 24px / 9px 3px no-repeat,
+    /* shaft */
+    linear-gradient(var(--text-muted), var(--text-muted)) 12px 27px / 6px 3px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 9px 30px / 6px 3px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 6px 33px / 6px 3px no-repeat;
+  image-rendering: pixelated;
+}
+
+/* NONE — Dashed line */
+.icon-none {
+  width: 48px; height: 48px;
+  background:
+    linear-gradient(var(--text-muted), var(--text-muted)) 6px 21px / 9px 3px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 21px 21px / 9px 3px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 36px 21px / 6px 3px no-repeat;
+  image-rendering: pixelated;
+}
+
+/* ═══════════════════════════════════════════
+   LABEL CHIPS
+   ═══════════════════════════════════════════ */
+.label-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  border: 2px solid;
+  background: var(--bg-elevated);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.label-chip .dot {
+  width: 6px;
+  height: 6px;
+  display: inline-block;
+}
+.label-chip.label-red    { border-color: var(--red);    color: var(--red); }
+.label-chip.label-red .dot    { background: var(--red); }
+.label-chip.label-orange { border-color: var(--orange); color: var(--orange); }
+.label-chip.label-orange .dot { background: var(--orange); }
+.label-chip.label-yellow { border-color: var(--yellow); color: var(--yellow); }
+.label-chip.label-yellow .dot { background: var(--yellow); }
+.label-chip.label-green  { border-color: var(--green);  color: var(--green); }
+.label-chip.label-green .dot  { background: var(--green); }
+.label-chip.label-blue   { border-color: var(--blue);   color: var(--blue); }
+.label-chip.label-blue .dot   { background: var(--blue); }
+.label-chip.label-purple { border-color: var(--purple); color: var(--purple); }
+.label-chip.label-purple .dot { background: var(--purple); }
+.label-chip.label-pink   { border-color: var(--pink);   color: var(--pink); }
+.label-chip.label-pink .dot   { background: var(--pink); }
+.label-chip.label-cyan   { border-color: var(--cyan);   color: var(--cyan); }
+.label-chip.label-cyan .dot   { background: var(--cyan); }
+
+.label-chip .remove {
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 8px;
+  margin-left: 2px;
+}
+.label-chip .remove:hover { opacity: 1; }
+
+/* ═══════════════════════════════════════════
+   AGENT CLASS BADGES
+   ═══════════════════════════════════════════ */
+.class-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  border: 2px solid;
+  line-height: 1.4;
+}
+.class-badge.class-coder {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(34,197,94,0.1);
+}
+.class-badge.class-researcher {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: rgba(59,130,246,0.1);
+}
+.class-badge.class-designer {
+  border-color: var(--purple);
+  color: var(--purple);
+  background: rgba(168,85,247,0.1);
+}
+.class-badge.class-devops {
+  border-color: var(--orange);
+  color: var(--orange);
+  background: rgba(255,112,0,0.1);
+}
+.class-badge .class-icon {
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  image-rendering: pixelated;
+}
+/* Tiny pixel icons for classes */
+.class-coder .class-icon {
+  background:
+    linear-gradient(var(--green), var(--green)) 0 3px / 3px 6px no-repeat,
+    linear-gradient(var(--green), var(--green)) 3px 0 / 6px 3px no-repeat,
+    linear-gradient(var(--green), var(--green)) 3px 9px / 6px 3px no-repeat,
+    linear-gradient(var(--green), var(--green)) 9px 3px / 3px 6px no-repeat;
+}
+.class-researcher .class-icon {
+  background:
+    linear-gradient(var(--blue), var(--blue)) 3px 0 / 6px 3px no-repeat,
+    linear-gradient(var(--blue), var(--blue)) 0 3px / 12px 3px no-repeat,
+    linear-gradient(var(--blue), var(--blue)) 3px 6px / 6px 3px no-repeat,
+    linear-gradient(var(--blue), var(--blue)) 6px 9px / 6px 3px no-repeat;
+}
+.class-designer .class-icon {
+  background:
+    linear-gradient(var(--purple), var(--purple)) 3px 0 / 6px 12px no-repeat,
+    linear-gradient(var(--purple), var(--purple)) 0 3px / 12px 6px no-repeat;
+}
+.class-devops .class-icon {
+  background:
+    linear-gradient(var(--orange), var(--orange)) 3px 0 / 6px 3px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 0 3px / 3px 6px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 9px 3px / 3px 6px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 3px 9px / 6px 3px no-repeat;
+}
+
+/* ═══════════════════════════════════════════
+   LEVEL BADGES
+   ═══════════════════════════════════════════ */
+.level-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  border: 2px solid var(--yellow);
+  color: var(--yellow);
+  background: rgba(255,203,0,0.08);
+  line-height: 1;
+}
+.level-badge .lv-label { font-size: 6px; opacity: 0.7; }
+.level-badge .lv-num { font-size: 10px; }
+
+.level-badge.level-low   { border-color: var(--text-secondary); color: var(--text-secondary); background: rgba(152,152,168,0.06); }
+.level-badge.level-mid   { border-color: var(--green); color: var(--green); background: rgba(34,197,94,0.08); }
+.level-badge.level-high  { border-color: var(--orange); color: var(--orange); background: rgba(255,112,0,0.08); }
+.level-badge.level-max   { border-color: var(--purple); color: var(--purple); background: rgba(168,85,247,0.08); animation: glow-badge 1.5s steps(3) infinite; }
+
+@keyframes glow-badge {
+  0%, 100% { box-shadow: 0 0 0 transparent; }
+  50% { box-shadow: 0 0 6px rgba(168,85,247,0.5); }
+}
+
+/* ═══════════════════════════════════════════
+   XP DISPLAYS
+   ═══════════════════════════════════════════ */
+.xp-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Press Start 2P', monospace;
+  line-height: 1;
+}
+.xp-display .xp-star {
+  width: 16px; height: 16px;
+  background:
+    linear-gradient(var(--yellow), var(--yellow)) 6px 0 / 4px 4px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 0 6px / 16px 4px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 4px 4px / 8px 8px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 2px 10px / 4px 4px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 10px 10px / 4px 4px no-repeat;
+  image-rendering: pixelated;
+}
+.xp-display .xp-value {
+  color: var(--yellow);
+  font-size: 10px;
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.4);
+}
+.xp-display .xp-label {
+  font-size: 6px;
+  color: var(--text-muted);
+}
+
+.xp-display.xp-large .xp-star { width: 24px; height: 24px; transform: scale(1.5); }
+.xp-display.xp-large .xp-value { font-size: 14px; }
+
+.xp-display.xp-gain {
+  color: var(--green);
+}
+.xp-display.xp-gain .xp-value {
+  color: var(--green);
+  animation: xp-pop 0.6s steps(3);
+}
+@keyframes xp-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* XP Bar */
+.xp-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.xp-bar {
+  height: 12px;
+  background: var(--bg-deep);
+  border: 2px solid var(--border);
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+.xp-bar-fill {
+  height: 100%;
+  background: var(--orange);
+  transition: width 0.3s steps(10);
+  position: relative;
+}
+.xp-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: rgba(255,255,255,0.15);
+}
+.xp-bar-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Segmented XP bar */
+.xp-bar-segmented {
+  height: 14px;
+  background: var(--bg-deep);
+  border: 2px solid var(--border);
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  flex: 1;
+}
+.xp-bar-segmented .seg {
+  flex: 1;
+  background: var(--border);
+}
+.xp-bar-segmented .seg.filled {
+  background: var(--orange);
+}
+.xp-bar-segmented .seg.filled::after {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 50%;
+  background: rgba(255,255,255,0.15);
+}
+
+/* ═══════════════════════════════════════════
+   PIXEL AVATAR FRAMES
+   ═══════════════════════════════════════════ */
+.avatar-frame {
+  width: 56px;
+  height: 56px;
+  border: 3px solid var(--border);
+  padding: 3px;
+  background: var(--bg-elevated);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatar-frame .avatar-sprite {
+  width: 40px;
+  height: 40px;
+  background: var(--bg-deep);
+  position: relative;
+  image-rendering: pixelated;
+}
+/* Generic pixel person sprite */
+.avatar-sprite::before {
+  content: '';
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background:
+    /* head */
+    linear-gradient(var(--text-primary), var(--text-primary)) 14px 2px / 12px 12px no-repeat,
+    /* body */
+    linear-gradient(var(--blue), var(--blue)) 10px 16px / 20px 12px no-repeat,
+    /* arms */
+    linear-gradient(var(--blue), var(--blue)) 4px 18px / 6px 8px no-repeat,
+    linear-gradient(var(--blue), var(--blue)) 30px 18px / 6px 8px no-repeat,
+    /* legs */
+    linear-gradient(var(--bg-deep), var(--bg-deep)) 18px 28px / 4px 2px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 12px 28px / 6px 10px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 22px 28px / 6px 10px no-repeat;
+  image-rendering: pixelated;
+}
+
+/* Frame states */
+.avatar-frame.frame-selected {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 2px var(--orange), 0 0 8px rgba(255,112,0,0.4);
+  animation: frame-pulse 1s steps(2) infinite;
+}
+@keyframes frame-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--orange), 0 0 8px rgba(255,112,0,0.4); }
+  50% { box-shadow: 0 0 0 2px var(--orange), 0 0 14px rgba(255,112,0,0.6); }
+}
+.avatar-frame.frame-selected::after {
+  content: '';
+  position: absolute;
+  top: -6px; right: -6px;
+  width: 12px; height: 12px;
+  background: var(--orange);
+  border: 2px solid var(--bg-deep);
+}
+
+.avatar-frame.frame-active {
+  border-color: var(--green);
+  box-shadow: 0 0 6px rgba(34,197,94,0.3);
+}
+.avatar-frame.frame-active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px; right: -4px;
+  width: 10px; height: 10px;
+  background: var(--green);
+  border: 2px solid var(--bg-deep);
+  border-radius: 0;
+  animation: blink-dot 2s steps(1) infinite;
+}
+@keyframes blink-dot {
+  0%, 70% { opacity: 1; }
+  71%, 100% { opacity: 0; }
+}
+
+.avatar-frame.frame-idle {
+  border-color: var(--yellow);
+  opacity: 0.8;
+}
+.avatar-frame.frame-idle::after {
+  content: '';
+  position: absolute;
+  bottom: -4px; right: -4px;
+  width: 10px; height: 10px;
+  background: var(--yellow);
+  border: 2px solid var(--bg-deep);
+}
+.avatar-frame.frame-idle .avatar-sprite::before {
+  filter: saturate(0.5);
+}
+
+.avatar-frame.frame-offline {
+  border-color: var(--text-muted);
+  opacity: 0.45;
+}
+.avatar-frame.frame-offline::after {
+  content: '';
+  position: absolute;
+  bottom: -4px; right: -4px;
+  width: 10px; height: 10px;
+  background: var(--text-muted);
+  border: 2px solid var(--bg-deep);
+}
+.avatar-frame.frame-offline .avatar-sprite::before {
+  filter: saturate(0) brightness(0.6);
+}
+
+/* ═══════════════════════════════════════════
+   HOURGLASS ICONS
+   ═══════════════════════════════════════════ */
+.icon-hourglass {
+  width: 48px; height: 48px;
+  image-rendering: pixelated;
+}
+.icon-hourglass.hg-full {
+  background:
+    /* top cap */
+    linear-gradient(var(--yellow), var(--yellow)) 9px 3px / 30px 3px no-repeat,
+    /* top glass */
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 12px 6px / 24px 3px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 15px 9px / 18px 3px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 18px 12px / 12px 3px no-repeat,
+    /* neck */
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 21px 15px / 6px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 18px 18px / 12px 3px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 21px 18px / 6px 3px no-repeat,
+    /* bottom glass */
+    linear-gradient(var(--orange), var(--orange)) 15px 21px / 18px 3px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 12px 24px / 24px 3px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 12px 27px / 24px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 12px 30px / 24px 3px no-repeat,
+    /* bottom cap */
+    linear-gradient(var(--yellow), var(--yellow)) 9px 33px / 30px 3px no-repeat;
+}
+.icon-hourglass.hg-half {
+  background:
+    linear-gradient(var(--yellow), var(--yellow)) 9px 3px / 30px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 12px 6px / 24px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 15px 9px / 18px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 18px 12px / 12px 3px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 21px 15px / 6px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 18px 18px / 12px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 15px 21px / 18px 3px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 12px 24px / 24px 6px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 12px 30px / 24px 3px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 9px 33px / 30px 3px no-repeat;
+}
+.icon-hourglass.hg-low {
+  background:
+    linear-gradient(var(--red), var(--red)) 9px 3px / 30px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 12px 6px / 24px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 15px 9px / 18px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 18px 12px / 12px 3px no-repeat,
+    linear-gradient(var(--red), var(--red)) 21px 15px / 6px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 18px 18px / 12px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 15px 21px / 18px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 12px 24px / 24px 3px no-repeat,
+    linear-gradient(var(--red), var(--red)) 12px 27px / 24px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 12px 30px / 24px 3px no-repeat,
+    linear-gradient(var(--red), var(--red)) 9px 33px / 30px 3px no-repeat;
+  animation: pulse-urgent 1.2s steps(2) infinite;
+}
+.icon-hourglass.hg-empty {
+  background:
+    linear-gradient(var(--text-muted), var(--text-muted)) 9px 3px / 30px 3px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 12px 6px / 24px 3px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 15px 9px / 18px 3px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 18px 12px / 12px 3px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 21px 15px / 6px 3px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 18px 18px / 12px 3px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 15px 21px / 18px 3px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 12px 24px / 24px 3px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 12px 27px / 24px 3px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 12px 30px / 24px 3px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 9px 33px / 30px 3px no-repeat;
+}
+
+/* ═══════════════════════════════════════════
+   ACHIEVEMENT BADGES
+   ═══════════════════════════════════════════ */
+.achievement {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border: 3px solid;
+  background: var(--bg-elevated);
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.05), 4px 4px 0 rgba(0,0,0,0.3);
+  position: relative;
+}
+.achievement .ach-icon {
+  width: 32px;
+  height: 32px;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--bg-deep);
+  image-rendering: pixelated;
+}
+.achievement .ach-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.achievement .ach-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  line-height: 1.2;
+}
+.achievement .ach-desc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+.achievement.ach-gold {
+  border-color: var(--yellow);
+}
+.achievement.ach-gold .ach-icon { border-color: var(--yellow); }
+.achievement.ach-gold .ach-name { color: var(--yellow); }
+.achievement.ach-gold .ach-icon::before {
+  content: '';
+  width: 20px; height: 20px;
+  background:
+    linear-gradient(var(--yellow), var(--yellow)) 8px 0 / 4px 4px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 4px 4px / 12px 4px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 0 8px / 20px 4px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 4px 12px / 12px 4px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 8px 16px / 4px 4px no-repeat;
+  image-rendering: pixelated;
+}
+
+.achievement.ach-orange {
+  border-color: var(--orange);
+}
+.achievement.ach-orange .ach-icon { border-color: var(--orange); }
+.achievement.ach-orange .ach-name { color: var(--orange); }
+.achievement.ach-orange .ach-icon::before {
+  content: '';
+  width: 20px; height: 20px;
+  background:
+    /* lightning bolt */
+    linear-gradient(var(--orange), var(--orange)) 10px 0 / 6px 4px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 6px 4px / 10px 4px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 2px 8px / 12px 4px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 6px 12px / 10px 4px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 4px 16px / 6px 4px no-repeat;
+  image-rendering: pixelated;
+}
+
+.achievement.ach-green {
+  border-color: var(--green);
+}
+.achievement.ach-green .ach-icon { border-color: var(--green); }
+.achievement.ach-green .ach-name { color: var(--green); }
+.achievement.ach-green .ach-icon::before {
+  content: '';
+  width: 20px; height: 20px;
+  background:
+    /* flame */
+    linear-gradient(var(--green), var(--green)) 8px 0 / 4px 4px no-repeat,
+    linear-gradient(var(--green), var(--green)) 4px 4px / 12px 4px no-repeat,
+    linear-gradient(var(--green), var(--green)) 4px 8px / 12px 4px no-repeat,
+    linear-gradient(#16a34a, #16a34a) 8px 8px / 4px 4px no-repeat,
+    linear-gradient(var(--green), var(--green)) 2px 12px / 16px 4px no-repeat,
+    linear-gradient(var(--green), var(--green)) 6px 16px / 8px 4px no-repeat;
+  image-rendering: pixelated;
+}
+
+.achievement.ach-purple {
+  border-color: var(--purple);
+  animation: glow-badge 2s steps(3) infinite;
+}
+.achievement.ach-purple .ach-icon { border-color: var(--purple); }
+.achievement.ach-purple .ach-name { color: var(--purple); }
+.achievement.ach-purple .ach-icon::before {
+  content: '';
+  width: 20px; height: 20px;
+  background:
+    /* crown */
+    linear-gradient(var(--purple), var(--purple)) 2px 4px / 4px 8px no-repeat,
+    linear-gradient(var(--purple), var(--purple)) 8px 0 / 4px 12px no-repeat,
+    linear-gradient(var(--purple), var(--purple)) 14px 4px / 4px 8px no-repeat,
+    linear-gradient(var(--purple), var(--purple)) 0 12px / 20px 4px no-repeat,
+    linear-gradient(var(--purple), var(--purple)) 2px 16px / 16px 4px no-repeat;
+  image-rendering: pixelated;
+}
+
+.achievement.ach-locked {
+  border-color: var(--text-muted);
+  opacity: 0.4;
+  filter: saturate(0);
+}
+.achievement.ach-locked .ach-icon { border-color: var(--text-muted); }
+.achievement.ach-locked .ach-name { color: var(--text-muted); }
+.achievement.ach-locked .ach-icon::before {
+  content: '?';
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ═══════════════════════════════════════════
+   NOTIFICATION PIPS
+   ═══════════════════════════════════════════ */
+.pip {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+}
+.pip.pip-red    { background: var(--red); box-shadow: 0 0 4px var(--red); }
+.pip.pip-orange { background: var(--orange); box-shadow: 0 0 4px var(--orange); }
+.pip.pip-green  { background: var(--green); box-shadow: 0 0 4px var(--green); }
+.pip.pip-blue   { background: var(--blue); }
+.pip.pip-yellow { background: var(--yellow); }
+.pip.pip-muted  { background: var(--text-muted); }
+
+.pip-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 4px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  border: 2px solid;
+  line-height: 1;
+}
+.pip-badge.pip-badge-red {
+  background: var(--red);
+  border-color: #ff5a47;
+  color: var(--white);
+}
+.pip-badge.pip-badge-orange {
+  background: var(--orange);
+  border-color: #ff8a33;
+  color: var(--bg-deep);
+}
+
+/* Animated notification pip */
+.pip-animated {
+  animation: pip-pulse 1.5s steps(2) infinite;
+}
+@keyframes pip-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+}
+
+/* ═══════════════════════════════════════════
+   PIXEL ARROWS & CHEVRONS
+   ═══════════════════════════════════════════ */
+.arrow {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  image-rendering: pixelated;
+}
+.arrow-right {
+  background:
+    linear-gradient(var(--text-primary), var(--text-primary)) 3px 9px / 15px 6px no-repeat,
+    linear-gradient(var(--text-primary), var(--text-primary)) 15px 6px / 3px 3px no-repeat,
+    linear-gradient(var(--text-primary), var(--text-primary)) 15px 15px / 3px 3px no-repeat,
+    linear-gradient(var(--text-primary), var(--text-primary)) 18px 9px / 3px 6px no-repeat;
+}
+.arrow-left {
+  background:
+    linear-gradient(var(--text-primary), var(--text-primary)) 6px 9px / 15px 6px no-repeat,
+    linear-gradient(var(--text-primary), var(--text-primary)) 6px 6px / 3px 3px no-repeat,
+    linear-gradient(var(--text-primary), var(--text-primary)) 6px 15px / 3px 3px no-repeat,
+    linear-gradient(var(--text-primary), var(--text-primary)) 3px 9px / 3px 6px no-repeat;
+}
+.arrow-up {
+  background:
+    linear-gradient(var(--text-primary), var(--text-primary)) 9px 3px / 6px 18px no-repeat,
+    linear-gradient(var(--text-primary), var(--text-primary)) 6px 6px / 3px 3px no-repeat,
+    linear-gradient(var(--text-primary), var(--text-primary)) 15px 6px / 3px 3px no-repeat,
+    linear-gradient(var(--text-primary), var(--text-primary)) 3px 9px / 3px 3px no-repeat,
+    linear-gradient(var(--text-primary), var(--text-primary)) 18px 9px / 3px 3px no-repeat;
+}
+.arrow-down {
+  background:
+    linear-gradient(var(--text-primary), var(--text-primary)) 9px 3px / 6px 18px no-repeat,
+    linear-gradient(var(--text-primary), var(--text-primary)) 6px 15px / 3px 3px no-repeat,
+    linear-gradient(var(--text-primary), var(--text-primary)) 15px 15px / 3px 3px no-repeat,
+    linear-gradient(var(--text-primary), var(--text-primary)) 3px 12px / 3px 3px no-repeat,
+    linear-gradient(var(--text-primary), var(--text-primary)) 18px 12px / 3px 3px no-repeat;
+}
+
+.chevron {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  image-rendering: pixelated;
+}
+.chevron-right {
+  background:
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 6px 3px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 9px 6px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 12px 9px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 9px 12px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 6px 15px / 3px 3px no-repeat;
+}
+.chevron-left {
+  background:
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 9px 3px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 6px 6px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 3px 9px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 6px 12px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 9px 15px / 3px 3px no-repeat;
+}
+.chevron-down {
+  background:
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 3px 6px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 6px 9px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 9px 12px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 12px 9px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 15px 6px / 3px 3px no-repeat;
+}
+.chevron-up {
+  background:
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 3px 12px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 6px 9px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 9px 6px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 12px 9px / 3px 3px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 15px 12px / 3px 3px no-repeat;
+}
+
+/* Menu selector arrow */
+.selector-arrow {
+  display: inline-block;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--orange);
+  animation: selector-blink 0.6s steps(1) infinite;
+}
+@keyframes selector-blink {
+  0%, 60% { opacity: 1; }
+  61%, 100% { opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════
+   STATUS BADGES (combined icon + text)
+   ═══════════════════════════════════════════ */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 2px solid;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  line-height: 1;
+}
+.status-badge .status-dot {
+  width: 8px; height: 8px;
+  display: inline-block;
+}
+.status-badge.sb-backlog   { border-color: var(--text-muted); color: var(--text-secondary); }
+.status-badge.sb-backlog .status-dot { background: var(--text-muted); }
+.status-badge.sb-todo      { border-color: var(--white); color: var(--white); }
+.status-badge.sb-todo .status-dot { background: var(--white); }
+.status-badge.sb-progress  { border-color: var(--orange); color: var(--orange); background: rgba(255,112,0,0.08); }
+.status-badge.sb-progress .status-dot { background: var(--orange); animation: pip-pulse 1s steps(2) infinite; }
+.status-badge.sb-review    { border-color: var(--yellow); color: var(--yellow); background: rgba(255,203,0,0.08); }
+.status-badge.sb-review .status-dot { background: var(--yellow); }
+.status-badge.sb-done      { border-color: var(--green); color: var(--green); background: rgba(34,197,94,0.08); }
+.status-badge.sb-done .status-dot { background: var(--green); }
+
+/* ═══════════════════════════════════════════
+   DUE DATE COMPACT CHIPS
+   ═══════════════════════════════════════════ */
+.due-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 2px solid var(--border);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  line-height: 1.2;
+}
+.due-chip .hg-mini {
+  width: 12px; height: 14px;
+  image-rendering: pixelated;
+}
+.due-chip.due-ok { color: var(--text-secondary); }
+.due-chip.due-ok .hg-mini {
+  background:
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 2px 0 / 8px 2px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 4px 2px / 4px 2px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 4px 4px / 4px 2px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 4px 6px / 4px 2px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 4px 8px / 4px 2px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 4px 10px / 4px 2px no-repeat,
+    linear-gradient(var(--text-secondary), var(--text-secondary)) 2px 12px / 8px 2px no-repeat;
+}
+.due-chip.due-soon { color: var(--yellow); border-color: rgba(255,203,0,0.3); }
+.due-chip.due-soon .hg-mini {
+  background:
+    linear-gradient(var(--yellow), var(--yellow)) 2px 0 / 8px 2px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 4px 2px / 4px 4px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 5px 4px / 2px 2px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 4px 6px / 4px 2px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 4px 8px / 4px 4px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 2px 12px / 8px 2px no-repeat;
+}
+.due-chip.due-overdue { color: var(--red); border-color: rgba(253,63,41,0.3); animation: pulse-urgent 1.5s steps(2) infinite; }
+.due-chip.due-overdue .hg-mini {
+  background:
+    linear-gradient(var(--red), var(--red)) 2px 0 / 8px 2px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 4px 2px / 4px 4px no-repeat,
+    linear-gradient(var(--red), var(--red)) 5px 5px / 2px 2px no-repeat,
+    linear-gradient(var(--text-muted), var(--text-muted)) 4px 6px / 4px 2px no-repeat,
+    linear-gradient(var(--red), var(--red)) 3px 8px / 6px 4px no-repeat,
+    linear-gradient(var(--red), var(--red)) 2px 12px / 8px 2px no-repeat;
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT HELPERS
+   ═══════════════════════════════════════════ */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.three-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 1200px) {
+  .two-col, .three-col { grid-template-columns: 1fr; }
+}
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.row-tight { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.col { display: flex; flex-direction: column; gap: 8px; }
+.mt-16 { margin-top: 16px; }
+.mb-8 { margin-bottom: 8px; }
+
+/* ═══════════════════════════════════════════
+   COMBO EXAMPLES
+   ═══════════════════════════════════════════ */
+.combo-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  border-left: 4px solid var(--orange);
+}
+.combo-card .cc-avatar {
+  flex-shrink: 0;
+}
+.combo-card .cc-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.combo-card .cc-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+.combo-card .cc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ═══════════════════════════════════════════
+   PIXEL CHECKBOX & RADIO
+   ═══════════════════════════════════════════ */
+.pixel-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.pixel-check .box {
+  width: 14px; height: 14px;
+  border: 2px solid var(--border-hover);
+  background: var(--bg-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.pixel-check.checked .box {
+  background: var(--green);
+  border-color: var(--green);
+}
+.pixel-check.checked .box::after {
+  content: '';
+  width: 6px; height: 6px;
+  background: var(--bg-deep);
+}
+.pixel-check.checked {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* ═══════════════════════════════════════════
+   MISC PIXEL ICONS
+   ═══════════════════════════════════════════ */
+.icon-sparkle {
+  display: inline-block;
+  width: 16px; height: 16px;
+  background:
+    linear-gradient(var(--yellow), var(--yellow)) 6px 0 / 4px 4px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 0 6px / 16px 4px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 6px 12px / 4px 4px no-repeat;
+  image-rendering: pixelated;
+  animation: sparkle-rotate 0.8s steps(4) infinite;
+}
+@keyframes sparkle-rotate {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(45deg); }
+  50% { transform: rotate(0deg); }
+  75% { transform: rotate(-45deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.icon-heart {
+  display: inline-block;
+  width: 18px; height: 16px;
+  background:
+    linear-gradient(var(--red), var(--red)) 2px 2px / 6px 4px no-repeat,
+    linear-gradient(var(--red), var(--red)) 10px 2px / 6px 4px no-repeat,
+    linear-gradient(var(--red), var(--red)) 0 4px / 18px 6px no-repeat,
+    linear-gradient(var(--red), var(--red)) 2px 10px / 14px 2px no-repeat,
+    linear-gradient(var(--red), var(--red)) 4px 12px / 10px 2px no-repeat,
+    linear-gradient(var(--red), var(--red)) 6px 14px / 6px 2px no-repeat;
+  image-rendering: pixelated;
+}
+
+.icon-coin {
+  display: inline-block;
+  width: 16px; height: 16px;
+  background:
+    linear-gradient(var(--yellow), var(--yellow)) 4px 0 / 8px 2px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 2px 2px / 12px 12px no-repeat,
+    linear-gradient(#b8960a, #b8960a) 6px 4px / 4px 8px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 4px 14px / 8px 2px no-repeat;
+  image-rendering: pixelated;
+}
+
+.icon-shield {
+  display: inline-block;
+  width: 16px; height: 18px;
+  background:
+    linear-gradient(var(--blue), var(--blue)) 2px 0 / 12px 4px no-repeat,
+    linear-gradient(var(--blue), var(--blue)) 0 2px / 16px 8px no-repeat,
+    linear-gradient(var(--blue), var(--blue)) 2px 10px / 12px 4px no-repeat,
+    linear-gradient(var(--blue), var(--blue)) 4px 14px / 8px 2px no-repeat,
+    linear-gradient(var(--blue), var(--blue)) 6px 16px / 4px 2px no-repeat;
+  image-rendering: pixelated;
+}
+
+/* ═══════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════ */
+.footer {
+  text-align: center;
+  padding: 24px;
+  margin-top: 16px;
+  border-top: 2px solid var(--border);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--text-muted);
+  line-height: 2;
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     PAGE HEADER
+     ══════════════════════════════════════════════ -->
+<div class="page-header">
+  <h1>PIXEL SPRITE SHEET</h1>
+  <p>Badge & Icon Design System Reference — AI Office Quest Board</p>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SECTION 1: STATUS ICONS
+     ══════════════════════════════════════════════ -->
+<div class="two-col">
+  <div class="pixel-window">
+    <div class="title-bar">
+      <div class="title"><span class="dot" style="background:var(--green)"></span> STATUS ICONS</div>
+      <div class="controls"><span>-</span><span>o</span><span>x</span></div>
+    </div>
+    <div class="window-body">
+      <div class="section-label">Quest Status — 16x16 Pixel Art</div>
+      <div class="sprite-grid">
+        <div class="sprite-item">
+          <div class="icon-backlog"></div>
+          <span class="sprite-name">BACKLOG<br><span style="color:var(--text-muted)">Scroll</span></span>
+        </div>
+        <div class="sprite-item">
+          <div class="icon-todo"></div>
+          <span class="sprite-name">TODO<br><span style="color:var(--text-muted)">Sword</span></span>
+        </div>
+        <div class="sprite-item">
+          <div class="icon-inprogress"></div>
+          <span class="sprite-name">IN PROGRESS<br><span style="color:var(--text-muted)">Gear</span></span>
+        </div>
+        <div class="sprite-item">
+          <div class="icon-review"></div>
+          <span class="sprite-name">REVIEW<br><span style="color:var(--text-muted)">Eye</span></span>
+        </div>
+        <div class="sprite-item">
+          <div class="icon-done"></div>
+          <span class="sprite-name">DONE<br><span style="color:var(--text-muted)">Star</span></span>
+        </div>
+      </div>
+
+      <div class="section-label mt-16">Status Badges — With Text</div>
+      <div class="col">
+        <div class="row">
+          <span class="status-badge sb-backlog"><span class="status-dot"></span>BACKLOG</span>
+          <span class="status-badge sb-todo"><span class="status-dot"></span>TODO</span>
+          <span class="status-badge sb-progress"><span class="status-dot"></span>IN PROGRESS</span>
+        </div>
+        <div class="row">
+          <span class="status-badge sb-review"><span class="status-dot"></span>REVIEW</span>
+          <span class="status-badge sb-done"><span class="status-dot"></span>DONE</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       SECTION 2: PRIORITY ICONS
+       ══════════════════════════════════════════════ -->
+  <div class="pixel-window">
+    <div class="title-bar">
+      <div class="title"><span class="dot" style="background:var(--red)"></span> PRIORITY ICONS</div>
+      <div class="controls"><span>-</span><span>o</span><span>x</span></div>
+    </div>
+    <div class="window-body">
+      <div class="section-label">Priority Levels — RPG Style</div>
+      <div class="sprite-grid">
+        <div class="sprite-item">
+          <div class="icon-urgent"></div>
+          <span class="sprite-name">URGENT<br><span style="color:var(--red)">Skull</span></span>
+        </div>
+        <div class="sprite-item">
+          <div class="icon-high"></div>
+          <span class="sprite-name">HIGH<br><span style="color:var(--orange)">Dbl Arrow</span></span>
+        </div>
+        <div class="sprite-item">
+          <div class="icon-medium"></div>
+          <span class="sprite-name">MEDIUM<br><span style="color:var(--yellow)">Arrow</span></span>
+        </div>
+        <div class="sprite-item">
+          <div class="icon-low"></div>
+          <span class="sprite-name">LOW<br><span style="color:var(--text-muted)">Feather</span></span>
+        </div>
+        <div class="sprite-item">
+          <div class="icon-none"></div>
+          <span class="sprite-name">NONE<br><span style="color:var(--text-muted)">Dash</span></span>
+        </div>
+      </div>
+
+      <div class="section-label mt-16">Priority in Context</div>
+      <div class="col" style="gap:6px;">
+        <div class="row" style="gap:6px; padding:6px 8px; background:var(--bg-elevated); border:2px solid var(--border);">
+          <span class="selector-arrow">&#9654;</span>
+          <div style="width:12px;height:12px;background:var(--red);"></div>
+          <span class="pixel-font" style="font-size:7px;color:var(--red)">BOSS FIGHT</span>
+          <span style="color:var(--text-muted);font-size:9px;font-family:'JetBrains Mono'" class="mono">— Deploy to prod NOW</span>
+        </div>
+        <div class="row" style="gap:6px; padding:6px 8px; background:var(--bg-elevated); border:2px solid var(--border);">
+          <span style="width:10px"></span>
+          <div style="width:12px;height:12px;background:var(--orange);"></div>
+          <span class="pixel-font" style="font-size:7px;color:var(--orange)">ELITE</span>
+          <span style="color:var(--text-muted);font-size:9px" class="mono">— Refactor auth system</span>
+        </div>
+        <div class="row" style="gap:6px; padding:6px 8px; background:var(--bg-elevated); border:2px solid var(--border);">
+          <span style="width:10px"></span>
+          <div style="width:12px;height:12px;background:var(--yellow);"></div>
+          <span class="pixel-font" style="font-size:7px;color:var(--yellow)">STANDARD</span>
+          <span style="color:var(--text-muted);font-size:9px" class="mono">— Add dark mode toggle</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SECTION 3: LABEL CHIPS
+     ══════════════════════════════════════════════ -->
+<div class="pixel-window">
+  <div class="title-bar">
+    <div class="title"><span class="dot" style="background:var(--purple)"></span> LABEL CHIPS</div>
+    <div class="controls"><span>-</span><span>o</span><span>x</span></div>
+  </div>
+  <div class="window-body">
+    <div class="section-label">8-Color Pixel Label System</div>
+    <div class="row" style="gap:8px;">
+      <span class="label-chip label-red"><span class="dot"></span>BUG</span>
+      <span class="label-chip label-orange"><span class="dot"></span>FEATURE</span>
+      <span class="label-chip label-yellow"><span class="dot"></span>ENHANCEMENT</span>
+      <span class="label-chip label-green"><span class="dot"></span>READY</span>
+      <span class="label-chip label-blue"><span class="dot"></span>FRONTEND</span>
+      <span class="label-chip label-purple"><span class="dot"></span>BACKEND</span>
+      <span class="label-chip label-pink"><span class="dot"></span>DESIGN</span>
+      <span class="label-chip label-cyan"><span class="dot"></span>INFRA</span>
+    </div>
+    <div class="section-label mt-16">With Remove Button</div>
+    <div class="row" style="gap:8px;">
+      <span class="label-chip label-red"><span class="dot"></span>BUG <span class="remove">x</span></span>
+      <span class="label-chip label-green"><span class="dot"></span>READY <span class="remove">x</span></span>
+      <span class="label-chip label-purple"><span class="dot"></span>BACKEND <span class="remove">x</span></span>
+    </div>
+    <div class="section-label mt-16">Compact Variant</div>
+    <div class="row" style="gap:6px;">
+      <span class="label-chip label-red" style="padding:2px 6px;font-size:6px;"><span class="dot" style="width:4px;height:4px;"></span>BUG</span>
+      <span class="label-chip label-blue" style="padding:2px 6px;font-size:6px;"><span class="dot" style="width:4px;height:4px;"></span>UI</span>
+      <span class="label-chip label-cyan" style="padding:2px 6px;font-size:6px;"><span class="dot" style="width:4px;height:4px;"></span>DB</span>
+      <span class="label-chip label-yellow" style="padding:2px 6px;font-size:6px;"><span class="dot" style="width:4px;height:4px;"></span>P1</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SECTION 4: AGENT CLASS & LEVEL BADGES
+     ══════════════════════════════════════════════ -->
+<div class="two-col">
+  <div class="pixel-window">
+    <div class="title-bar">
+      <div class="title"><span class="dot" style="background:var(--blue)"></span> AGENT CLASS BADGES</div>
+      <div class="controls"><span>-</span><span>o</span><span>x</span></div>
+    </div>
+    <div class="window-body">
+      <div class="section-label">Agent Classes — RPG Roles</div>
+      <div class="col" style="gap:10px;">
+        <div class="row">
+          <span class="class-badge class-coder"><span class="class-icon"></span>CODER</span>
+          <span style="color:var(--text-muted);font-size:9px" class="mono">&#60;/&#62; — Writes code, fixes bugs</span>
+        </div>
+        <div class="row">
+          <span class="class-badge class-researcher"><span class="class-icon"></span>RESEARCHER</span>
+          <span style="color:var(--text-muted);font-size:9px" class="mono">Reads docs, explores APIs</span>
+        </div>
+        <div class="row">
+          <span class="class-badge class-designer"><span class="class-icon"></span>DESIGNER</span>
+          <span style="color:var(--text-muted);font-size:9px" class="mono">UI/UX, pixel art, layouts</span>
+        </div>
+        <div class="row">
+          <span class="class-badge class-devops"><span class="class-icon"></span>DEVOPS</span>
+          <span style="color:var(--text-muted);font-size:9px" class="mono">Deploy, infra, CI/CD</span>
+        </div>
+      </div>
+
+      <div class="section-label mt-16">Compact Class Tags</div>
+      <div class="row">
+        <span class="class-badge class-coder" style="font-size:6px;padding:2px 6px;"><span class="class-icon" style="width:8px;height:8px;transform:scale(0.7);"></span>COD</span>
+        <span class="class-badge class-researcher" style="font-size:6px;padding:2px 6px;"><span class="class-icon" style="width:8px;height:8px;transform:scale(0.7);"></span>RES</span>
+        <span class="class-badge class-designer" style="font-size:6px;padding:2px 6px;"><span class="class-icon" style="width:8px;height:8px;transform:scale(0.7);"></span>DES</span>
+        <span class="class-badge class-devops" style="font-size:6px;padding:2px 6px;"><span class="class-icon" style="width:8px;height:8px;transform:scale(0.7);"></span>OPS</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pixel-window">
+    <div class="title-bar">
+      <div class="title"><span class="dot" style="background:var(--yellow)"></span> LEVEL & XP BADGES</div>
+      <div class="controls"><span>-</span><span>o</span><span>x</span></div>
+    </div>
+    <div class="window-body">
+      <div class="section-label">Level Badges — By Tier</div>
+      <div class="row" style="gap:12px;">
+        <div class="col" style="align-items:center;">
+          <span class="level-badge level-low"><span class="lv-label">LV.</span><span class="lv-num">1</span></span>
+          <span style="font-size:7px;color:var(--text-muted)" class="pixel-font">Novice</span>
+        </div>
+        <div class="col" style="align-items:center;">
+          <span class="level-badge level-low"><span class="lv-label">LV.</span><span class="lv-num">3</span></span>
+          <span style="font-size:7px;color:var(--text-muted)" class="pixel-font">Rookie</span>
+        </div>
+        <div class="col" style="align-items:center;">
+          <span class="level-badge level-mid"><span class="lv-label">LV.</span><span class="lv-num">5</span></span>
+          <span style="font-size:7px;color:var(--green)" class="pixel-font">Adept</span>
+        </div>
+        <div class="col" style="align-items:center;">
+          <span class="level-badge level-high"><span class="lv-label">LV.</span><span class="lv-num">8</span></span>
+          <span style="font-size:7px;color:var(--orange)" class="pixel-font">Veteran</span>
+        </div>
+        <div class="col" style="align-items:center;">
+          <span class="level-badge level-max"><span class="lv-label">LV.</span><span class="lv-num">10</span></span>
+          <span style="font-size:7px;color:var(--purple)" class="pixel-font">Legend</span>
+        </div>
+      </div>
+
+      <div class="section-label mt-16">XP Displays</div>
+      <div class="col" style="gap:10px;">
+        <div class="row">
+          <span class="xp-display">
+            <span class="xp-star"></span>
+            <span class="xp-value">+25</span>
+            <span class="xp-label">XP</span>
+          </span>
+          <span style="color:var(--text-muted);font-size:9px" class="mono">— Small reward</span>
+        </div>
+        <div class="row">
+          <span class="xp-display xp-large">
+            <span class="xp-star"></span>
+            <span class="xp-value">+340</span>
+            <span class="xp-label">XP</span>
+          </span>
+          <span style="color:var(--text-muted);font-size:9px" class="mono">— Big reward</span>
+        </div>
+        <div class="row">
+          <span class="xp-display xp-gain">
+            <span class="xp-star"></span>
+            <span class="xp-value">+100</span>
+            <span class="xp-label">XP GAINED!</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="section-label mt-16">XP Bars</div>
+      <div class="col" style="gap:8px;">
+        <div class="xp-bar-container">
+          <span class="xp-bar-text">LV.5</span>
+          <div class="xp-bar" style="width:200px;"><div class="xp-bar-fill" style="width:65%;"></div></div>
+          <span class="xp-bar-text">650/1000</span>
+        </div>
+        <div class="xp-bar-container">
+          <span class="xp-bar-text">LV.8</span>
+          <div class="xp-bar-segmented" style="width:200px;">
+            <div class="seg filled"></div><div class="seg filled"></div><div class="seg filled"></div>
+            <div class="seg filled"></div><div class="seg filled"></div><div class="seg filled"></div>
+            <div class="seg filled"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div>
+          </div>
+          <span class="xp-bar-text">7/10</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SECTION 5: AVATAR FRAMES
+     ══════════════════════════════════════════════ -->
+<div class="pixel-window">
+  <div class="title-bar">
+    <div class="title"><span class="dot" style="background:var(--orange)"></span> PIXEL AVATAR FRAMES</div>
+    <div class="controls"><span>-</span><span>o</span><span>x</span></div>
+  </div>
+  <div class="window-body">
+    <div class="section-label">Frame States — Agent Presence</div>
+    <div class="sprite-grid">
+      <div class="sprite-item" style="min-width:100px;">
+        <div class="avatar-frame frame-selected">
+          <div class="avatar-sprite"></div>
+        </div>
+        <span class="sprite-name" style="color:var(--orange)">SELECTED</span>
+        <span class="sprite-name">Glow + pip</span>
+      </div>
+      <div class="sprite-item" style="min-width:100px;">
+        <div class="avatar-frame frame-active">
+          <div class="avatar-sprite"></div>
+        </div>
+        <span class="sprite-name" style="color:var(--green)">ACTIVE</span>
+        <span class="sprite-name">Green border</span>
+      </div>
+      <div class="sprite-item" style="min-width:100px;">
+        <div class="avatar-frame frame-idle">
+          <div class="avatar-sprite"></div>
+        </div>
+        <span class="sprite-name" style="color:var(--yellow)">IDLE</span>
+        <span class="sprite-name">Dimmed</span>
+      </div>
+      <div class="sprite-item" style="min-width:100px;">
+        <div class="avatar-frame frame-offline">
+          <div class="avatar-sprite"></div>
+        </div>
+        <span class="sprite-name" style="color:var(--text-muted)">OFFLINE</span>
+        <span class="sprite-name">Grayed out</span>
+      </div>
+    </div>
+
+    <div class="section-label mt-16">Agent Cards — Combined Usage</div>
+    <div class="row" style="gap:16px;flex-wrap:wrap;">
+      <div class="combo-card" style="border-left-color:var(--green);flex:1;min-width:280px;">
+        <div class="cc-avatar">
+          <div class="avatar-frame frame-active" style="width:44px;height:44px;">
+            <div class="avatar-sprite" style="width:32px;height:32px;"></div>
+          </div>
+        </div>
+        <div class="cc-info">
+          <div class="cc-title">AGENT VEGA</div>
+          <div class="cc-meta">
+            <span class="class-badge class-coder" style="font-size:6px;padding:2px 6px;"><span class="class-icon" style="width:8px;height:8px;transform:scale(0.7);"></span>CODER</span>
+            <span class="level-badge level-mid" style="font-size:6px;padding:2px 6px;"><span class="lv-label" style="font-size:5px">LV.</span><span class="lv-num" style="font-size:7px">5</span></span>
+            <span class="xp-display" style="font-size:6px;"><span class="xp-star" style="width:10px;height:10px;transform:scale(0.65);"></span><span class="xp-value" style="font-size:7px">2,340</span><span class="xp-label" style="font-size:5px">XP</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="combo-card" style="border-left-color:var(--purple);flex:1;min-width:280px;">
+        <div class="cc-avatar">
+          <div class="avatar-frame frame-idle" style="width:44px;height:44px;">
+            <div class="avatar-sprite" style="width:32px;height:32px;"></div>
+          </div>
+        </div>
+        <div class="cc-info">
+          <div class="cc-title">AGENT NOVA</div>
+          <div class="cc-meta">
+            <span class="class-badge class-designer" style="font-size:6px;padding:2px 6px;"><span class="class-icon" style="width:8px;height:8px;transform:scale(0.7);"></span>DESIGNER</span>
+            <span class="level-badge level-high" style="font-size:6px;padding:2px 6px;"><span class="lv-label" style="font-size:5px">LV.</span><span class="lv-num" style="font-size:7px">8</span></span>
+            <span class="xp-display" style="font-size:6px;"><span class="xp-star" style="width:10px;height:10px;transform:scale(0.65);"></span><span class="xp-value" style="font-size:7px">5,120</span><span class="xp-label" style="font-size:5px">XP</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SECTION 6: HOURGLASS & DUE DATES
+     ══════════════════════════════════════════════ -->
+<div class="two-col">
+  <div class="pixel-window">
+    <div class="title-bar">
+      <div class="title"><span class="dot" style="background:var(--yellow)"></span> HOURGLASS ICONS</div>
+      <div class="controls"><span>-</span><span>o</span><span>x</span></div>
+    </div>
+    <div class="window-body">
+      <div class="section-label">Due Date Hourglass Variants</div>
+      <div class="sprite-grid">
+        <div class="sprite-item">
+          <div class="icon-hourglass hg-full"></div>
+          <span class="sprite-name" style="color:var(--yellow)">FULL</span>
+          <span class="sprite-name">Plenty of time</span>
+        </div>
+        <div class="sprite-item">
+          <div class="icon-hourglass hg-half"></div>
+          <span class="sprite-name" style="color:var(--orange)">HALF</span>
+          <span class="sprite-name">Halfway there</span>
+        </div>
+        <div class="sprite-item">
+          <div class="icon-hourglass hg-low"></div>
+          <span class="sprite-name" style="color:var(--red)">LOW</span>
+          <span class="sprite-name">Almost due!</span>
+        </div>
+        <div class="sprite-item">
+          <div class="icon-hourglass hg-empty"></div>
+          <span class="sprite-name" style="color:var(--text-muted)">EMPTY</span>
+          <span class="sprite-name">No deadline</span>
+        </div>
+      </div>
+
+      <div class="section-label mt-16">Due Date Chips</div>
+      <div class="col" style="gap:6px;">
+        <div class="row">
+          <span class="due-chip due-ok"><span class="hg-mini"></span>7 DAYS LEFT</span>
+          <span class="due-chip due-soon"><span class="hg-mini"></span>2 DAYS LEFT</span>
+          <span class="due-chip due-overdue"><span class="hg-mini"></span>OVERDUE!</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       SECTION 7: NOTIFICATION PIPS & MISC ICONS
+       ══════════════════════════════════════════════ -->
+  <div class="pixel-window">
+    <div class="title-bar">
+      <div class="title"><span class="dot" style="background:var(--cyan)"></span> PIPS, ARROWS & UI ICONS</div>
+      <div class="controls"><span>-</span><span>o</span><span>x</span></div>
+    </div>
+    <div class="window-body">
+      <div class="section-label">Notification Pips</div>
+      <div class="row" style="gap:12px;">
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="pip pip-red"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">URGENT</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="pip pip-red pip-animated"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">PULSE</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="pip pip-orange"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">WARN</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="pip pip-green"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">OK</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="pip pip-blue"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">INFO</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="pip pip-muted"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">OFF</span>
+        </div>
+        <div style="width:2px;height:20px;background:var(--border);"></div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="pip-badge pip-badge-red">3</span>
+          <span class="sprite-name pixel-font" style="font-size:5px">COUNT</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="pip-badge pip-badge-orange">12</span>
+          <span class="sprite-name pixel-font" style="font-size:5px">COUNT</span>
+        </div>
+      </div>
+
+      <div class="section-label mt-16">Pixel Arrows</div>
+      <div class="row" style="gap:12px;">
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="arrow arrow-up"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">UP</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="arrow arrow-down"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">DOWN</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="arrow arrow-left"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">LEFT</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="arrow arrow-right"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">RIGHT</span>
+        </div>
+        <div style="width:2px;height:20px;background:var(--border);"></div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="chevron chevron-up"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">CHV UP</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="chevron chevron-down"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">CHV DN</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="chevron chevron-left"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">CHV LT</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="chevron chevron-right"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">CHV RT</span>
+        </div>
+        <div style="width:2px;height:20px;background:var(--border);"></div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="selector-arrow">&#9654;</span>
+          <span class="sprite-name pixel-font" style="font-size:5px">SELECT</span>
+        </div>
+      </div>
+
+      <div class="section-label mt-16">Misc Pixel Icons</div>
+      <div class="row" style="gap:14px;">
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="icon-sparkle"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">SPARKLE</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="icon-heart"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">HEART</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="icon-coin"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">COIN</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <span class="icon-shield"></span>
+          <span class="sprite-name pixel-font" style="font-size:5px">SHIELD</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <div class="pixel-check checked"><span class="box"></span></div>
+          <span class="sprite-name pixel-font" style="font-size:5px">CHECK</span>
+        </div>
+        <div class="col" style="align-items:center;gap:4px;">
+          <div class="pixel-check"><span class="box"></span></div>
+          <span class="sprite-name pixel-font" style="font-size:5px">UNCHECK</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SECTION 8: ACHIEVEMENT BADGES
+     ══════════════════════════════════════════════ -->
+<div class="pixel-window">
+  <div class="title-bar">
+    <div class="title"><span class="dot" style="background:var(--yellow)"></span> ACHIEVEMENT BADGES</div>
+    <div class="controls"><span>-</span><span>o</span><span>x</span></div>
+  </div>
+  <div class="window-body">
+    <div class="section-label">Unlocked Achievements</div>
+    <div class="sprite-grid" style="gap:12px;">
+      <div class="achievement ach-gold">
+        <div class="ach-icon"></div>
+        <div class="ach-info">
+          <span class="ach-name">FIRST QUEST</span>
+          <span class="ach-desc">Complete your first task</span>
+        </div>
+      </div>
+      <div class="achievement ach-orange">
+        <div class="ach-icon"></div>
+        <div class="ach-info">
+          <span class="ach-name">SPEED RUN</span>
+          <span class="ach-desc">Finish a task in under 1 hour</span>
+        </div>
+      </div>
+      <div class="achievement ach-green">
+        <div class="ach-icon"></div>
+        <div class="ach-info">
+          <span class="ach-name">10 STREAK</span>
+          <span class="ach-desc">Complete 10 tasks in a row</span>
+        </div>
+      </div>
+      <div class="achievement ach-purple">
+        <div class="ach-icon"></div>
+        <div class="ach-info">
+          <span class="ach-name">LEGENDARY</span>
+          <span class="ach-desc">Reach Level 10 with any agent</span>
+        </div>
+      </div>
+      <div class="achievement ach-locked">
+        <div class="ach-icon"></div>
+        <div class="ach-info">
+          <span class="ach-name">???</span>
+          <span class="ach-desc">Hidden achievement</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label mt-16">Achievement Toast — In Context</div>
+    <div style="max-width:400px;margin:0 auto;padding:12px;background:rgba(255,203,0,0.06);border:3px solid var(--yellow);box-shadow:0 0 16px rgba(255,203,0,0.15), 4px 4px 0 rgba(0,0,0,0.3);text-align:center;">
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;">
+        <span class="icon-sparkle"></span>
+        <span class="pixel-font" style="font-size:8px;color:var(--yellow);">ACHIEVEMENT UNLOCKED!</span>
+        <span class="icon-sparkle"></span>
+      </div>
+      <div class="achievement ach-gold" style="display:inline-flex;margin:0 auto;">
+        <div class="ach-icon"></div>
+        <div class="ach-info">
+          <span class="ach-name">FIRST QUEST</span>
+          <span class="ach-desc">+50 XP Bonus</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SECTION 9: FULL COMPOSITION EXAMPLE
+     ══════════════════════════════════════════════ -->
+<div class="pixel-window">
+  <div class="title-bar">
+    <div class="title"><span class="dot" style="background:var(--orange)"></span> COMPOSITION EXAMPLE — QUEST CARD</div>
+    <div class="controls"><span>-</span><span>o</span><span>x</span></div>
+  </div>
+  <div class="window-body">
+    <div class="section-label">All Elements Combined</div>
+    <div style="max-width:520px;background:var(--bg-elevated);border:3px solid var(--border);padding:14px;box-shadow:4px 4px 0 rgba(0,0,0,0.3);">
+      <!-- Card header -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:10px;height:10px;background:var(--orange);"></div>
+          <span class="pixel-font" style="font-size:8px;color:var(--text-primary);line-height:1.4;">Implement auth flow</span>
+        </div>
+        <span style="font-size:8px;color:var(--text-muted)" class="mono">#QST-247</span>
+      </div>
+      <!-- Status + Priority row -->
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+        <span class="status-badge sb-progress" style="font-size:6px;padding:2px 6px;"><span class="status-dot" style="width:6px;height:6px;"></span>IN PROGRESS</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border:2px solid var(--orange);font-family:'Press Start 2P',monospace;font-size:6px;color:var(--orange);">
+          <span style="width:6px;height:6px;background:var(--orange);display:inline-block;"></span>HIGH
+        </span>
+        <span class="due-chip due-soon" style="font-size:5px;padding:2px 6px;"><span class="hg-mini" style="width:8px;height:10px;transform:scale(0.8);"></span>2 DAYS</span>
+      </div>
+      <!-- Labels -->
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">
+        <span class="label-chip label-blue" style="padding:2px 6px;font-size:5px;"><span class="dot" style="width:4px;height:4px;"></span>FRONTEND</span>
+        <span class="label-chip label-purple" style="padding:2px 6px;font-size:5px;"><span class="dot" style="width:4px;height:4px;"></span>BACKEND</span>
+      </div>
+      <!-- Agent + XP -->
+      <div style="display:flex;align-items:center;justify-content:space-between;border-top:2px solid var(--border);padding-top:10px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="avatar-frame frame-active" style="width:32px;height:32px;padding:2px;border-width:2px;">
+            <div class="avatar-sprite" style="width:22px;height:22px;"></div>
+          </div>
+          <div>
+            <div class="pixel-font" style="font-size:6px;color:var(--text-primary);margin-bottom:3px;">VEGA</div>
+            <div style="display:flex;gap:4px;">
+              <span class="class-badge class-coder" style="font-size:5px;padding:1px 4px;border-width:1px;"><span class="class-icon" style="width:6px;height:6px;transform:scale(0.5);"></span>COD</span>
+              <span class="level-badge level-mid" style="font-size:5px;padding:1px 4px;border-width:1px;"><span class="lv-label" style="font-size:4px">LV.</span><span class="lv-num" style="font-size:6px">5</span></span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span class="icon-coin" style="transform:scale(0.8);"></span>
+          <span class="pixel-font" style="font-size:8px;color:var(--yellow);">+50 XP</span>
+        </div>
+      </div>
+      <!-- Progress bar -->
+      <div style="margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span class="pixel-font" style="font-size:5px;color:var(--text-muted);">SUBTASKS</span>
+          <span class="pixel-font" style="font-size:5px;color:var(--text-secondary);">3/5</span>
+        </div>
+        <div class="xp-bar-segmented" style="width:100%;">
+          <div class="seg filled"></div><div class="seg filled"></div><div class="seg filled"></div>
+          <div class="seg"></div><div class="seg"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  AGENT 7 — BADGE & ICON SYSTEM<br>
+  AI OFFICE QUEST BOARD — PIXEL DESIGN SYSTEM v1.0<br>
+  MISTRAL HACKATHON 2026
+</div>
+
+</body>
+</html>

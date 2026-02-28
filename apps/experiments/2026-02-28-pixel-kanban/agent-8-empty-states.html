@@ -1,0 +1,2620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440, initial-scale=1">
+<title>Agent 8: Empty States & Loading — Game Screens</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Mistral Pixel Palette */
+  --bg-deep: #0D0D11;
+  --bg-surface: #14141A;
+  --bg-elevated: #1C1C24;
+  --border: #2E2E3A;
+  --border-hover: #3E3E4E;
+  --text-primary: #E8E8F0;
+  --text-secondary: #9898A8;
+  --text-muted: #5E5E6E;
+  --mistral-orange: #FF7000;
+  --mistral-red: #FD3F29;
+  --mistral-yellow: #FFCB00;
+  --success-green: #22C55E;
+  --mana-blue: #3B82F6;
+  --purple-magic: #A855F7;
+  --pixel-white: #F0F0FF;
+
+  /* Pixel sizes */
+  --px: 2px;
+  --border-w: 3px;
+}
+
+html {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  image-rendering: pixelated;
+  font-size: 12px;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+}
+
+/* Pixel font helper */
+.pixel-font {
+  font-family: 'Press Start 2P', monospace;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+}
+
+.mono-font {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ============================================================
+   PAGE LAYOUT
+   ============================================================ */
+.page-header {
+  background: var(--bg-surface);
+  border-bottom: var(--border-w) solid var(--border);
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.page-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: var(--mistral-orange);
+  text-shadow: 2px 2px 0 #4a2000;
+}
+
+.page-subtitle {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+.page-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--bg-deep);
+  background: var(--mistral-orange);
+  padding: 6px 10px;
+  border: 2px solid #cc5a00;
+  box-shadow: 2px 2px 0 #4a2000;
+}
+
+.grid-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 24px 32px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.grid-full {
+  grid-column: 1 / -1;
+}
+
+/* ============================================================
+   PIXEL WINDOW FRAME
+   ============================================================ */
+.pixel-window {
+  background: var(--bg-surface);
+  border: var(--border-w) solid var(--border);
+  box-shadow:
+    inset 1px 1px 0 rgba(240,240,255,0.05),
+    inset -1px -1px 0 rgba(0,0,0,0.3),
+    4px 4px 0 rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+.pixel-window-title {
+  background: var(--bg-elevated);
+  border-bottom: 2px solid var(--border);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.pixel-window-title .title-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pixel-window-title .title-icon {
+  color: var(--mistral-orange);
+}
+
+.window-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.window-btn {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-hover);
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'Press Start 2P', monospace;
+  line-height: 1;
+}
+
+.window-btn:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.pixel-window-body {
+  padding: 24px;
+}
+
+/* ============================================================
+   SECTION LABEL
+   ============================================================ */
+.section-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+  padding: 4px 8px;
+}
+
+/* ============================================================
+   1. EMPTY BOARD — "NO QUESTS YET" + CAMPFIRE
+   ============================================================ */
+.empty-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 380px;
+  text-align: center;
+  gap: 20px;
+}
+
+/* Pixel campfire animation — CSS only */
+.campfire-container {
+  position: relative;
+  width: 96px;
+  height: 96px;
+}
+
+/* Campfire base — logs */
+.campfire-logs {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 16px;
+}
+
+.campfire-logs::before,
+.campfire-logs::after {
+  content: '';
+  position: absolute;
+  background: #8B4513;
+  border: 2px solid #5C2D0E;
+}
+
+.campfire-logs::before {
+  width: 44px;
+  height: 8px;
+  bottom: 0;
+  left: 2px;
+  transform: rotate(-8deg);
+}
+
+.campfire-logs::after {
+  width: 44px;
+  height: 8px;
+  bottom: 4px;
+  left: 0;
+  transform: rotate(8deg);
+}
+
+/* Campfire flames — stepped animation */
+.flame {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  image-rendering: pixelated;
+}
+
+.flame-core {
+  width: 16px;
+  height: 24px;
+  background: var(--mistral-yellow);
+  box-shadow:
+    0 0 0 2px var(--mistral-orange),
+    0 0 0 4px rgba(253,63,41,0.4);
+  animation: flame-core-anim 0.4s steps(2) infinite;
+}
+
+.flame-outer {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 32px;
+  background: var(--mistral-orange);
+  opacity: 0.7;
+  animation: flame-outer-anim 0.5s steps(3) infinite;
+}
+
+.flame-tip {
+  position: absolute;
+  bottom: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 16px;
+  background: var(--mistral-red);
+  opacity: 0.6;
+  animation: flame-tip-anim 0.3s steps(2) infinite alternate;
+}
+
+/* Embers / sparks */
+.ember {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: var(--mistral-yellow);
+  animation: ember-rise 1.2s steps(6) infinite;
+}
+
+.ember:nth-child(1) {
+  bottom: 48px;
+  left: 36px;
+  animation-delay: 0s;
+}
+
+.ember:nth-child(2) {
+  bottom: 48px;
+  left: 56px;
+  animation-delay: 0.4s;
+}
+
+.ember:nth-child(3) {
+  bottom: 52px;
+  left: 48px;
+  animation-delay: 0.8s;
+}
+
+@keyframes flame-core-anim {
+  0% { height: 24px; width: 16px; }
+  50% { height: 28px; width: 12px; }
+  100% { height: 24px; width: 16px; }
+}
+
+@keyframes flame-outer-anim {
+  0% { height: 32px; width: 24px; opacity: 0.7; }
+  33% { height: 36px; width: 20px; opacity: 0.5; }
+  66% { height: 28px; width: 28px; opacity: 0.6; }
+  100% { height: 32px; width: 24px; opacity: 0.7; }
+}
+
+@keyframes flame-tip-anim {
+  0% { height: 16px; bottom: 44px; opacity: 0.6; }
+  100% { height: 12px; bottom: 48px; opacity: 0.3; }
+}
+
+@keyframes ember-rise {
+  0% { transform: translateY(0) translateX(0); opacity: 1; }
+  16% { transform: translateY(-8px) translateX(2px); opacity: 1; }
+  33% { transform: translateY(-16px) translateX(-2px); opacity: 0.8; }
+  50% { transform: translateY(-24px) translateX(4px); opacity: 0.6; }
+  66% { transform: translateY(-32px) translateX(0px); opacity: 0.4; }
+  83% { transform: translateY(-40px) translateX(-4px); opacity: 0.2; }
+  100% { transform: translateY(-48px) translateX(2px); opacity: 0; }
+}
+
+/* Campfire glow */
+.campfire-glow {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 40px;
+  background: radial-gradient(ellipse, rgba(255,112,0,0.25) 0%, transparent 70%);
+  animation: glow-pulse 1s steps(3) infinite;
+}
+
+@keyframes glow-pulse {
+  0% { opacity: 0.8; width: 80px; }
+  33% { opacity: 1; width: 88px; }
+  66% { opacity: 0.7; width: 76px; }
+  100% { opacity: 0.8; width: 80px; }
+}
+
+.empty-board-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: var(--text-primary);
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+}
+
+.empty-board-subtitle {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  line-height: 2;
+}
+
+.pixel-btn-primary {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--bg-deep);
+  background: var(--mistral-orange);
+  border: 3px solid #cc5a00;
+  padding: 12px 24px;
+  cursor: pointer;
+  box-shadow:
+    inset -2px -2px 0 #cc5a00,
+    inset 2px 2px 0 #ff9940,
+    4px 4px 0 rgba(0,0,0,0.5);
+  transition: none;
+  position: relative;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pixel-btn-primary:hover {
+  background: #ff8c33;
+  box-shadow:
+    inset -2px -2px 0 #cc5a00,
+    inset 2px 2px 0 #ffb366,
+    4px 4px 0 rgba(0,0,0,0.5);
+}
+
+.pixel-btn-primary:active {
+  box-shadow:
+    inset 2px 2px 0 #cc5a00,
+    inset -2px -2px 0 #ff9940;
+  transform: translate(2px, 2px);
+}
+
+.btn-icon {
+  font-size: 12px;
+}
+
+/* Stars decoration around title */
+.stars-deco {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: var(--mistral-yellow);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+}
+
+.stars-deco .star {
+  animation: twinkle 1.5s steps(2) infinite;
+}
+
+.stars-deco .star:nth-child(2) { animation-delay: 0.5s; }
+.stars-deco .star:nth-child(3) { animation-delay: 1s; }
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* ============================================================
+   2. EMPTY COLUMN — TUMBLEWEED + DOTS
+   ============================================================ */
+.empty-columns-showcase {
+  display: flex;
+  gap: 16px;
+  min-height: 300px;
+}
+
+.empty-column-demo {
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 2px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 12px;
+  min-height: 240px;
+}
+
+.empty-column-header {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-muted);
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--border);
+  width: 100%;
+  text-align: center;
+}
+
+/* Tumbleweed CSS pixel art */
+.tumbleweed-container {
+  position: relative;
+  width: 100%;
+  height: 48px;
+  overflow: hidden;
+}
+
+.tumbleweed {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  top: 10px;
+  animation: tumble-roll 5s steps(20) infinite;
+}
+
+.tumbleweed-body {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #A08060;
+  border-radius: 50%;
+  position: relative;
+  animation: tumble-spin 1s steps(4) infinite linear;
+  box-shadow: inset 2px 2px 0 rgba(160,128,96,0.3);
+}
+
+.tumbleweed-body::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 3px;
+  background: #A08060;
+  top: 10px;
+  left: 2px;
+  transform: rotate(45deg);
+}
+
+.tumbleweed-body::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 3px;
+  background: #A08060;
+  top: 10px;
+  left: 2px;
+  transform: rotate(-45deg);
+}
+
+@keyframes tumble-roll {
+  0% { left: -24px; opacity: 0; }
+  5% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { left: calc(100% + 24px); opacity: 0; }
+}
+
+@keyframes tumble-spin {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(90deg); }
+  50% { transform: rotate(180deg); }
+  75% { transform: rotate(270deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Dots animation "..." */
+.empty-dots {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  gap: 4px;
+}
+
+.empty-dots .dot {
+  animation: dot-blink 1.2s steps(1) infinite;
+  opacity: 0.2;
+}
+
+.empty-dots .dot:nth-child(1) { animation-delay: 0s; }
+.empty-dots .dot:nth-child(2) { animation-delay: 0.4s; }
+.empty-dots .dot:nth-child(3) { animation-delay: 0.8s; }
+
+@keyframes dot-blink {
+  0% { opacity: 0.2; }
+  33% { opacity: 1; }
+  66% { opacity: 0.2; }
+}
+
+.empty-column-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 2;
+}
+
+/* Ghost card placeholder */
+.ghost-card {
+  width: 90%;
+  height: 48px;
+  border: 2px dashed var(--border);
+  opacity: 0.3;
+  animation: ghost-pulse 2s steps(3) infinite;
+}
+
+@keyframes ghost-pulse {
+  0% { opacity: 0.15; }
+  33% { opacity: 0.3; }
+  66% { opacity: 0.15; }
+}
+
+/* Plus button for empty column */
+.empty-add-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: var(--text-muted);
+  background: none;
+  border: 2px dashed var(--border);
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-add-btn:hover {
+  color: var(--mistral-orange);
+  border-color: var(--mistral-orange);
+}
+
+/* ============================================================
+   3. LOADING BAR — SEGMENTED PIXEL BLOCKS
+   ============================================================ */
+.loading-demos {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.loading-bar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.loading-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.loading-percent {
+  color: var(--mistral-orange);
+  animation: percent-tick 3s steps(1) infinite;
+}
+
+@keyframes percent-tick {
+  0% { content: '0%'; }
+  10% { content: '12%'; }
+}
+
+/* Segmented loading bar */
+.loading-bar-track {
+  background: var(--bg-deep);
+  border: 3px solid var(--border);
+  padding: 3px;
+  height: 28px;
+  display: flex;
+  gap: 3px;
+  box-shadow: inset 2px 2px 0 rgba(0,0,0,0.3);
+}
+
+.loading-bar-segment {
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid rgba(0,0,0,0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.loading-bar-segment.filled {
+  background: var(--mistral-orange);
+  border-color: #cc5a00;
+  box-shadow: inset 0 -2px 0 #cc5a00, inset 0 2px 0 #ff9940;
+}
+
+.loading-bar-segment.filling {
+  animation: segment-fill 0.3s steps(1) forwards;
+}
+
+@keyframes segment-fill {
+  0% { background: var(--bg-elevated); }
+  100% { background: var(--mistral-orange); border-color: #cc5a00; box-shadow: inset 0 -2px 0 #cc5a00, inset 0 2px 0 #ff9940; }
+}
+
+/* Animated loading bar */
+.loading-bar-animated {
+  animation: loading-progress 3s steps(1) infinite;
+}
+
+.loading-bar-animated .loading-bar-segment:nth-child(1) { animation: seg-anim 3s steps(1) infinite; animation-delay: 0s; }
+.loading-bar-animated .loading-bar-segment:nth-child(2) { animation: seg-anim 3s steps(1) infinite; animation-delay: 0.2s; }
+.loading-bar-animated .loading-bar-segment:nth-child(3) { animation: seg-anim 3s steps(1) infinite; animation-delay: 0.4s; }
+.loading-bar-animated .loading-bar-segment:nth-child(4) { animation: seg-anim 3s steps(1) infinite; animation-delay: 0.6s; }
+.loading-bar-animated .loading-bar-segment:nth-child(5) { animation: seg-anim 3s steps(1) infinite; animation-delay: 0.8s; }
+.loading-bar-animated .loading-bar-segment:nth-child(6) { animation: seg-anim 3s steps(1) infinite; animation-delay: 1.0s; }
+.loading-bar-animated .loading-bar-segment:nth-child(7) { animation: seg-anim 3s steps(1) infinite; animation-delay: 1.2s; }
+.loading-bar-animated .loading-bar-segment:nth-child(8) { animation: seg-anim 3s steps(1) infinite; animation-delay: 1.4s; }
+.loading-bar-animated .loading-bar-segment:nth-child(9) { animation: seg-anim 3s steps(1) infinite; animation-delay: 1.6s; }
+.loading-bar-animated .loading-bar-segment:nth-child(10) { animation: seg-anim 3s steps(1) infinite; animation-delay: 1.8s; }
+.loading-bar-animated .loading-bar-segment:nth-child(11) { animation: seg-anim 3s steps(1) infinite; animation-delay: 2.0s; }
+.loading-bar-animated .loading-bar-segment:nth-child(12) { animation: seg-anim 3s steps(1) infinite; animation-delay: 2.2s; }
+
+@keyframes seg-anim {
+  0% {
+    background: var(--bg-elevated);
+    border-color: rgba(0,0,0,0.2);
+    box-shadow: none;
+  }
+  6.67% {
+    background: var(--mistral-orange);
+    border-color: #cc5a00;
+    box-shadow: inset 0 -2px 0 #cc5a00, inset 0 2px 0 #ff9940;
+  }
+  80% {
+    background: var(--mistral-orange);
+    border-color: #cc5a00;
+    box-shadow: inset 0 -2px 0 #cc5a00, inset 0 2px 0 #ff9940;
+  }
+  86% {
+    background: var(--bg-elevated);
+    border-color: rgba(0,0,0,0.2);
+    box-shadow: none;
+  }
+}
+
+/* Additional bar color variants */
+.loading-bar-green .loading-bar-segment.filled {
+  background: var(--success-green);
+  border-color: #1a9e4a;
+  box-shadow: inset 0 -2px 0 #1a9e4a, inset 0 2px 0 #4ae07a;
+}
+
+.loading-bar-blue .loading-bar-segment.filled {
+  background: var(--mana-blue);
+  border-color: #2563c4;
+  box-shadow: inset 0 -2px 0 #2563c4, inset 0 2px 0 #6ba3f7;
+}
+
+.loading-bar-yellow .loading-bar-segment.filled {
+  background: var(--mistral-yellow);
+  border-color: #cca300;
+  box-shadow: inset 0 -2px 0 #cca300, inset 0 2px 0 #ffe04d;
+}
+
+/* Loading text blink */
+.loading-text-blink {
+  animation: text-blink 0.8s steps(1) infinite;
+}
+
+@keyframes text-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ============================================================
+   4. LOADING MODAL — SPINNER + TEXT
+   ============================================================ */
+.loading-modal-demo {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.loading-modal-frame {
+  background: var(--bg-deep);
+  border: 3px solid var(--border);
+  padding: 32px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  box-shadow:
+    0 0 0 3px var(--bg-deep),
+    0 0 0 6px var(--border),
+    8px 8px 0 rgba(0,0,0,0.5);
+  flex: 1;
+}
+
+/* Pixel spinner — rotating square */
+.pixel-spinner {
+  width: 32px;
+  height: 32px;
+  border: 4px solid var(--mistral-orange);
+  animation: pixel-spin 0.8s steps(4) infinite;
+  position: relative;
+}
+
+.pixel-spinner::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--mistral-orange);
+  top: 2px;
+  left: 2px;
+}
+
+@keyframes pixel-spin {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(90deg); }
+  50% { transform: rotate(180deg); }
+  75% { transform: rotate(270deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Pixel spinner variant 2 — chasing dots */
+.pixel-spinner-dots {
+  width: 32px;
+  height: 32px;
+  position: relative;
+}
+
+.pixel-spinner-dots .spin-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--mistral-orange);
+}
+
+.pixel-spinner-dots .spin-dot:nth-child(1) {
+  top: 0; left: 12px;
+  animation: spin-dot-anim 0.8s steps(1) infinite;
+  animation-delay: 0s;
+}
+.pixel-spinner-dots .spin-dot:nth-child(2) {
+  top: 12px; right: 0;
+  animation: spin-dot-anim 0.8s steps(1) infinite;
+  animation-delay: 0.2s;
+}
+.pixel-spinner-dots .spin-dot:nth-child(3) {
+  bottom: 0; left: 12px;
+  animation: spin-dot-anim 0.8s steps(1) infinite;
+  animation-delay: 0.4s;
+}
+.pixel-spinner-dots .spin-dot:nth-child(4) {
+  top: 12px; left: 0;
+  animation: spin-dot-anim 0.8s steps(1) infinite;
+  animation-delay: 0.6s;
+}
+
+@keyframes spin-dot-anim {
+  0% { opacity: 1; background: var(--mistral-orange); }
+  25% { opacity: 0.7; background: #cc5a00; }
+  50% { opacity: 0.4; background: #993f00; }
+  75% { opacity: 0.2; background: #662a00; }
+  100% { opacity: 1; background: var(--mistral-orange); }
+}
+
+/* Pixel hourglass spinner */
+.pixel-hourglass {
+  width: 24px;
+  height: 32px;
+  position: relative;
+  animation: hourglass-flip 2s steps(1) infinite;
+}
+
+.hourglass-top, .hourglass-bottom {
+  position: absolute;
+  left: 0;
+  width: 24px;
+  height: 14px;
+  border: 3px solid var(--mistral-yellow);
+}
+
+.hourglass-top {
+  top: 0;
+  border-bottom: none;
+  background: linear-gradient(to bottom, var(--mistral-yellow) 0%, var(--mistral-yellow) var(--sand-top, 60%), transparent var(--sand-top, 60%));
+  animation: sand-drain 2s steps(4) infinite;
+}
+
+.hourglass-bottom {
+  bottom: 0;
+  border-top: none;
+  background: linear-gradient(to top, var(--mistral-yellow) 0%, var(--mistral-yellow) var(--sand-bottom, 20%), transparent var(--sand-bottom, 20%));
+  animation: sand-fill 2s steps(4) infinite;
+}
+
+.hourglass-neck {
+  position: absolute;
+  top: 13px;
+  left: 9px;
+  width: 6px;
+  height: 6px;
+  background: var(--mistral-yellow);
+  animation: sand-flow 0.5s steps(2) infinite;
+}
+
+@keyframes sand-drain {
+  0% { --sand-top: 80%; }
+  25% { --sand-top: 60%; }
+  50% { --sand-top: 40%; }
+  75% { --sand-top: 20%; }
+  100% { --sand-top: 0%; }
+}
+
+@keyframes sand-fill {
+  0% { --sand-bottom: 0%; }
+  25% { --sand-bottom: 20%; }
+  50% { --sand-bottom: 40%; }
+  75% { --sand-bottom: 60%; }
+  100% { --sand-bottom: 80%; }
+}
+
+@keyframes sand-flow {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes hourglass-flip {
+  0%, 95% { transform: rotate(0deg); }
+  100% { transform: rotate(180deg); }
+}
+
+.loading-modal-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.loading-modal-subtext {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-muted);
+  animation: loading-subtext 3s steps(1) infinite;
+}
+
+@keyframes loading-subtext {
+  0% { content: 'Fetching quest data...'; }
+  33% { content: 'Summoning agents...'; }
+  66% { content: 'Polishing swords...'; }
+}
+
+/* Cycling text via child visibility */
+.cycling-text span {
+  display: none;
+}
+
+.cycling-text span:nth-child(1) {
+  animation: cycle-show-1 4.5s steps(1) infinite;
+}
+.cycling-text span:nth-child(2) {
+  animation: cycle-show-2 4.5s steps(1) infinite;
+}
+.cycling-text span:nth-child(3) {
+  animation: cycle-show-3 4.5s steps(1) infinite;
+}
+
+@keyframes cycle-show-1 {
+  0%, 33.33% { display: inline; }
+  33.34%, 100% { display: none; }
+}
+@keyframes cycle-show-2 {
+  0%, 33.33% { display: none; }
+  33.34%, 66.66% { display: inline; }
+  66.67%, 100% { display: none; }
+}
+@keyframes cycle-show-3 {
+  0%, 66.66% { display: none; }
+  66.67%, 100% { display: inline; }
+}
+
+/* ============================================================
+   5. ERROR STATE — SKULL + QUEST FAILED
+   ============================================================ */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  gap: 16px;
+  text-align: center;
+}
+
+/* Pixel skull */
+.pixel-skull {
+  width: 64px;
+  height: 64px;
+  position: relative;
+  animation: skull-shake 3s steps(1) infinite;
+}
+
+/* Skull rendered with box-shadows on a single pixel */
+.pixel-skull-art {
+  width: 4px;
+  height: 4px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: transparent;
+  box-shadow:
+    /* Row 1 - top of skull */
+    16px 0 0 var(--pixel-white),
+    20px 0 0 var(--pixel-white),
+    24px 0 0 var(--pixel-white),
+    28px 0 0 var(--pixel-white),
+    32px 0 0 var(--pixel-white),
+    36px 0 0 var(--pixel-white),
+    40px 0 0 var(--pixel-white),
+    /* Row 2 */
+    12px 4px 0 var(--pixel-white),
+    16px 4px 0 var(--pixel-white),
+    20px 4px 0 var(--pixel-white),
+    24px 4px 0 var(--pixel-white),
+    28px 4px 0 var(--pixel-white),
+    32px 4px 0 var(--pixel-white),
+    36px 4px 0 var(--pixel-white),
+    40px 4px 0 var(--pixel-white),
+    44px 4px 0 var(--pixel-white),
+    /* Row 3 */
+    8px 8px 0 var(--pixel-white),
+    12px 8px 0 var(--pixel-white),
+    16px 8px 0 var(--pixel-white),
+    20px 8px 0 var(--pixel-white),
+    24px 8px 0 var(--pixel-white),
+    28px 8px 0 var(--pixel-white),
+    32px 8px 0 var(--pixel-white),
+    36px 8px 0 var(--pixel-white),
+    40px 8px 0 var(--pixel-white),
+    44px 8px 0 var(--pixel-white),
+    48px 8px 0 var(--pixel-white),
+    /* Row 4 - eyes */
+    8px 12px 0 var(--pixel-white),
+    12px 12px 0 var(--pixel-white),
+    16px 12px 0 var(--mistral-red),
+    20px 12px 0 var(--mistral-red),
+    24px 12px 0 var(--pixel-white),
+    28px 12px 0 var(--pixel-white),
+    32px 12px 0 var(--mistral-red),
+    36px 12px 0 var(--mistral-red),
+    40px 12px 0 var(--pixel-white),
+    44px 12px 0 var(--pixel-white),
+    48px 12px 0 var(--pixel-white),
+    /* Row 5 - eyes bottom */
+    8px 16px 0 var(--pixel-white),
+    12px 16px 0 var(--pixel-white),
+    16px 16px 0 var(--mistral-red),
+    20px 16px 0 var(--mistral-red),
+    24px 16px 0 var(--pixel-white),
+    28px 16px 0 var(--pixel-white),
+    32px 16px 0 var(--mistral-red),
+    36px 16px 0 var(--mistral-red),
+    40px 16px 0 var(--pixel-white),
+    44px 16px 0 var(--pixel-white),
+    48px 16px 0 var(--pixel-white),
+    /* Row 6 - nose */
+    8px 20px 0 var(--pixel-white),
+    12px 20px 0 var(--pixel-white),
+    16px 20px 0 var(--pixel-white),
+    20px 20px 0 var(--pixel-white),
+    24px 20px 0 var(--pixel-white),
+    28px 20px 0 #0D0D11,
+    32px 20px 0 var(--pixel-white),
+    36px 20px 0 var(--pixel-white),
+    40px 20px 0 var(--pixel-white),
+    44px 20px 0 var(--pixel-white),
+    48px 20px 0 var(--pixel-white),
+    /* Row 7 - mouth area */
+    12px 24px 0 var(--pixel-white),
+    16px 24px 0 var(--pixel-white),
+    20px 24px 0 var(--pixel-white),
+    24px 24px 0 var(--pixel-white),
+    28px 24px 0 var(--pixel-white),
+    32px 24px 0 var(--pixel-white),
+    36px 24px 0 var(--pixel-white),
+    40px 24px 0 var(--pixel-white),
+    44px 24px 0 var(--pixel-white),
+    /* Row 8 - teeth */
+    12px 28px 0 var(--pixel-white),
+    16px 28px 0 #0D0D11,
+    20px 28px 0 var(--pixel-white),
+    24px 28px 0 #0D0D11,
+    28px 28px 0 var(--pixel-white),
+    32px 28px 0 #0D0D11,
+    36px 28px 0 var(--pixel-white),
+    40px 28px 0 #0D0D11,
+    44px 28px 0 var(--pixel-white),
+    /* Row 9 - jaw */
+    16px 32px 0 var(--pixel-white),
+    20px 32px 0 var(--pixel-white),
+    24px 32px 0 var(--pixel-white),
+    28px 32px 0 var(--pixel-white),
+    32px 32px 0 var(--pixel-white),
+    36px 32px 0 var(--pixel-white),
+    40px 32px 0 var(--pixel-white);
+  image-rendering: pixelated;
+}
+
+@keyframes skull-shake {
+  0%, 90% { transform: translateX(0); }
+  92% { transform: translateX(-2px); }
+  94% { transform: translateX(2px); }
+  96% { transform: translateX(-2px); }
+  98% { transform: translateX(2px); }
+  100% { transform: translateX(0); }
+}
+
+/* Red glow pulsing behind skull */
+.skull-glow {
+  position: absolute;
+  inset: -12px;
+  background: radial-gradient(circle, rgba(253,63,41,0.2) 0%, transparent 70%);
+  animation: skull-glow-pulse 1.5s steps(3) infinite;
+}
+
+@keyframes skull-glow-pulse {
+  0% { opacity: 0.4; }
+  33% { opacity: 0.8; }
+  66% { opacity: 0.5; }
+  100% { opacity: 0.4; }
+}
+
+.error-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: var(--mistral-red);
+  text-shadow: 2px 2px 0 #6b1a11;
+}
+
+.error-msg {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  line-height: 2;
+  max-width: 320px;
+}
+
+.error-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--mistral-red);
+  background: rgba(253,63,41,0.1);
+  border: 2px solid rgba(253,63,41,0.3);
+  padding: 6px 12px;
+}
+
+.pixel-btn-danger {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--pixel-white);
+  background: var(--mistral-red);
+  border: 3px solid #c4311f;
+  padding: 12px 24px;
+  cursor: pointer;
+  box-shadow:
+    inset -2px -2px 0 #c4311f,
+    inset 2px 2px 0 #ff6b5a,
+    4px 4px 0 rgba(0,0,0,0.5);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pixel-btn-danger:hover {
+  background: #ff5040;
+}
+
+.pixel-btn-danger:active {
+  box-shadow:
+    inset 2px 2px 0 #c4311f,
+    inset -2px -2px 0 #ff6b5a;
+  transform: translate(2px, 2px);
+}
+
+/* Pixel sword icon */
+.sword-icon {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  position: relative;
+}
+
+.sword-icon::before {
+  content: '';
+  position: absolute;
+  width: 2px;
+  height: 10px;
+  background: var(--pixel-white);
+  top: 0;
+  left: 5px;
+}
+
+.sword-icon::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 2px;
+  background: var(--pixel-white);
+  top: 6px;
+  left: 2px;
+}
+
+/* ============================================================
+   6. NO SEARCH RESULTS — MAGNIFYING GLASS
+   ============================================================ */
+.no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 16px;
+  text-align: center;
+}
+
+/* Pixel magnifying glass */
+.pixel-magnifier {
+  width: 64px;
+  height: 64px;
+  position: relative;
+}
+
+.magnifier-lens {
+  width: 36px;
+  height: 36px;
+  border: 4px solid var(--text-secondary);
+  border-radius: 50%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.magnifier-lens::after {
+  content: '?';
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.magnifier-handle {
+  width: 20px;
+  height: 6px;
+  background: var(--text-secondary);
+  position: absolute;
+  bottom: 8px;
+  right: 4px;
+  transform: rotate(45deg);
+}
+
+.magnifier-handle::after {
+  content: '';
+  width: 10px;
+  height: 6px;
+  background: var(--text-muted);
+  position: absolute;
+  right: -8px;
+  top: 0;
+  border-radius: 0 2px 2px 0;
+}
+
+.pixel-magnifier-anim {
+  animation: magnifier-bob 1.5s steps(4) infinite;
+}
+
+@keyframes magnifier-bob {
+  0% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-4px) rotate(-2deg); }
+  50% { transform: translateY(0) rotate(0deg); }
+  75% { transform: translateY(-2px) rotate(2deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+
+.no-results-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.no-results-hint {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-muted);
+  line-height: 2.2;
+}
+
+/* Pixel search input field replica */
+.search-field-demo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-deep);
+  border: 3px solid var(--border);
+  padding: 8px 12px;
+  width: 280px;
+}
+
+.search-field-demo .search-icon {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.search-field-demo .search-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--mistral-orange);
+}
+
+.search-field-demo .search-cursor {
+  width: 2px;
+  height: 12px;
+  background: var(--mistral-orange);
+  animation: cursor-blink 0.6s steps(1) infinite;
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ============================================================
+   7. ONBOARDING — 3-PANEL PIXEL TUTORIAL
+   ============================================================ */
+.onboarding-panels {
+  display: flex;
+  gap: 2px;
+  background: var(--border);
+  padding: 2px;
+}
+
+.onboarding-panel {
+  flex: 1;
+  background: var(--bg-surface);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  position: relative;
+}
+
+.panel-number {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 20px;
+  color: var(--mistral-orange);
+  text-shadow: 2px 2px 0 #4a2000;
+  opacity: 0.3;
+  position: absolute;
+  top: 8px;
+  left: 12px;
+}
+
+/* Panel illustrations — pixel art scenes */
+.panel-illustration {
+  width: 80px;
+  height: 80px;
+  border: 2px solid var(--border);
+  background: var(--bg-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Panel 1 — Create Quest: pixel sword + sparkle */
+.illust-create {
+  position: relative;
+}
+
+.illust-create .pixel-sword-big {
+  width: 4px;
+  height: 40px;
+  background: linear-gradient(to bottom, var(--text-secondary), var(--pixel-white));
+  position: absolute;
+  top: 12px;
+  left: 38px;
+}
+
+.illust-create .pixel-sword-big::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 4px;
+  background: #8B6914;
+  bottom: 8px;
+  left: -8px;
+}
+
+.illust-create .pixel-sword-big::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #8B6914;
+  bottom: 0;
+  left: -2px;
+  border-radius: 0 0 2px 2px;
+}
+
+.illust-create .sparkle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: var(--mistral-yellow);
+  animation: sparkle-blink 1s steps(1) infinite;
+}
+
+.illust-create .sparkle:nth-child(2) { top: 10px; left: 24px; animation-delay: 0.2s; }
+.illust-create .sparkle:nth-child(3) { top: 20px; right: 18px; animation-delay: 0.5s; }
+.illust-create .sparkle:nth-child(4) { top: 30px; left: 18px; animation-delay: 0.8s; }
+
+@keyframes sparkle-blink {
+  0%, 70% { opacity: 0; }
+  70%, 100% { opacity: 1; }
+}
+
+/* Panel 2 — Assign Agents: pixel character */
+.illust-assign .pixel-agent {
+  width: 24px;
+  height: 32px;
+  position: relative;
+}
+
+.pixel-agent-head {
+  width: 16px;
+  height: 16px;
+  background: #FFD4A8;
+  border: 2px solid #C4976E;
+  margin: 0 auto;
+  position: relative;
+}
+
+.pixel-agent-head::before {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: var(--bg-deep);
+  top: 4px;
+  left: 2px;
+  box-shadow: 6px 0 0 var(--bg-deep);
+}
+
+.pixel-agent-body {
+  width: 20px;
+  height: 12px;
+  background: var(--mana-blue);
+  border: 2px solid #2563c4;
+  margin: 0 auto;
+}
+
+.illust-assign .assign-arrow {
+  position: absolute;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--mistral-orange);
+  animation: arrow-bounce 0.8s steps(2) infinite;
+}
+
+.illust-assign .assign-arrow:nth-child(2) {
+  right: 8px;
+  top: 30px;
+}
+
+.illust-assign .assign-arrow:nth-child(3) {
+  left: 8px;
+  top: 30px;
+  transform: scaleX(-1);
+}
+
+@keyframes arrow-bounce {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(4px); }
+}
+
+/* Panel 3 — Track Progress: pixel chart */
+.illust-track {
+  position: relative;
+}
+
+.illust-track .bar {
+  position: absolute;
+  bottom: 8px;
+  width: 10px;
+  background: var(--success-green);
+  border: 2px solid #1a9e4a;
+}
+
+.illust-track .bar:nth-child(1) { left: 10px; height: 16px; }
+.illust-track .bar:nth-child(2) { left: 24px; height: 28px; background: var(--mistral-orange); border-color: #cc5a00; }
+.illust-track .bar:nth-child(3) { left: 38px; height: 40px; background: var(--mistral-yellow); border-color: #cca300; }
+.illust-track .bar:nth-child(4) { left: 52px; height: 52px; }
+
+.illust-track .star-top {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  font-size: 12px;
+  animation: star-spin 2s steps(4) infinite;
+}
+
+@keyframes star-spin {
+  0% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(90deg) scale(1.2); }
+  50% { transform: rotate(180deg) scale(1); }
+  75% { transform: rotate(270deg) scale(1.2); }
+}
+
+.panel-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--text-primary);
+}
+
+.panel-desc {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-muted);
+  line-height: 2.2;
+}
+
+/* Arrow between panels */
+.panel-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: var(--mistral-orange);
+  padding: 0 4px;
+  animation: arrow-pulse 1s steps(2) infinite;
+  background: var(--border);
+}
+
+@keyframes arrow-pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Onboarding navigation dots */
+.onboarding-nav {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 16px;
+}
+
+.nav-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--border);
+  cursor: pointer;
+}
+
+.nav-dot.active {
+  background: var(--mistral-orange);
+  box-shadow: 0 0 4px var(--mistral-orange);
+}
+
+/* Skip button */
+.onboarding-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px 16px;
+}
+
+.pixel-btn-ghost {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  background: none;
+  border: 2px solid var(--border);
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.pixel-btn-ghost:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.pixel-btn-sm {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--bg-deep);
+  background: var(--mistral-orange);
+  border: 2px solid #cc5a00;
+  padding: 8px 16px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pixel-btn-sm:hover {
+  background: #ff8c33;
+}
+
+.pixel-btn-sm:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+/* ============================================================
+   8. BOOT SCREEN — INITIALIZING QUEST BOARD
+   ============================================================ */
+.boot-screen {
+  background: var(--bg-deep);
+  padding: 0;
+  min-height: 380px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.boot-screen .pixel-window-body {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.boot-logo {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--mistral-orange);
+  text-align: center;
+  padding: 16px 0 8px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.boot-logo .version {
+  font-size: 7px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  display: block;
+}
+
+/* Console log lines */
+.boot-console {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  line-height: 1.8;
+  flex: 1;
+  overflow: hidden;
+}
+
+.boot-line {
+  opacity: 0;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.boot-line .ok {
+  color: var(--success-green);
+}
+
+.boot-line .warn {
+  color: var(--mistral-yellow);
+}
+
+.boot-line .err {
+  color: var(--mistral-red);
+}
+
+.boot-line .info {
+  color: var(--mana-blue);
+}
+
+.boot-line .highlight {
+  color: var(--mistral-orange);
+}
+
+.boot-line .purple {
+  color: var(--purple-magic);
+}
+
+/* Staggered line reveal animation */
+.boot-line:nth-child(1)  { animation: boot-reveal 0.1s steps(1) 0.2s forwards; }
+.boot-line:nth-child(2)  { animation: boot-reveal 0.1s steps(1) 0.5s forwards; }
+.boot-line:nth-child(3)  { animation: boot-reveal 0.1s steps(1) 0.8s forwards; }
+.boot-line:nth-child(4)  { animation: boot-reveal 0.1s steps(1) 1.1s forwards; }
+.boot-line:nth-child(5)  { animation: boot-reveal 0.1s steps(1) 1.4s forwards; }
+.boot-line:nth-child(6)  { animation: boot-reveal 0.1s steps(1) 1.7s forwards; }
+.boot-line:nth-child(7)  { animation: boot-reveal 0.1s steps(1) 2.0s forwards; }
+.boot-line:nth-child(8)  { animation: boot-reveal 0.1s steps(1) 2.3s forwards; }
+.boot-line:nth-child(9)  { animation: boot-reveal 0.1s steps(1) 2.6s forwards; }
+.boot-line:nth-child(10) { animation: boot-reveal 0.1s steps(1) 2.9s forwards; }
+.boot-line:nth-child(11) { animation: boot-reveal 0.1s steps(1) 3.2s forwards; }
+.boot-line:nth-child(12) { animation: boot-reveal 0.1s steps(1) 3.5s forwards; }
+.boot-line:nth-child(13) { animation: boot-reveal 0.1s steps(1) 3.8s forwards; }
+.boot-line:nth-child(14) { animation: boot-reveal 0.1s steps(1) 4.1s forwards; }
+.boot-line:nth-child(15) { animation: boot-reveal 0.1s steps(1) 4.4s forwards; }
+
+@keyframes boot-reveal {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Boot progress bar at bottom */
+.boot-progress {
+  padding: 12px 16px;
+  border-top: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.boot-progress-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.boot-progress-bar {
+  flex: 1;
+  height: 12px;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  overflow: hidden;
+  position: relative;
+}
+
+.boot-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--success-green);
+  box-shadow: inset 0 -2px 0 #1a9e4a, inset 0 2px 0 #4ae07a;
+  animation: boot-fill 4.5s steps(15) forwards;
+}
+
+@keyframes boot-fill {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+.boot-progress-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--success-green);
+  min-width: 36px;
+  text-align: right;
+  animation: boot-pct-count 4.5s steps(15) forwards;
+}
+
+@keyframes boot-pct-count {
+  0% { }
+  6.67% { }
+  100% { }
+}
+
+/* Boot cursor blink */
+.boot-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 12px;
+  background: var(--success-green);
+  animation: cursor-blink 0.6s steps(1) infinite;
+  vertical-align: middle;
+  margin-left: 2px;
+}
+
+/* ============================================================
+   EXTRA DECORATION — PIXEL DIVIDERS
+   ============================================================ */
+.pixel-divider {
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--border) 0px,
+    var(--border) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  margin: 4px 0;
+}
+
+/* ============================================================
+   LABEL HELPER
+   ============================================================ */
+.demo-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--bg-deep);
+  background: var(--text-muted);
+  padding: 3px 6px;
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  z-index: 5;
+  letter-spacing: 1px;
+}
+
+/* ============================================================
+   VARIANT SPINNERS ROW
+   ============================================================ */
+.spinners-row {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.spinner-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.spinner-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--text-muted);
+}
+
+/* Spinner variant: bouncing pixel */
+.pixel-bounce-spinner {
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+  height: 32px;
+}
+
+.pixel-bounce-spinner .bounce-block {
+  width: 8px;
+  height: 8px;
+  background: var(--mistral-orange);
+  animation: bounce-up 0.6s steps(3) infinite alternate;
+}
+
+.pixel-bounce-spinner .bounce-block:nth-child(1) { animation-delay: 0s; }
+.pixel-bounce-spinner .bounce-block:nth-child(2) { animation-delay: 0.15s; }
+.pixel-bounce-spinner .bounce-block:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes bounce-up {
+  0% { transform: translateY(0); height: 8px; }
+  33% { transform: translateY(-8px); height: 12px; }
+  66% { transform: translateY(-16px); height: 8px; }
+  100% { transform: translateY(-20px); height: 6px; }
+}
+
+/* Spinner variant: pixel orbit */
+.pixel-orbit {
+  width: 32px;
+  height: 32px;
+  position: relative;
+}
+
+.orbit-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: var(--mana-blue);
+  animation: orbit-move 1.2s steps(8) infinite;
+}
+
+.orbit-dot:nth-child(1) { animation-delay: 0s; }
+.orbit-dot:nth-child(2) { animation-delay: 0.3s; background: var(--purple-magic); }
+.orbit-dot:nth-child(3) { animation-delay: 0.6s; background: var(--mistral-orange); }
+.orbit-dot:nth-child(4) { animation-delay: 0.9s; background: var(--success-green); }
+
+@keyframes orbit-move {
+  0%    { top: 0;   left: 13px; }
+  12.5% { top: 3px; left: 23px; }
+  25%   { top: 13px; left: 26px; }
+  37.5% { top: 23px; left: 23px; }
+  50%   { top: 26px; left: 13px; }
+  62.5% { top: 23px; left: 3px; }
+  75%   { top: 13px; left: 0; }
+  87.5% { top: 3px; left: 3px; }
+  100%  { top: 0;   left: 13px; }
+}
+
+/* Spinner variant: pixel pacman */
+.pixel-pacman {
+  width: 32px;
+  height: 32px;
+  position: relative;
+}
+
+.pacman-body {
+  width: 24px;
+  height: 24px;
+  background: var(--mistral-yellow);
+  border-radius: 50%;
+  position: absolute;
+  top: 4px;
+  left: 0;
+  animation: pacman-chomp 0.4s steps(2) infinite;
+}
+
+@keyframes pacman-chomp {
+  0% {
+    clip-path: polygon(100% 0%, 100% 100%, 50% 50%, 0% 100%, 0% 0%);
+  }
+  50% {
+    clip-path: polygon(100% 0%, 100% 100%, 50% 50%, 0% 80%, 0% 20%);
+  }
+}
+
+.pacman-dots {
+  position: absolute;
+  top: 14px;
+  right: 0;
+  display: flex;
+  gap: 4px;
+}
+
+.pacman-dots .pac-dot {
+  width: 4px;
+  height: 4px;
+  background: var(--text-muted);
+  animation: pac-dot-eat 1.2s steps(1) infinite;
+}
+
+.pacman-dots .pac-dot:nth-child(1) { animation-delay: 0s; }
+.pacman-dots .pac-dot:nth-child(2) { animation-delay: 0.4s; }
+
+@keyframes pac-dot-eat {
+  0%, 90% { opacity: 1; }
+  90.1%, 100% { opacity: 0; }
+}
+
+/* ============================================================
+   COMBINED LOADING OVERLAY DEMO
+   ============================================================ */
+.overlay-demo {
+  position: relative;
+  background: var(--bg-deep);
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlay-content {
+  opacity: 0.15;
+  padding: 16px;
+  width: 100%;
+}
+
+.overlay-content .fake-card {
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  padding: 12px;
+  margin-bottom: 8px;
+  height: 40px;
+}
+
+.overlay-spinner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(13,13,17,0.7);
+}
+
+</style>
+</head>
+<body>
+
+<!-- ================================================
+     PAGE HEADER
+     ================================================ -->
+<header class="page-header">
+  <div>
+    <div class="page-title">EMPTY STATES & LOADING</div>
+    <div class="page-subtitle">GAME SCREENS &amp; FEEDBACK UI</div>
+  </div>
+  <div class="page-badge">AGENT 8</div>
+</header>
+
+<!-- ================================================
+     GRID LAYOUT
+     ================================================ -->
+<div class="grid-container">
+
+  <!-- ==========================================
+       1. EMPTY BOARD — NO QUESTS YET
+       ========================================== -->
+  <div class="pixel-window grid-full">
+    <div class="pixel-window-title">
+      <span class="title-text"><span class="title-icon">&#9876;</span> EMPTY QUEST BOARD</span>
+      <div class="window-controls">
+        <div class="window-btn">-</div>
+        <div class="window-btn">&#9633;</div>
+        <div class="window-btn">X</div>
+      </div>
+    </div>
+    <div class="pixel-window-body">
+      <div class="empty-board">
+
+        <div class="stars-deco">
+          <span class="star">&#10022;</span>
+          <span class="star">&#183;</span>
+          <span class="star">&#10022;</span>
+          <span class="star">&#183;</span>
+          <span class="star">&#10022;</span>
+        </div>
+
+        <div class="campfire-container">
+          <div class="campfire-glow"></div>
+          <div class="ember"></div>
+          <div class="ember"></div>
+          <div class="ember"></div>
+          <div class="flame-outer"></div>
+          <div class="flame" style="z-index:2;">
+            <div class="flame-core"></div>
+          </div>
+          <div class="flame-tip"></div>
+          <div class="campfire-logs"></div>
+        </div>
+
+        <div class="empty-board-title">NO QUESTS YET</div>
+        <div class="empty-board-subtitle">
+          The quest board is empty...<br>
+          Your adventure awaits, brave hero!
+        </div>
+
+        <button class="pixel-btn-primary">
+          <span class="btn-icon">&#9876;</span>
+          START FIRST QUEST
+        </button>
+
+        <div class="stars-deco" style="margin-top: 4px;">
+          <span class="star">&#183;</span>
+          <span class="star">&#10022;</span>
+          <span class="star">&#183;</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       2. EMPTY COLUMNS — TUMBLEWEED + DOTS
+       ========================================== -->
+  <div class="pixel-window grid-full">
+    <div class="pixel-window-title">
+      <span class="title-text"><span class="title-icon">&#9744;</span> EMPTY COLUMN STATES</span>
+      <div class="window-controls">
+        <div class="window-btn">-</div>
+        <div class="window-btn">&#9633;</div>
+        <div class="window-btn">X</div>
+      </div>
+    </div>
+    <div class="pixel-window-body">
+      <div class="empty-columns-showcase">
+
+        <!-- Column A: Tumbleweed -->
+        <div class="empty-column-demo">
+          <div class="empty-column-header">&#9876; TODO</div>
+          <div class="tumbleweed-container">
+            <div class="tumbleweed">
+              <div class="tumbleweed-body"></div>
+            </div>
+          </div>
+          <div class="empty-column-text">NO QUESTS HERE</div>
+          <div class="ghost-card"></div>
+          <button class="empty-add-btn">+</button>
+        </div>
+
+        <!-- Column B: Dots animation -->
+        <div class="empty-column-demo">
+          <div class="empty-column-header">&#128293; IN PROGRESS</div>
+          <div class="empty-dots">
+            <span class="dot">&#9608;</span>
+            <span class="dot">&#9608;</span>
+            <span class="dot">&#9608;</span>
+          </div>
+          <div class="empty-column-text">AWAITING QUESTS<br>...</div>
+          <div class="ghost-card"></div>
+          <div class="ghost-card" style="height: 32px;"></div>
+          <button class="empty-add-btn">+</button>
+        </div>
+
+        <!-- Column C: Ghost cards -->
+        <div class="empty-column-demo">
+          <div class="empty-column-header">&#9733; DONE</div>
+          <div style="font-size: 24px; opacity: 0.2; animation: twinkle 2s steps(2) infinite;">&#127942;</div>
+          <div class="empty-column-text">NO VICTORIES YET</div>
+          <div class="ghost-card"></div>
+          <button class="empty-add-btn">+</button>
+        </div>
+
+        <!-- Column D: Minimal -->
+        <div class="empty-column-demo">
+          <div class="empty-column-header">&#128065; REVIEW</div>
+          <div class="empty-dots" style="font-size: 8px;">
+            <span class="dot">.</span>
+            <span class="dot">.</span>
+            <span class="dot">.</span>
+          </div>
+          <div class="empty-column-text">NOTHING TO<br>INSPECT</div>
+          <button class="empty-add-btn">+</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       3. LOADING BARS — SEGMENTED BLOCKS
+       ========================================== -->
+  <div class="pixel-window">
+    <div class="pixel-window-title">
+      <span class="title-text"><span class="title-icon">&#9632;</span> LOADING BARS</span>
+      <div class="window-controls">
+        <div class="window-btn">-</div>
+        <div class="window-btn">&#9633;</div>
+        <div class="window-btn">X</div>
+      </div>
+    </div>
+    <div class="pixel-window-body">
+      <div class="loading-demos">
+
+        <!-- Animated bar -->
+        <div class="loading-bar-section">
+          <div class="loading-label">
+            <span>LOADING QUESTS<span class="loading-text-blink">...</span></span>
+          </div>
+          <div class="loading-bar-track loading-bar-animated">
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+          </div>
+        </div>
+
+        <div class="pixel-divider"></div>
+
+        <!-- Static bars at different states -->
+        <div class="loading-bar-section">
+          <div class="loading-label">
+            <span>XP PROGRESS</span>
+            <span style="color: var(--mistral-orange);">8/12</span>
+          </div>
+          <div class="loading-bar-track">
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+          </div>
+        </div>
+
+        <!-- HP bar -->
+        <div class="loading-bar-section">
+          <div class="loading-label">
+            <span>AGENT HP</span>
+            <span style="color: var(--success-green);">10/12</span>
+          </div>
+          <div class="loading-bar-track loading-bar-green">
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+          </div>
+        </div>
+
+        <!-- Mana bar -->
+        <div class="loading-bar-section">
+          <div class="loading-label">
+            <span>MANA</span>
+            <span style="color: var(--mana-blue);">5/12</span>
+          </div>
+          <div class="loading-bar-track loading-bar-blue">
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment filled"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+          </div>
+        </div>
+
+        <!-- Low HP (danger) -->
+        <div class="loading-bar-section">
+          <div class="loading-label">
+            <span style="color: var(--mistral-red); animation: text-blink 0.5s steps(1) infinite;">!! LOW HP !!</span>
+            <span style="color: var(--mistral-red);">2/12</span>
+          </div>
+          <div class="loading-bar-track" style="border-color: rgba(253,63,41,0.4);">
+            <div class="loading-bar-segment" style="background: var(--mistral-red); border-color: #c4311f; box-shadow: inset 0 -2px 0 #c4311f, inset 0 2px 0 #ff6b5a; animation: hp-blink 0.5s steps(1) infinite;"></div>
+            <div class="loading-bar-segment" style="background: var(--mistral-red); border-color: #c4311f; box-shadow: inset 0 -2px 0 #c4311f, inset 0 2px 0 #ff6b5a; animation: hp-blink 0.5s steps(1) infinite;"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+            <div class="loading-bar-segment"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes hp-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+  </style>
+
+  <!-- ==========================================
+       4. LOADING MODAL — SPINNERS
+       ========================================== -->
+  <div class="pixel-window">
+    <div class="pixel-window-title">
+      <span class="title-text"><span class="title-icon">&#10227;</span> LOADING MODALS & SPINNERS</span>
+      <div class="window-controls">
+        <div class="window-btn">-</div>
+        <div class="window-btn">&#9633;</div>
+        <div class="window-btn">X</div>
+      </div>
+    </div>
+    <div class="pixel-window-body">
+
+      <!-- Loading modal examples -->
+      <div class="loading-modal-demo" style="flex-direction: column; gap: 24px;">
+
+        <!-- Main loading modal -->
+        <div class="loading-modal-frame" style="width: 100%;">
+          <div class="pixel-spinner"></div>
+          <div class="loading-modal-text">LOADING<span class="loading-text-blink">...</span></div>
+          <div class="loading-modal-subtext">Fetching quest data...</div>
+          <div class="loading-bar-track" style="width: 200px; height: 16px;">
+            <div class="loading-bar-segment" style="animation: seg-anim 2s steps(1) infinite; animation-delay: 0s;"></div>
+            <div class="loading-bar-segment" style="animation: seg-anim 2s steps(1) infinite; animation-delay: 0.16s;"></div>
+            <div class="loading-bar-segment" style="animation: seg-anim 2s steps(1) infinite; animation-delay: 0.32s;"></div>
+            <div class="loading-bar-segment" style="animation: seg-anim 2s steps(1) infinite; animation-delay: 0.48s;"></div>
+            <div class="loading-bar-segment" style="animation: seg-anim 2s steps(1) infinite; animation-delay: 0.64s;"></div>
+            <div class="loading-bar-segment" style="animation: seg-anim 2s steps(1) infinite; animation-delay: 0.8s;"></div>
+            <div class="loading-bar-segment" style="animation: seg-anim 2s steps(1) infinite; animation-delay: 0.96s;"></div>
+            <div class="loading-bar-segment" style="animation: seg-anim 2s steps(1) infinite; animation-delay: 1.12s;"></div>
+          </div>
+        </div>
+
+        <div class="pixel-divider" style="width: 100%;"></div>
+
+        <!-- Spinner variants showcase -->
+        <div style="font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--text-secondary); text-align: center;">SPINNER VARIANTS</div>
+
+        <div class="spinners-row">
+          <div class="spinner-item">
+            <div class="pixel-spinner"></div>
+            <div class="spinner-label">SQUARE</div>
+          </div>
+
+          <div class="spinner-item">
+            <div class="pixel-spinner-dots">
+              <div class="spin-dot"></div>
+              <div class="spin-dot"></div>
+              <div class="spin-dot"></div>
+              <div class="spin-dot"></div>
+            </div>
+            <div class="spinner-label">CHASE</div>
+          </div>
+
+          <div class="spinner-item">
+            <div class="pixel-bounce-spinner">
+              <div class="bounce-block"></div>
+              <div class="bounce-block"></div>
+              <div class="bounce-block"></div>
+            </div>
+            <div class="spinner-label">BOUNCE</div>
+          </div>
+
+          <div class="spinner-item">
+            <div class="pixel-orbit">
+              <div class="orbit-dot"></div>
+              <div class="orbit-dot"></div>
+              <div class="orbit-dot"></div>
+              <div class="orbit-dot"></div>
+            </div>
+            <div class="spinner-label">ORBIT</div>
+          </div>
+
+          <div class="spinner-item">
+            <div class="pixel-pacman">
+              <div class="pacman-body"></div>
+              <div class="pacman-dots">
+                <div class="pac-dot"></div>
+                <div class="pac-dot"></div>
+              </div>
+            </div>
+            <div class="spinner-label">CHOMP</div>
+          </div>
+        </div>
+
+        <div class="pixel-divider" style="width: 100%;"></div>
+
+        <!-- Overlay loading demo -->
+        <div style="font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--text-secondary); text-align: center;">OVERLAY LOADING STATE</div>
+        <div class="overlay-demo" style="width: 100%;">
+          <div class="overlay-content">
+            <div class="fake-card"></div>
+            <div class="fake-card"></div>
+            <div class="fake-card"></div>
+          </div>
+          <div class="overlay-spinner">
+            <div class="pixel-spinner"></div>
+            <div style="font-family: 'Press Start 2P', monospace; font-size: 10px; color: var(--text-primary);">LOADING<span class="loading-text-blink">...</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       5. ERROR STATE — SKULL + QUEST FAILED
+       ========================================== -->
+  <div class="pixel-window">
+    <div class="pixel-window-title">
+      <span class="title-text"><span class="title-icon" style="color: var(--mistral-red);">&#9760;</span> ERROR STATE</span>
+      <div class="window-controls">
+        <div class="window-btn">-</div>
+        <div class="window-btn">&#9633;</div>
+        <div class="window-btn">X</div>
+      </div>
+    </div>
+    <div class="pixel-window-body">
+      <div class="error-state">
+
+        <div class="pixel-skull">
+          <div class="skull-glow"></div>
+          <div class="pixel-skull-art"></div>
+        </div>
+
+        <div class="error-title">QUEST FAILED</div>
+        <div class="error-msg">
+          Something went horribly wrong.<br>
+          The quest board could not be loaded.
+        </div>
+        <div class="error-code">ERR_QUEST_404: Board not found</div>
+
+        <div style="display: flex; gap: 12px; margin-top: 8px;">
+          <button class="pixel-btn-danger">
+            <span class="sword-icon"></span>
+            RETRY
+          </button>
+          <button class="pixel-btn-ghost">GO BACK</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       6. NO SEARCH RESULTS — MAGNIFYING GLASS
+       ========================================== -->
+  <div class="pixel-window">
+    <div class="pixel-window-title">
+      <span class="title-text"><span class="title-icon">&#128269;</span> NO SEARCH RESULTS</span>
+      <div class="window-controls">
+        <div class="window-btn">-</div>
+        <div class="window-btn">&#9633;</div>
+        <div class="window-btn">X</div>
+      </div>
+    </div>
+    <div class="pixel-window-body">
+      <div class="no-results">
+
+        <div class="pixel-magnifier pixel-magnifier-anim">
+          <div class="magnifier-lens"></div>
+          <div class="magnifier-handle"></div>
+        </div>
+
+        <div class="no-results-title">NOTHING FOUND</div>
+        <div class="no-results-hint">
+          No quests match your search.<br>
+          Try different keywords or<br>
+          clear your filters.
+        </div>
+
+        <div class="search-field-demo">
+          <span class="search-icon">&#128269;</span>
+          <span class="search-text">dragon slayer</span>
+          <span class="search-cursor"></span>
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-top: 8px;">
+          <button class="pixel-btn-ghost">CLEAR SEARCH</button>
+          <button class="pixel-btn-sm">
+            <span>&#9876;</span>
+            NEW QUEST
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       7. ONBOARDING — 3-PANEL TUTORIAL
+       ========================================== -->
+  <div class="pixel-window grid-full">
+    <div class="pixel-window-title">
+      <span class="title-text"><span class="title-icon">&#128214;</span> ONBOARDING TUTORIAL</span>
+      <div class="window-controls">
+        <div class="window-btn">-</div>
+        <div class="window-btn">&#9633;</div>
+        <div class="window-btn">X</div>
+      </div>
+    </div>
+    <div class="pixel-window-body" style="padding: 16px;">
+
+      <div style="text-align: center; margin-bottom: 16px;">
+        <span class="pixel-font" style="font-size: 12px; color: var(--mistral-orange);">WELCOME, HERO!</span>
+        <div class="pixel-font" style="font-size: 7px; color: var(--text-muted); margin-top: 8px;">YOUR ADVENTURE BEGINS IN 3 STEPS</div>
+      </div>
+
+      <div class="onboarding-panels">
+
+        <!-- Panel 1 — Create -->
+        <div class="onboarding-panel">
+          <div class="panel-number">1</div>
+          <div class="panel-illustration illust-create">
+            <div class="pixel-sword-big"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+          </div>
+          <div class="panel-title">CREATE QUESTS</div>
+          <div class="panel-desc">
+            Post tasks to the<br>
+            quest board for your<br>
+            agents to tackle.
+          </div>
+        </div>
+
+        <div class="panel-arrow">&#9654;</div>
+
+        <!-- Panel 2 — Assign -->
+        <div class="onboarding-panel">
+          <div class="panel-number">2</div>
+          <div class="panel-illustration illust-assign">
+            <div class="pixel-agent">
+              <div class="pixel-agent-head"></div>
+              <div class="pixel-agent-body"></div>
+            </div>
+            <span class="assign-arrow">&#9654;</span>
+            <span class="assign-arrow">&#9664;</span>
+          </div>
+          <div class="panel-title">ASSIGN AGENTS</div>
+          <div class="panel-desc">
+            Send your AI agents<br>
+            to work on quests.<br>
+            Each has a specialty.
+          </div>
+        </div>
+
+        <div class="panel-arrow">&#9654;</div>
+
+        <!-- Panel 3 — Track -->
+        <div class="onboarding-panel">
+          <div class="panel-number">3</div>
+          <div class="panel-illustration illust-track">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="star-top">&#11088;</div>
+          </div>
+          <div class="panel-title">TRACK PROGRESS</div>
+          <div class="panel-desc">
+            Watch agents work,<br>
+            earn XP, and level<br>
+            up your team!
+          </div>
+        </div>
+
+      </div>
+
+      <div class="onboarding-nav">
+        <div class="nav-dot active"></div>
+        <div class="nav-dot"></div>
+        <div class="nav-dot"></div>
+      </div>
+
+      <div class="onboarding-footer">
+        <button class="pixel-btn-ghost">SKIP TUTORIAL</button>
+        <button class="pixel-btn-sm">NEXT &#9654;</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==========================================
+       8. BOOT SCREEN — INITIALIZING
+       ========================================== -->
+  <div class="pixel-window grid-full boot-screen">
+    <div class="pixel-window-title">
+      <span class="title-text"><span class="title-icon" style="color: var(--success-green);">&#9632;</span> SYSTEM BOOT</span>
+      <div class="window-controls">
+        <div class="window-btn">-</div>
+        <div class="window-btn">&#9633;</div>
+        <div class="window-btn">X</div>
+      </div>
+    </div>
+    <div class="pixel-window-body">
+      <div class="boot-logo">
+        AI OFFICE QUEST BOARD
+        <span class="version">v2.4.1 // MISTRAL ENGINE</span>
+      </div>
+      <div class="boot-console">
+        <div class="boot-line"><span class="ok">[OK]</span> Initializing quest board engine...</div>
+        <div class="boot-line"><span class="ok">[OK]</span> Loading Mistral AI core <span class="highlight">v2.4.1</span></div>
+        <div class="boot-line"><span class="ok">[OK]</span> Connecting to Convex backend...</div>
+        <div class="boot-line"><span class="info">[INFO]</span> Found <span class="highlight">4</span> registered agents</div>
+        <div class="boot-line"><span class="ok">[OK]</span> Agent <span class="purple">CODER-01</span> online &mdash; LV.12</div>
+        <div class="boot-line"><span class="ok">[OK]</span> Agent <span class="purple">RESEARCHER-02</span> online &mdash; LV.8</div>
+        <div class="boot-line"><span class="ok">[OK]</span> Agent <span class="purple">DESIGNER-03</span> online &mdash; LV.10</div>
+        <div class="boot-line"><span class="warn">[WARN]</span> Agent <span class="purple">DEVOPS-04</span> &mdash; slow response (2340ms)</div>
+        <div class="boot-line"><span class="ok">[OK]</span> Agent <span class="purple">DEVOPS-04</span> online &mdash; LV.6</div>
+        <div class="boot-line"><span class="info">[INFO]</span> Loading quest data... <span class="highlight">21 quests</span> found</div>
+        <div class="boot-line"><span class="ok">[OK]</span> Real-time subscriptions active</div>
+        <div class="boot-line"><span class="ok">[OK]</span> XP tracking initialized &mdash; <span class="highlight">+340 XP</span> today</div>
+        <div class="boot-line"><span class="info">[INFO]</span> Rendering pixel canvas at <span class="highlight">1440x900</span></div>
+        <div class="boot-line"><span class="ok">[OK]</span> Scanline shader loaded</div>
+        <div class="boot-line"><span class="ok">[READY]</span> <span style="color: var(--success-green);">Quest board initialized successfully!</span> <span class="boot-cursor"></span></div>
+      </div>
+    </div>
+    <div class="boot-progress">
+      <span class="boot-progress-label">LOADING...</span>
+      <div class="boot-progress-bar">
+        <div class="boot-progress-fill"></div>
+      </div>
+      <span class="boot-progress-pct" id="boot-pct">0%</span>
+    </div>
+  </div>
+
+</div><!-- end grid-container -->
+
+<!-- ================================================
+     FOOTER
+     ================================================ -->
+<footer style="
+  text-align: center;
+  padding: 24px 32px 32px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-muted);
+  line-height: 2.5;
+  border-top: 2px solid var(--border);
+  margin-top: 8px;
+">
+  <span style="color: var(--mistral-orange);">AGENT 8</span> : EMPTY STATES & LOADING : GAME SCREENS<br>
+  PRESS START 2P &middot; MISTRAL PALETTE &middot; PIXEL BORDERS &middot; SCANLINES<br>
+  <span style="color: var(--text-muted); opacity: 0.5;">AI OFFICE QUEST BOARD // 2026</span>
+</footer>
+
+<!-- ================================================
+     BOOT PERCENTAGE COUNTER (JS for smooth counting)
+     ================================================ -->
+<script>
+(function() {
+  const pctEl = document.getElementById('boot-pct');
+  const totalDuration = 4500; // ms matching CSS animation
+  const steps = 15;
+  const interval = totalDuration / steps;
+  let current = 0;
+
+  const timer = setInterval(() => {
+    current++;
+    const pct = Math.round((current / steps) * 100);
+    if (pctEl) pctEl.textContent = pct + '%';
+    if (current >= steps) {
+      clearInterval(timer);
+      if (pctEl) pctEl.textContent = '100%';
+    }
+  }, interval);
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440, initial-scale=1">
+<title>Agent 10 — Context Menus & Quick Actions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-base: #0A0A0B;
+    --bg-surface: #111113;
+    --bg-elevated: #1A1A1D;
+    --bg-hover: #222226;
+    --bg-active: #28282D;
+    --border-subtle: #2A2A2E;
+    --border-hover: #3A3A3E;
+    --text-primary: #FAFAFA;
+    --text-secondary: #A0A0A8;
+    --text-tertiary: #6B6B73;
+    --accent-orange: #FF7000;
+    --accent-orange-dim: rgba(255, 112, 0, 0.12);
+    --accent-red: #FD3F29;
+    --accent-red-dim: rgba(253, 63, 41, 0.10);
+    --accent-yellow: #FFCB00;
+    --accent-yellow-dim: rgba(255, 203, 0, 0.10);
+    --accent-green: #22C55E;
+    --accent-green-dim: rgba(34, 197, 94, 0.10);
+    --accent-blue: #3B82F6;
+    --accent-blue-dim: rgba(59, 130, 246, 0.10);
+    --accent-purple: #A855F7;
+    --accent-purple-dim: rgba(168, 85, 247, 0.10);
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --shadow-menu: 0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.04);
+    --shadow-command: 0 16px 64px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+    --shadow-card-hover: 0 2px 12px rgba(0,0,0,0.3);
+    --transition-fast: 120ms ease-out;
+    --transition-med: 180ms ease-out;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ===== PAGE LAYOUT ===== */
+  .page {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 40px 48px 80px;
+  }
+
+  .page-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: -0.5px;
+  }
+
+  .page-subtitle {
+    font-size: 14px;
+    color: var(--text-tertiary);
+    margin-bottom: 48px;
+  }
+
+  .page-subtitle span {
+    color: var(--accent-orange);
+    font-weight: 600;
+  }
+
+  /* ===== SECTION ===== */
+  .section {
+    margin-bottom: 64px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--accent-orange);
+    margin-bottom: 8px;
+  }
+
+  .section-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    letter-spacing: -0.3px;
+  }
+
+  .section-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 28px;
+    line-height: 1.5;
+  }
+
+  /* ===== SHOWCASE AREA (dark canvas) ===== */
+  .showcase {
+    position: relative;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    overflow: visible;
+  }
+
+  .showcase.clip {
+    overflow: hidden;
+  }
+
+  /* ===== GENERIC MENU STYLING ===== */
+  .menu {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-menu);
+    padding: 4px;
+    min-width: 220px;
+    user-select: none;
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text-primary);
+    cursor: pointer;
+    position: relative;
+    transition: background var(--transition-fast);
+    line-height: 1;
+  }
+
+  .menu-item:hover {
+    background: var(--bg-hover);
+  }
+
+  .menu-item.destructive {
+    color: var(--accent-red);
+  }
+  .menu-item.destructive:hover {
+    background: var(--accent-red-dim);
+  }
+
+  .menu-item.disabled {
+    color: var(--text-tertiary);
+    pointer-events: none;
+  }
+
+  .menu-item-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+  }
+
+  .menu-item.destructive .menu-item-icon {
+    color: var(--accent-red);
+  }
+
+  .menu-item-label {
+    flex: 1;
+    white-space: nowrap;
+  }
+
+  .menu-item-shortcut {
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-tertiary);
+    letter-spacing: 0.3px;
+    display: flex;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+
+  .menu-item-shortcut kbd {
+    font-family: inherit;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 10px;
+    min-width: 18px;
+    text-align: center;
+    line-height: 16px;
+  }
+
+  .menu-item-arrow {
+    color: var(--text-tertiary);
+    font-size: 10px;
+    margin-left: auto;
+  }
+
+  .menu-separator {
+    height: 1px;
+    background: var(--border-subtle);
+    margin: 4px 8px;
+  }
+
+  .menu-group-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    padding: 8px 12px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  /* ===== SUBMENU ===== */
+  .submenu-wrapper {
+    position: relative;
+  }
+
+  .submenu {
+    position: absolute;
+    left: calc(100% + 4px);
+    top: -4px;
+  }
+
+  /* ===== STATUS DOTS ===== */
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-dot.backlog { background: #6B6B73; }
+  .status-dot.todo { background: transparent; border: 2px solid var(--text-primary); width: 10px; height: 10px; }
+  .status-dot.in-progress {
+    background: conic-gradient(var(--accent-orange) 0deg, var(--accent-orange) 180deg, transparent 180deg, transparent 360deg);
+    border-radius: 50%;
+  }
+  .status-dot.review { background: var(--accent-yellow); }
+  .status-dot.done { background: var(--accent-green); position: relative; }
+  .status-dot.done::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 3px;
+    width: 4px; height: 2.5px;
+    border-left: 1.5px solid var(--bg-base);
+    border-bottom: 1.5px solid var(--bg-base);
+    transform: rotate(-45deg);
+  }
+
+  .status-dot.active-status {
+    box-shadow: 0 0 0 2px var(--bg-elevated), 0 0 0 3.5px var(--accent-orange);
+  }
+
+  /* ===== PRIORITY ICONS ===== */
+  .priority-icon {
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .priority-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* ===== TASK CARD (contextual backdrop) ===== */
+  .task-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    width: 280px;
+    cursor: pointer;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    position: relative;
+  }
+
+  .task-card:hover, .task-card.hovered {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .task-card-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-bottom: 6px;
+  }
+
+  .task-card-title {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    margin-bottom: 10px;
+    color: var(--text-primary);
+  }
+
+  .task-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+
+  .task-card-label {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .label-blue { background: var(--accent-blue-dim); color: var(--accent-blue); }
+  .label-orange { background: var(--accent-orange-dim); color: var(--accent-orange); }
+  .label-green { background: var(--accent-green-dim); color: var(--accent-green); }
+  .label-purple { background: var(--accent-purple-dim); color: var(--accent-purple); }
+
+  .task-card-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent-orange-dim);
+    color: var(--accent-orange);
+    font-size: 10px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+  }
+
+  .task-card.selected {
+    border-color: var(--accent-orange);
+    background: rgba(255, 112, 0, 0.04);
+  }
+
+  .task-card-checkbox {
+    position: absolute;
+    top: 10px;
+    left: -28px;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border-hover);
+    background: var(--bg-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .task-card-checkbox.checked {
+    border-color: var(--accent-orange);
+    background: var(--accent-orange);
+  }
+
+  .task-card-checkbox.checked::after {
+    content: '';
+    width: 6px;
+    height: 3.5px;
+    border-left: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    transform: rotate(-45deg);
+    margin-top: -1px;
+  }
+
+  /* ===== QUICK ACTION BAR ===== */
+  .quick-actions {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    display: flex;
+    gap: 0;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-hover);
+    border-radius: 0 var(--radius-md) 0 var(--radius-md);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    z-index: 10;
+  }
+
+  .quick-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 28px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
+    border-right: 1px solid var(--border-subtle);
+  }
+
+  .quick-action-btn:last-child {
+    border-right: none;
+  }
+
+  .quick-action-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  .quick-action-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* ===== COLUMN HEADER ===== */
+  .column-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .column-header-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .column-header-title {
+    font-size: 13px;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .column-header-count {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+  }
+
+  .column-header-more {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
+  }
+
+  .column-header-more:hover, .column-header-more.active {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  /* ===== BULK ACTION TOOLBAR ===== */
+  .bulk-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 10px 16px;
+    box-shadow: var(--shadow-menu);
+  }
+
+  .bulk-toolbar-count {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-orange);
+    white-space: nowrap;
+  }
+
+  .bulk-toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border-subtle);
+  }
+
+  .bulk-toolbar-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
+    white-space: nowrap;
+  }
+
+  .bulk-toolbar-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  .bulk-toolbar-btn.destructive:hover {
+    background: var(--accent-red-dim);
+    color: var(--accent-red);
+  }
+
+  .bulk-toolbar-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .bulk-toolbar-close {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    margin-left: auto;
+    transition: background var(--transition-fast), color var(--transition-fast);
+  }
+
+  .bulk-toolbar-close:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  /* ===== COMMAND PALETTE ===== */
+  .command-overlay {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 80px;
+    min-height: 540px;
+  }
+
+  .command-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+  }
+
+  .command-palette {
+    position: relative;
+    width: 560px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-command);
+    overflow: hidden;
+    z-index: 10;
+  }
+
+  .command-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .command-input-icon {
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+
+  .command-input-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .command-input {
+    flex: 1;
+    font-size: 15px;
+    color: var(--text-primary);
+    background: none;
+    border: none;
+    outline: none;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .command-input::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  .command-input-hint {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    padding: 2px 6px;
+    white-space: nowrap;
+  }
+
+  .command-body {
+    max-height: 360px;
+    overflow-y: auto;
+    padding: 6px;
+  }
+
+  .command-section-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    padding: 10px 10px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  .command-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+  }
+
+  .command-item:hover, .command-item.active {
+    background: var(--bg-hover);
+  }
+
+  .command-item.active {
+    background: var(--accent-orange-dim);
+  }
+
+  .command-item-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+
+  .command-item-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .command-item-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .command-item-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .command-item-desc {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 1px;
+  }
+
+  .command-item-shortcut {
+    display: flex;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+
+  .command-item-shortcut kbd {
+    font-family: 'Inter', sans-serif;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 10px;
+    color: var(--text-tertiary);
+    min-width: 18px;
+    text-align: center;
+    line-height: 14px;
+  }
+
+  .command-footer {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+
+  .command-footer-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .command-footer-item kbd {
+    font-family: 'Inter', sans-serif;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 10px;
+    min-width: 16px;
+    text-align: center;
+    line-height: 14px;
+  }
+
+  /* ===== LAYOUT HELPERS ===== */
+  .flex-row { display: flex; gap: 32px; flex-wrap: wrap; }
+  .flex-col { display: flex; flex-direction: column; }
+
+  .showcase-grid {
+    display: grid;
+    gap: 0;
+  }
+
+  .showcase-label {
+    position: absolute;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-tertiary);
+    background: var(--bg-base);
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  /* Context indicator arrow */
+  .context-line {
+    position: absolute;
+    border: 1px dashed var(--border-hover);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* Selected checkmark in menu */
+  .menu-check {
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-orange);
+  }
+
+  .menu-check svg {
+    width: 14px;
+    height: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- Page header -->
+  <div class="page-title">Context Menus & Quick Actions</div>
+  <div class="page-subtitle">Agent 10 &mdash; <span>AI Office Kanban</span> &mdash; Interaction overlays, menus, and command palette</div>
+
+
+  <!-- =============================================
+       SECTION 1: TASK CARD CONTEXT MENU
+       ============================================= -->
+  <div class="section">
+    <div class="section-label">Component 01</div>
+    <div class="section-title">Task Card Context Menu</div>
+    <div class="section-desc">Right-click on a task card opens this menu. Includes submenus for status and priority, keyboard shortcut hints, and a destructive delete action.</div>
+
+    <div class="showcase" style="padding: 48px 60px; min-height: 440px; display: flex; gap: 40px; align-items: flex-start;">
+
+      <!-- The card that was right-clicked -->
+      <div style="position: relative; margin-top: 30px; flex-shrink: 0;">
+        <div class="showcase-label" style="top: -28px; left: 0;">Right-clicked card</div>
+        <div class="task-card" style="border-color: var(--border-hover); opacity: 0.85;">
+          <div class="task-card-id">TSK-142</div>
+          <div class="task-card-title">Implement agent message streaming</div>
+          <div class="task-card-meta">
+            <div class="status-dot in-progress" style="width: 8px; height: 8px;"></div>
+            <span>In Progress</span>
+            <span style="margin-left: auto;">
+              <div class="task-card-label label-blue">Backend</div>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Context Menu with submenus -->
+      <div style="position: relative; margin-top: 30px; margin-right: 200px; flex-shrink: 0;">
+        <div class="showcase-label" style="top: -28px; left: 0;">Context menu</div>
+
+        <div class="menu" style="min-width: 240px;">
+
+          <!-- Change Status (with submenu) -->
+          <div class="submenu-wrapper">
+            <div class="menu-item" style="background: var(--bg-hover);">
+              <div class="menu-item-icon">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5A5.5 5.5 0 0 1 13.5 8" stroke-linecap="round"/></svg>
+              </div>
+              <span class="menu-item-label">Change status</span>
+              <span class="menu-item-shortcut"><kbd>S</kbd></span>
+              <span class="menu-item-arrow">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3.5 2L7.5 5L3.5 8z"/></svg>
+              </span>
+            </div>
+
+            <!-- Status Submenu -->
+            <div class="submenu">
+              <div class="menu" style="min-width: 180px;">
+                <div class="menu-item">
+                  <div class="status-dot backlog"></div>
+                  <span class="menu-item-label">Backlog</span>
+                </div>
+                <div class="menu-item">
+                  <div class="status-dot todo"></div>
+                  <span class="menu-item-label">Todo</span>
+                </div>
+                <div class="menu-item" style="background: var(--accent-orange-dim);">
+                  <div class="status-dot in-progress active-status"></div>
+                  <span class="menu-item-label" style="color: var(--accent-orange); font-weight: 500;">In Progress</span>
+                  <div class="menu-check">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5L6.5 12L13 4"/></svg>
+                  </div>
+                </div>
+                <div class="menu-item">
+                  <div class="status-dot review"></div>
+                  <span class="menu-item-label">Review</span>
+                </div>
+                <div class="menu-item">
+                  <div class="status-dot done"></div>
+                  <span class="menu-item-label">Done</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Set Priority (with submenu) -->
+          <div class="submenu-wrapper">
+            <div class="menu-item">
+              <div class="menu-item-icon">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 14V3l10 4-10 4z" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="menu-item-label">Set priority</span>
+              <span class="menu-item-shortcut"><kbd>P</kbd></span>
+              <span class="menu-item-arrow">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3.5 2L7.5 5L3.5 8z"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <div class="menu-separator"></div>
+
+          <!-- Assign -->
+          <div class="menu-item">
+            <div class="menu-item-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5.5" r="3"/><path d="M2.5 14.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke-linecap="round"/></svg>
+            </div>
+            <span class="menu-item-label">Assign to...</span>
+            <span class="menu-item-shortcut"><kbd>A</kbd></span>
+          </div>
+
+          <!-- Labels -->
+          <div class="menu-item">
+            <div class="menu-item-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 8.5V3.5a1 1 0 0 1 1-1h5l5 5-5 5z" stroke-linejoin="round"/><circle cx="5.5" cy="5.5" r="1" fill="currentColor" stroke="none"/></svg>
+            </div>
+            <span class="menu-item-label">Labels</span>
+            <span class="menu-item-shortcut"><kbd>L</kbd></span>
+          </div>
+
+          <!-- Due date -->
+          <div class="menu-item">
+            <div class="menu-item-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5.5 2v2M10.5 2v2"/></svg>
+            </div>
+            <span class="menu-item-label">Set due date</span>
+            <span class="menu-item-shortcut"><kbd>D</kbd></span>
+          </div>
+
+          <div class="menu-separator"></div>
+
+          <!-- Copy link -->
+          <div class="menu-item">
+            <div class="menu-item-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.5 9.5a3 3 0 0 0 4.24 0l1.5-1.5a3 3 0 0 0-4.24-4.24l-.88.88" stroke-linecap="round"/><path d="M9.5 6.5a3 3 0 0 0-4.24 0L3.76 8a3 3 0 0 0 4.24 4.24l.88-.88" stroke-linecap="round"/></svg>
+            </div>
+            <span class="menu-item-label">Copy link</span>
+            <span class="menu-item-shortcut"><kbd>&#x2318;</kbd><kbd>C</kbd></span>
+          </div>
+
+          <!-- Duplicate -->
+          <div class="menu-item">
+            <div class="menu-item-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M3 11V3.5A1.5 1.5 0 0 1 4.5 2H11"/></svg>
+            </div>
+            <span class="menu-item-label">Duplicate</span>
+            <span class="menu-item-shortcut"><kbd>&#x2318;</kbd><kbd>D</kbd></span>
+          </div>
+
+          <div class="menu-separator"></div>
+
+          <!-- Delete (destructive) -->
+          <div class="menu-item destructive">
+            <div class="menu-item-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5L5 13.5a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1l.5-9" stroke-linecap="round"/></svg>
+            </div>
+            <span class="menu-item-label">Delete task</span>
+            <span class="menu-item-shortcut"><kbd>&#x232B;</kbd></span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Priority submenu (shown separately) -->
+      <div style="position: relative; margin-top: 30px;">
+        <div class="showcase-label" style="top: -28px; left: 0;">Priority submenu</div>
+
+        <div class="menu" style="min-width: 180px;">
+          <div class="menu-item">
+            <div class="priority-icon">
+              <svg viewBox="0 0 14 14" fill="var(--accent-red)" stroke="none"><path d="M2 12V2l9 3.5L2 9z"/><rect x="2" y="9" width="1.5" height="3" rx="0.5"/></svg>
+            </div>
+            <span class="menu-item-label" style="color: var(--accent-red);">Urgent</span>
+          </div>
+          <div class="menu-item">
+            <div class="priority-icon">
+              <svg viewBox="0 0 14 14" fill="var(--accent-orange)" stroke="none"><path d="M2 12V2l9 3.5L2 9z"/><rect x="2" y="9" width="1.5" height="3" rx="0.5"/></svg>
+            </div>
+            <span class="menu-item-label" style="color: var(--accent-orange);">High</span>
+            <div class="menu-check">
+              <svg viewBox="0 0 16 16" fill="none" stroke="var(--accent-orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5L6.5 12L13 4"/></svg>
+            </div>
+          </div>
+          <div class="menu-item">
+            <div class="priority-icon">
+              <svg viewBox="0 0 14 14" fill="none" stroke="var(--accent-yellow)" stroke-width="1.2"><path d="M2 12V2l9 3.5L2 9z"/><rect x="2" y="9" width="1.5" height="3" rx="0.5"/></svg>
+            </div>
+            <span class="menu-item-label">Medium</span>
+          </div>
+          <div class="menu-item">
+            <div class="priority-icon">
+              <svg viewBox="0 0 14 14" fill="none" stroke="#6B6B73" stroke-width="1.2"><path d="M2 12V2l9 3.5L2 9z"/><rect x="2" y="9" width="1.5" height="3" rx="0.5"/></svg>
+            </div>
+            <span class="menu-item-label">Low</span>
+          </div>
+          <div class="menu-separator"></div>
+          <div class="menu-item">
+            <div class="priority-icon" style="color: var(--text-tertiary);">
+              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="7" cy="7" r="4"/><path d="M5 7h4"/></svg>
+            </div>
+            <span class="menu-item-label" style="color: var(--text-tertiary);">No priority</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- =============================================
+       SECTION 2: QUICK ACTION BAR ON HOVER
+       ============================================= -->
+  <div class="section">
+    <div class="section-label">Component 02</div>
+    <div class="section-title">Quick Action Bar on Card Hover</div>
+    <div class="section-desc">Small icon buttons appear at the top-right of a task card on hover. Provides one-click access to status cycling, assignment, and priority.</div>
+
+    <div class="showcase" style="padding: 48px 60px; min-height: 200px; display: flex; gap: 60px; align-items: flex-start;">
+
+      <!-- Default card (no hover) -->
+      <div style="position: relative;">
+        <div class="showcase-label" style="top: -28px; left: 0;">Default state</div>
+        <div class="task-card" style="margin-top: 30px;">
+          <div class="task-card-id">TSK-089</div>
+          <div class="task-card-title">Design sandbox provisioning flow</div>
+          <div class="task-card-meta">
+            <div class="status-dot todo" style="width: 8px; height: 8px;"></div>
+            <span>Todo</span>
+            <div class="task-card-avatar">MK</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hovered card with quick actions -->
+      <div style="position: relative;">
+        <div class="showcase-label" style="top: -28px; left: 0;">Hover state</div>
+        <div class="task-card hovered" style="margin-top: 30px;">
+          <div class="task-card-id">TSK-089</div>
+          <div class="task-card-title">Design sandbox provisioning flow</div>
+          <div class="task-card-meta">
+            <div class="status-dot todo" style="width: 8px; height: 8px;"></div>
+            <span>Todo</span>
+            <div class="task-card-avatar">MK</div>
+          </div>
+
+          <!-- Quick action bar -->
+          <div class="quick-actions">
+            <!-- Status cycle -->
+            <div class="quick-action-btn" title="Cycle status">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5A5.5 5.5 0 0 1 13.5 8" stroke-linecap="round"/></svg>
+            </div>
+            <!-- Assign -->
+            <div class="quick-action-btn" title="Assign">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5.5" r="3"/><path d="M2.5 14.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke-linecap="round"/></svg>
+            </div>
+            <!-- Priority -->
+            <div class="quick-action-btn" title="Set priority">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 13V3l8 3.5L4 10z" stroke-linejoin="round"/></svg>
+            </div>
+            <!-- More -->
+            <div class="quick-action-btn" title="More actions">
+              <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12" cy="8" r="1.2"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card with action tooltip shown -->
+      <div style="position: relative;">
+        <div class="showcase-label" style="top: -28px; left: 0;">Action hovered</div>
+        <div class="task-card hovered" style="margin-top: 30px;">
+          <div class="task-card-id">TSK-203</div>
+          <div class="task-card-title">Add Convex subscription for agent logs</div>
+          <div class="task-card-meta">
+            <div class="status-dot in-progress" style="width: 8px; height: 8px;"></div>
+            <span>In Progress</span>
+            <div class="task-card-label label-orange">Feature</div>
+          </div>
+
+          <div class="quick-actions">
+            <div class="quick-action-btn" style="background: var(--bg-hover); color: var(--text-primary);" title="Cycle status">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5A5.5 5.5 0 0 1 13.5 8" stroke-linecap="round"/></svg>
+            </div>
+            <div class="quick-action-btn" title="Assign">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5.5" r="3"/><path d="M2.5 14.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="quick-action-btn" title="Set priority">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 13V3l8 3.5L4 10z" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="quick-action-btn" title="More actions">
+              <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12" cy="8" r="1.2"/></svg>
+            </div>
+          </div>
+
+          <!-- Tooltip for hovered action -->
+          <div style="position: absolute; top: -36px; right: -1px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 4px 8px; font-size: 11px; color: var(--text-secondary); white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.4); z-index: 20;">
+            Cycle status <kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 1px 5px; font-size: 10px; margin-left: 4px;">S</kbd>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- =============================================
+       SECTION 3: COLUMN HEADER CONTEXT MENU
+       ============================================= -->
+  <div class="section">
+    <div class="section-label">Component 03</div>
+    <div class="section-title">Column Header Context Menu</div>
+    <div class="section-desc">Right-click or click the "..." on a column header to open management options: sort, filter, collapse, hide, and delete.</div>
+
+    <div class="showcase" style="min-height: 380px; display: flex; gap: 48px; align-items: flex-start;">
+
+      <!-- Column with header and context menu -->
+      <div style="width: 280px; flex-shrink: 0;">
+        <div class="column-header">
+          <div class="column-header-dot" style="background: var(--accent-orange);"></div>
+          <span class="column-header-title">In Progress</span>
+          <span class="column-header-count">4</span>
+          <div class="column-header-more active">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12" cy="8" r="1.3"/></svg>
+          </div>
+        </div>
+
+        <!-- Placeholder cards underneath -->
+        <div style="padding: 8px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 12px; opacity: 0.4;">
+            <div style="width: 60%; height: 8px; background: var(--border-subtle); border-radius: 4px; margin-bottom: 8px;"></div>
+            <div style="width: 40%; height: 6px; background: var(--border-subtle); border-radius: 4px;"></div>
+          </div>
+          <div style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 12px; opacity: 0.4;">
+            <div style="width: 80%; height: 8px; background: var(--border-subtle); border-radius: 4px; margin-bottom: 8px;"></div>
+            <div style="width: 35%; height: 6px; background: var(--border-subtle); border-radius: 4px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column context menu -->
+      <div style="position: relative; margin-top: 40px;">
+        <div class="showcase-label" style="top: -28px; left: 0;">Column menu</div>
+
+        <div class="menu" style="min-width: 220px;">
+
+          <div class="menu-item">
+            <div class="menu-item-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6l4-3 4 3M4 10l4 3 4-3"/></svg>
+            </div>
+            <span class="menu-item-label">Collapse column</span>
+            <span class="menu-item-shortcut"><kbd>C</kbd></span>
+          </div>
+
+          <div class="menu-separator"></div>
+
+          <!-- Sort by -->
+          <div class="menu-item">
+            <div class="menu-item-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3v10M4 13l-2-2M4 13l2-2M12 13V3M12 3l-2 2M12 3l2 2"/></svg>
+            </div>
+            <span class="menu-item-label">Sort by</span>
+            <span class="menu-item-arrow">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3.5 2L7.5 5L3.5 8z"/></svg>
+            </span>
+          </div>
+
+          <!-- Filter -->
+          <div class="menu-item">
+            <div class="menu-item-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5h12M4 8h8M6 12.5h4" stroke-linecap="round"/></svg>
+            </div>
+            <span class="menu-item-label">Filter</span>
+            <span class="menu-item-shortcut"><kbd>F</kbd></span>
+          </div>
+
+          <div class="menu-separator"></div>
+
+          <!-- Set WIP limit -->
+          <div class="menu-item">
+            <div class="menu-item-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="10" height="10" rx="2"/><path d="M8 6v4M6 8h4" stroke-linecap="round"/></svg>
+            </div>
+            <span class="menu-item-label">Set WIP limit</span>
+          </div>
+
+          <!-- Rename -->
+          <div class="menu-item">
+            <div class="menu-item-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11z" stroke-linejoin="round"/></svg>
+            </div>
+            <span class="menu-item-label">Rename</span>
+            <span class="menu-item-shortcut"><kbd>R</kbd></span>
+          </div>
+
+          <div class="menu-separator"></div>
+
+          <!-- Hide column -->
+          <div class="menu-item">
+            <div class="menu-item-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8s2.5-4.5 6-4.5S14 8 14 8s-2.5 4.5-6 4.5S2 8 2 8z"/><circle cx="8" cy="8" r="2"/><path d="M2.5 13.5l11-11" stroke-linecap="round"/></svg>
+            </div>
+            <span class="menu-item-label">Hide column</span>
+            <span class="menu-item-shortcut"><kbd>H</kbd></span>
+          </div>
+
+          <!-- Delete column (destructive) -->
+          <div class="menu-item destructive">
+            <div class="menu-item-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5L5 13.5a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1l.5-9" stroke-linecap="round"/></svg>
+            </div>
+            <span class="menu-item-label">Delete column</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Sort by submenu shown separately -->
+      <div style="position: relative; margin-top: 40px;">
+        <div class="showcase-label" style="top: -28px; left: 0;">Sort submenu</div>
+
+        <div class="menu" style="min-width: 190px;">
+          <div class="menu-item" style="background: var(--accent-orange-dim);">
+            <span class="menu-item-label" style="color: var(--accent-orange); font-weight: 500;">Manual order</span>
+            <div class="menu-check">
+              <svg viewBox="0 0 16 16" fill="none" stroke="var(--accent-orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5L6.5 12L13 4"/></svg>
+            </div>
+          </div>
+          <div class="menu-item">
+            <span class="menu-item-label">Priority</span>
+          </div>
+          <div class="menu-item">
+            <span class="menu-item-label">Due date</span>
+          </div>
+          <div class="menu-item">
+            <span class="menu-item-label">Title (A-Z)</span>
+          </div>
+          <div class="menu-item">
+            <span class="menu-item-label">Date created</span>
+          </div>
+          <div class="menu-item">
+            <span class="menu-item-label">Last updated</span>
+          </div>
+          <div class="menu-separator"></div>
+          <div class="menu-item">
+            <div class="menu-item-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3v10M4 3l-2 2M4 3l2 2" stroke-linecap="round"/></svg>
+            </div>
+            <span class="menu-item-label" style="color: var(--text-secondary);">Ascending</span>
+          </div>
+          <div class="menu-item">
+            <div class="menu-item-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 13V3M4 13l-2-2M4 13l2-2" stroke-linecap="round"/></svg>
+            </div>
+            <span class="menu-item-label" style="color: var(--text-secondary);">Descending</span>
+            <div class="menu-check">
+              <svg viewBox="0 0 16 16" fill="none" stroke="var(--accent-orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5L6.5 12L13 4"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- =============================================
+       SECTION 4: BULK ACTION TOOLBAR
+       ============================================= -->
+  <div class="section">
+    <div class="section-label">Component 04</div>
+    <div class="section-title">Bulk Action Toolbar</div>
+    <div class="section-desc">Appears at the bottom of the viewport when multiple cards are selected via checkbox or shift+click. Shows count, quick actions, and a close/deselect button.</div>
+
+    <div class="showcase" style="padding: 32px 40px; min-height: 340px; display: flex; flex-direction: column; gap: 24px;">
+
+      <!-- Selected cards row -->
+      <div style="display: flex; gap: 16px; padding: 0 20px; justify-content: center;">
+        <div style="position: relative;">
+          <div class="task-card selected" style="width: 240px;">
+            <div class="task-card-checkbox checked" style="left: -32px;"></div>
+            <div class="task-card-id">TSK-142</div>
+            <div class="task-card-title">Implement agent message streaming</div>
+            <div class="task-card-meta">
+              <div class="status-dot in-progress" style="width: 8px; height: 8px;"></div>
+              <span>In Progress</span>
+            </div>
+          </div>
+        </div>
+        <div style="position: relative;">
+          <div class="task-card selected" style="width: 240px;">
+            <div class="task-card-checkbox checked" style="left: -32px;"></div>
+            <div class="task-card-id">TSK-089</div>
+            <div class="task-card-title">Design sandbox provisioning flow</div>
+            <div class="task-card-meta">
+              <div class="status-dot todo" style="width: 8px; height: 8px;"></div>
+              <span>Todo</span>
+            </div>
+          </div>
+        </div>
+        <div style="position: relative;">
+          <div class="task-card selected" style="width: 240px;">
+            <div class="task-card-checkbox checked" style="left: -32px;"></div>
+            <div class="task-card-id">TSK-203</div>
+            <div class="task-card-title">Add Convex subscription for agent logs</div>
+            <div class="task-card-meta">
+              <div class="status-dot review" style="width: 8px; height: 8px;"></div>
+              <span>Review</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connecting visual -->
+      <div style="display: flex; justify-content: center;">
+        <div style="width: 1px; height: 32px; background: linear-gradient(to bottom, var(--border-hover), var(--accent-orange)); opacity: 0.5;"></div>
+      </div>
+
+      <!-- Bulk toolbar -->
+      <div style="display: flex; justify-content: center;">
+        <div class="bulk-toolbar">
+          <div class="bulk-toolbar-count">3 selected</div>
+          <div class="bulk-toolbar-divider"></div>
+
+          <div class="bulk-toolbar-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5A5.5 5.5 0 0 1 13.5 8" stroke-linecap="round"/></svg>
+            Set status
+          </div>
+
+          <div class="bulk-toolbar-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5.5" r="3"/><path d="M2.5 14.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke-linecap="round"/></svg>
+            Assign
+          </div>
+
+          <div class="bulk-toolbar-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 13V3l8 3.5L4 10z" stroke-linejoin="round"/></svg>
+            Priority
+          </div>
+
+          <div class="bulk-toolbar-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 8.5V3.5a1 1 0 0 1 1-1h5l5 5-5 5z" stroke-linejoin="round"/><circle cx="5.5" cy="5.5" r="1" fill="currentColor" stroke="none"/></svg>
+            Labels
+          </div>
+
+          <div class="bulk-toolbar-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5.5 2v2M10.5 2v2"/></svg>
+            Due date
+          </div>
+
+          <div class="bulk-toolbar-divider"></div>
+
+          <div class="bulk-toolbar-btn destructive">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5L5 13.5a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1l.5-9" stroke-linecap="round"/></svg>
+            Delete
+          </div>
+
+          <div class="bulk-toolbar-close" title="Deselect all">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- =============================================
+       SECTION 5: COMMAND PALETTE
+       ============================================= -->
+  <div class="section">
+    <div class="section-label">Component 05</div>
+    <div class="section-title">Command Palette</div>
+    <div class="section-desc">Opened with <kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 1px 5px; font-size: 11px;">&#x2318;</kbd> + <kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 1px 5px; font-size: 11px;">K</kbd>. Provides quick search for tasks, recent items, and common actions. Sections update as you type.</div>
+
+    <div class="showcase clip">
+      <div class="command-overlay">
+
+        <div class="command-palette">
+
+          <!-- Search input -->
+          <div class="command-input-wrapper">
+            <div class="command-input-icon">
+              <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="7.5" r="5.5"/><path d="M12 12l4 4" stroke-linecap="round"/></svg>
+            </div>
+            <input type="text" class="command-input" placeholder="Search tasks, actions, people..." value="" readonly>
+            <span class="command-input-hint">esc</span>
+          </div>
+
+          <!-- Body -->
+          <div class="command-body">
+
+            <!-- Recent tasks -->
+            <div class="command-section-label">Recent</div>
+
+            <div class="command-item active">
+              <div class="command-item-icon">
+                <div class="status-dot in-progress" style="width: 8px; height: 8px;"></div>
+              </div>
+              <div class="command-item-content">
+                <div class="command-item-title">Implement agent message streaming</div>
+                <div class="command-item-desc">TSK-142 &middot; In Progress &middot; Assigned to you</div>
+              </div>
+            </div>
+
+            <div class="command-item">
+              <div class="command-item-icon">
+                <div class="status-dot review" style="width: 8px; height: 8px;"></div>
+              </div>
+              <div class="command-item-content">
+                <div class="command-item-title">Add Convex subscription for agent logs</div>
+                <div class="command-item-desc">TSK-203 &middot; Review &middot; Assigned to Alex</div>
+              </div>
+            </div>
+
+            <div class="command-item">
+              <div class="command-item-icon">
+                <div class="status-dot todo" style="width: 8px; height: 8px;"></div>
+              </div>
+              <div class="command-item-content">
+                <div class="command-item-title">Design sandbox provisioning flow</div>
+                <div class="command-item-desc">TSK-089 &middot; Todo &middot; Unassigned</div>
+              </div>
+            </div>
+
+            <!-- Quick actions -->
+            <div class="command-section-label">Quick Actions</div>
+
+            <div class="command-item">
+              <div class="command-item-icon" style="background: var(--accent-orange-dim); border-color: transparent;">
+                <svg viewBox="0 0 16 16" fill="none" stroke="var(--accent-orange)" stroke-width="1.5"><path d="M8 3v10M3 8h10" stroke-linecap="round"/></svg>
+              </div>
+              <div class="command-item-content">
+                <div class="command-item-title">Create new task</div>
+                <div class="command-item-desc">Add a task to the board</div>
+              </div>
+              <div class="command-item-shortcut"><kbd>&#x2318;</kbd><kbd>N</kbd></div>
+            </div>
+
+            <div class="command-item">
+              <div class="command-item-icon">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5A5.5 5.5 0 0 1 13.5 8" stroke-linecap="round"/></svg>
+              </div>
+              <div class="command-item-content">
+                <div class="command-item-title">Change status</div>
+                <div class="command-item-desc">Update task status</div>
+              </div>
+              <div class="command-item-shortcut"><kbd>S</kbd></div>
+            </div>
+
+            <div class="command-item">
+              <div class="command-item-icon">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5.5" r="3"/><path d="M2.5 14.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke-linecap="round"/></svg>
+              </div>
+              <div class="command-item-content">
+                <div class="command-item-title">Assign to member</div>
+                <div class="command-item-desc">Set task assignee</div>
+              </div>
+              <div class="command-item-shortcut"><kbd>A</kbd></div>
+            </div>
+
+            <div class="command-item">
+              <div class="command-item-icon">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 13V3l8 3.5L4 10z" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="command-item-content">
+                <div class="command-item-title">Set priority</div>
+                <div class="command-item-desc">Change task priority level</div>
+              </div>
+              <div class="command-item-shortcut"><kbd>P</kbd></div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="command-section-label">Navigate</div>
+
+            <div class="command-item">
+              <div class="command-item-icon">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M2 6h12"/><path d="M5 6v7"/></svg>
+              </div>
+              <div class="command-item-content">
+                <div class="command-item-title">Board view</div>
+              </div>
+              <div class="command-item-shortcut"><kbd>G</kbd><kbd>B</kbd></div>
+            </div>
+
+            <div class="command-item">
+              <div class="command-item-icon">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M3 8h7M3 12h10" stroke-linecap="round"/></svg>
+              </div>
+              <div class="command-item-content">
+                <div class="command-item-title">List view</div>
+              </div>
+              <div class="command-item-shortcut"><kbd>G</kbd><kbd>L</kbd></div>
+            </div>
+
+          </div>
+
+          <!-- Footer -->
+          <div class="command-footer">
+            <div class="command-footer-item">
+              <kbd>&uarr;</kbd><kbd>&darr;</kbd> navigate
+            </div>
+            <div class="command-footer-item">
+              <kbd>&crarr;</kbd> select
+            </div>
+            <div class="command-footer-item">
+              <kbd>esc</kbd> close
+            </div>
+            <div class="command-footer-item" style="margin-left: auto; color: var(--accent-orange);">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="var(--accent-orange)"><path d="M8 1l2 5h5l-4 3.5 1.5 5.5L8 12l-4.5 3 1.5-5.5L1 6h5z"/></svg>
+              AI Office
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =============================================
+       SECTION 6: COMMAND PALETTE — FILTERED STATE
+       ============================================= -->
+  <div class="section">
+    <div class="section-label">Component 06</div>
+    <div class="section-title">Command Palette &mdash; Search Results</div>
+    <div class="section-desc">Shows the command palette after typing a search query. Results are filtered and highlighted.</div>
+
+    <div class="showcase clip">
+      <div class="command-overlay" style="min-height: 420px;">
+
+        <div class="command-palette">
+
+          <div class="command-input-wrapper">
+            <div class="command-input-icon">
+              <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="7.5" r="5.5"/><path d="M12 12l4 4" stroke-linecap="round"/></svg>
+            </div>
+            <input type="text" class="command-input" value="agent" readonly style="caret-color: var(--accent-orange);">
+            <span class="command-input-hint">esc</span>
+          </div>
+
+          <div class="command-body">
+
+            <div class="command-section-label">Tasks</div>
+
+            <div class="command-item active">
+              <div class="command-item-icon">
+                <div class="status-dot in-progress" style="width: 8px; height: 8px;"></div>
+              </div>
+              <div class="command-item-content">
+                <div class="command-item-title">Implement <mark style="background: var(--accent-orange-dim); color: var(--accent-orange); padding: 0 2px; border-radius: 2px;">agent</mark> message streaming</div>
+                <div class="command-item-desc">TSK-142 &middot; In Progress</div>
+              </div>
+            </div>
+
+            <div class="command-item">
+              <div class="command-item-icon">
+                <div class="status-dot review" style="width: 8px; height: 8px;"></div>
+              </div>
+              <div class="command-item-content">
+                <div class="command-item-title">Add Convex subscription for <mark style="background: var(--accent-orange-dim); color: var(--accent-orange); padding: 0 2px; border-radius: 2px;">agent</mark> logs</div>
+                <div class="command-item-desc">TSK-203 &middot; Review</div>
+              </div>
+            </div>
+
+            <div class="command-item">
+              <div class="command-item-icon">
+                <div class="status-dot backlog" style="width: 8px; height: 8px;"></div>
+              </div>
+              <div class="command-item-content">
+                <div class="command-item-title"><mark style="background: var(--accent-orange-dim); color: var(--accent-orange); padding: 0 2px; border-radius: 2px;">Agent</mark> status persistence in DB</div>
+                <div class="command-item-desc">TSK-301 &middot; Backlog</div>
+              </div>
+            </div>
+
+            <div class="command-item">
+              <div class="command-item-icon">
+                <div class="status-dot done" style="width: 8px; height: 8px;"></div>
+              </div>
+              <div class="command-item-content">
+                <div class="command-item-title">Define <mark style="background: var(--accent-orange-dim); color: var(--accent-orange); padding: 0 2px; border-radius: 2px;">agent</mark> schema types</div>
+                <div class="command-item-desc">TSK-078 &middot; Done</div>
+              </div>
+            </div>
+
+            <div class="command-section-label">People</div>
+
+            <div class="command-item">
+              <div class="command-item-icon" style="border-radius: 50%; background: var(--accent-purple-dim); border-color: transparent;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--accent-purple);">A</span>
+              </div>
+              <div class="command-item-content">
+                <div class="command-item-title">Alex (<mark style="background: var(--accent-orange-dim); color: var(--accent-orange); padding: 0 2px; border-radius: 2px;">Agent</mark> Lead)</div>
+                <div class="command-item-desc">alex@team.dev &middot; 5 tasks assigned</div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="command-footer">
+            <div class="command-footer-item">
+              <kbd>&uarr;</kbd><kbd>&darr;</kbd> navigate
+            </div>
+            <div class="command-footer-item">
+              <kbd>&crarr;</kbd> open
+            </div>
+            <div class="command-footer-item" style="margin-left: auto;">
+              <span style="color: var(--text-tertiary);">5 results</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =============================================
+       SECTION 7: KEYBOARD SHORTCUT LEGEND
+       ============================================= -->
+  <div class="section">
+    <div class="section-label">Reference</div>
+    <div class="section-title">Keyboard Shortcuts</div>
+    <div class="section-desc">Complete shortcut map available across all menus and interactions. Shown when pressing <kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 1px 5px; font-size: 11px;">?</kbd>.</div>
+
+    <div class="showcase" style="padding: 32px 40px;">
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px 40px;">
+
+        <!-- Task Actions -->
+        <div>
+          <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent-orange); margin-bottom: 12px;">Task Actions</div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Change status</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">S</kbd></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Set priority</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">P</kbd></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Assign</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">A</kbd></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Labels</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">L</kbd></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Due date</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">D</kbd></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Delete task</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">&#x232B;</kbd></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation -->
+        <div>
+          <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent-orange); margin-bottom: 12px;">Navigation</div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Command palette</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">&#x2318;</kbd><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">K</kbd></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Board view</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">G</kbd><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">B</kbd></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">List view</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">G</kbd><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">L</kbd></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Show shortcuts</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">?</kbd></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Next task</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">J</kbd></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Previous task</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">K</kbd></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Board Actions -->
+        <div>
+          <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent-orange); margin-bottom: 12px;">Board Actions</div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">New task</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">&#x2318;</kbd><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">N</kbd></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Copy link</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">&#x2318;</kbd><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">C</kbd></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Duplicate</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">&#x2318;</kbd><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">D</kbd></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Select all</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">&#x2318;</kbd><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">A</kbd></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Filter</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">F</kbd></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">Toggle select</span>
+              <span style="display: flex; gap: 3px;"><kbd style="font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text-tertiary); min-width: 18px; text-align: center;">X</kbd></span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

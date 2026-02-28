@@ -1,0 +1,2222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>Agent 2: Task Card — All Pixel Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================
+   RESET & BASE
+   ============================================ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Mistral Pixel Palette */
+  --bg-deep:      #0D0D11;
+  --bg-surface:   #14141A;
+  --bg-elevated:  #1C1C24;
+  --border:       #2E2E3A;
+  --border-hover: #3E3E4E;
+  --text-primary: #E8E8F0;
+  --text-secondary: #9898A8;
+  --text-muted:   #5E5E6E;
+  --orange:       #FF7000;
+  --red:          #FD3F29;
+  --yellow:       #FFCB00;
+  --green:        #22C55E;
+  --blue:         #3B82F6;
+  --purple:       #A855F7;
+  --white:        #F0F0FF;
+  --gold:         #FFD700;
+  --gold-dark:    #B8860B;
+
+  /* Pixel grid unit */
+  --px: 2px;
+}
+
+html {
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  font-smooth: never;
+  image-rendering: pixelated;
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+}
+
+/* ============================================
+   PIXEL FONTS
+   ============================================ */
+.pixel-font {
+  font-family: 'Press Start 2P', monospace;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  font-smooth: never;
+}
+
+.mono-font {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ============================================
+   MAIN LAYOUT
+   ============================================ */
+.page-container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 32px 40px;
+}
+
+/* Page header — pixel window style */
+.page-header {
+  border: 3px solid var(--border);
+  background: var(--bg-surface);
+  margin-bottom: 40px;
+  position: relative;
+}
+
+.page-header::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(255,255,255,0.04);
+  pointer-events: none;
+}
+
+.page-title-bar {
+  background: var(--bg-elevated);
+  border-bottom: 3px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.page-title-bar h1 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: var(--orange);
+  letter-spacing: 1px;
+}
+
+.window-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.window-controls span {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.page-header-content {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.page-header-content p {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.page-header-content .pixel-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   SECTION LAYOUT
+   ============================================ */
+.section {
+  margin-bottom: 48px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px dashed var(--border);
+}
+
+.section-number {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--bg-deep);
+  background: var(--orange);
+  padding: 4px 8px;
+  min-width: 32px;
+  text-align: center;
+}
+
+.section-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+}
+
+.section-desc {
+  color: var(--text-muted);
+  font-size: 10px;
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ============================================
+   CARD GRID
+   ============================================ */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 32px;
+  align-items: start;
+}
+
+.card-showcase {
+  position: relative;
+}
+
+.card-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+/* ============================================
+   BASE QUEST CARD
+   ============================================ */
+.quest-card {
+  background: var(--bg-surface);
+  border: 3px solid var(--border);
+  padding: 0;
+  position: relative;
+  cursor: pointer;
+  transition: border-color 0.1s steps(1);
+}
+
+.quest-card::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(255,255,255,0.03);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.quest-card:hover {
+  border-color: var(--border-hover);
+}
+
+/* Card top bar with priority color stripe */
+.card-priority-stripe {
+  height: 4px;
+  width: 100%;
+}
+
+.card-priority-stripe.urgent { background: var(--red); }
+.card-priority-stripe.high { background: var(--orange); }
+.card-priority-stripe.medium { background: var(--yellow); }
+.card-priority-stripe.low { background: var(--text-muted); }
+.card-priority-stripe.none { background: var(--border); }
+
+/* Card inner content */
+.card-body {
+  padding: 12px 14px;
+}
+
+/* Card header row: priority + ID */
+.card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.card-quest-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.priority-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  letter-spacing: 0.5px;
+}
+
+.priority-badge .icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.priority-badge.urgent { color: var(--red); }
+.priority-badge.high { color: var(--orange); }
+.priority-badge.medium { color: var(--yellow); }
+.priority-badge.low { color: var(--text-muted); }
+
+/* Card title */
+.card-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-primary);
+  line-height: 1.8;
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+/* Card description snippet */
+.card-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Label pills */
+.card-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.label-pill {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  padding: 3px 8px;
+  border: 2px solid;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+}
+
+.label-pill.frontend { color: var(--blue); border-color: var(--blue); background: rgba(59,130,246,0.1); }
+.label-pill.backend  { color: var(--purple); border-color: var(--purple); background: rgba(168,85,247,0.1); }
+.label-pill.bug      { color: var(--red); border-color: var(--red); background: rgba(253,63,41,0.1); }
+.label-pill.feature  { color: var(--green); border-color: var(--green); background: rgba(34,197,94,0.1); }
+.label-pill.design   { color: var(--yellow); border-color: var(--yellow); background: rgba(255,203,0,0.1); }
+.label-pill.devops   { color: var(--orange); border-color: var(--orange); background: rgba(255,112,0,0.1); }
+.label-pill.docs     { color: var(--text-secondary); border-color: var(--text-muted); background: rgba(152,152,168,0.1); }
+.label-pill.urgent-label { color: var(--red); border-color: var(--red); background: rgba(253,63,41,0.15); }
+
+/* Card footer */
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 2px solid var(--border);
+}
+
+/* Agent sprite area */
+.agent-sprite {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-avatar {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-hover);
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  image-rendering: pixelated;
+  position: relative;
+}
+
+.agent-avatar .status-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 6px;
+  height: 6px;
+  background: var(--green);
+  border: 1px solid var(--bg-surface);
+}
+
+.agent-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+
+/* XP reward */
+.xp-reward {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--yellow);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.xp-reward .star {
+  font-size: 10px;
+}
+
+/* ============================================
+   VARIANT: SUBTASK HP BAR
+   ============================================ */
+.subtask-bar {
+  margin-bottom: 10px;
+}
+
+.subtask-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.subtask-label span {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-secondary);
+}
+
+.subtask-label .count {
+  color: var(--green);
+}
+
+.hp-bar {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+}
+
+.hp-segment {
+  flex: 1;
+  background: var(--border);
+  min-width: 4px;
+  transition: background 0.1s steps(1);
+}
+
+.hp-segment.filled {
+  background: var(--green);
+}
+
+.hp-segment.filled.warning {
+  background: var(--yellow);
+}
+
+.hp-segment.filled.danger {
+  background: var(--red);
+}
+
+/* ============================================
+   VARIANT: DUE DATE
+   ============================================ */
+.due-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  margin-bottom: 10px;
+}
+
+.due-date .hourglass {
+  font-size: 12px;
+  animation: hourglassSpin 2s steps(4) infinite;
+}
+
+@keyframes hourglassSpin {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(0deg); }
+  50% { transform: rotate(180deg); }
+  75% { transform: rotate(180deg); }
+}
+
+.due-date.overdue { color: var(--red); }
+.due-date.soon { color: var(--yellow); }
+.due-date.ok { color: var(--text-secondary); }
+
+.due-date .countdown {
+  letter-spacing: 1px;
+}
+
+/* ============================================
+   VARIANT: DRAGGED
+   ============================================ */
+.quest-card.dragged {
+  box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.6);
+  transform: rotate(-1deg) scale(1.03);
+  border-color: var(--orange);
+  z-index: 100;
+  opacity: 0.95;
+}
+
+/* ============================================
+   VARIANT: DROP TARGET
+   ============================================ */
+.quest-card.drop-target {
+  border: 3px dashed var(--orange);
+  background: rgba(255,112,0,0.05);
+  animation: dropBlink 0.6s steps(1) infinite;
+}
+
+@keyframes dropBlink {
+  0%, 100% { border-color: var(--orange); }
+  50% { border-color: transparent; }
+}
+
+.drop-target-inner {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 100px;
+}
+
+.drop-target-inner .icon {
+  font-size: 24px;
+  animation: dropBounce 0.8s steps(4) infinite;
+}
+
+@keyframes dropBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.drop-target-inner .text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--orange);
+  letter-spacing: 1px;
+}
+
+/* ============================================
+   VARIANT: COMPACT
+   ============================================ */
+.compact-card {
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: border-color 0.1s steps(1);
+}
+
+.compact-card:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-elevated);
+}
+
+.compact-card .selector {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--orange);
+  opacity: 0;
+  transition: opacity 0.1s steps(1);
+}
+
+.compact-card:hover .selector {
+  opacity: 1;
+}
+
+.compact-card .priority-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.compact-card .title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-primary);
+  flex: 1;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compact-card .meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.compact-card .meta .id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+}
+
+.compact-card .meta .xp {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--yellow);
+}
+
+.compact-card .mini-avatar {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  background: var(--bg-elevated);
+}
+
+/* Compact list container */
+.compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.compact-list .compact-card:nth-child(odd) {
+  background: rgba(255,255,255,0.01);
+}
+
+/* ============================================
+   VARIANT: ATTACHMENT
+   ============================================ */
+.card-attachments {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.attachment-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 2px solid var(--border);
+  background: var(--bg-elevated);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.attachment-chip:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.attachment-chip .file-icon {
+  font-size: 12px;
+}
+
+.attachment-chip .file-size {
+  font-size: 8px;
+  color: var(--text-muted);
+}
+
+/* ============================================
+   VARIANT: EPIC QUEST - GOLDEN
+   ============================================ */
+.quest-card.epic {
+  border: 3px solid var(--gold);
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    rgba(255,215,0,0.06) 0%,
+    var(--bg-surface) 30%
+  );
+}
+
+.quest-card.epic::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(255,215,0,0.12);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.quest-card.epic::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border: 2px solid rgba(255,215,0,0.15);
+  pointer-events: none;
+  animation: epicGlow 2s steps(3) infinite;
+}
+
+@keyframes epicGlow {
+  0%, 100% { border-color: rgba(255,215,0,0.15); }
+  33% { border-color: rgba(255,215,0,0.3); }
+  66% { border-color: rgba(255,215,0,0.1); }
+}
+
+.epic-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--gold);
+  padding: 3px 8px;
+  border: 2px solid var(--gold);
+  background: rgba(255,215,0,0.08);
+  margin-bottom: 8px;
+}
+
+.epic-badge .crown {
+  font-size: 10px;
+}
+
+/* Sparkle system */
+.sparkle-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.sparkle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: var(--gold);
+  animation: sparkleAnim 1.5s steps(3) infinite;
+}
+
+.sparkle:nth-child(1) { top: 8px; left: 12px; animation-delay: 0s; }
+.sparkle:nth-child(2) { top: 20px; right: 16px; animation-delay: 0.4s; }
+.sparkle:nth-child(3) { bottom: 14px; left: 40%; animation-delay: 0.8s; }
+.sparkle:nth-child(4) { top: 40%; right: 8px; animation-delay: 1.2s; }
+.sparkle:nth-child(5) { bottom: 30px; left: 20px; animation-delay: 0.2s; }
+.sparkle:nth-child(6) { top: 12px; left: 60%; animation-delay: 0.6s; }
+
+@keyframes sparkleAnim {
+  0%, 100% { opacity: 0; transform: scale(0); }
+  33% { opacity: 1; transform: scale(1); }
+  66% { opacity: 0.5; transform: scale(0.5); }
+}
+
+/* Sparkle cross shape */
+.sparkle::before,
+.sparkle::after {
+  content: '';
+  position: absolute;
+  background: var(--gold);
+}
+
+.sparkle::before {
+  width: 4px;
+  height: 12px;
+  top: -4px;
+  left: 0;
+}
+
+.sparkle::after {
+  width: 12px;
+  height: 4px;
+  top: 0;
+  left: -4px;
+}
+
+/* ============================================
+   STATUS BADGES
+   ============================================ */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  padding: 3px 8px;
+  border: 2px solid;
+  letter-spacing: 0.5px;
+}
+
+.status-badge .status-icon {
+  font-size: 10px;
+}
+
+.status-badge.backlog  { color: var(--text-muted); border-color: var(--text-muted); }
+.status-badge.todo     { color: var(--white); border-color: var(--white); }
+.status-badge.progress { color: var(--orange); border-color: var(--orange); background: rgba(255,112,0,0.08); }
+.status-badge.review   { color: var(--yellow); border-color: var(--yellow); background: rgba(255,203,0,0.08); }
+.status-badge.done     { color: var(--green); border-color: var(--green); background: rgba(34,197,94,0.08); }
+
+/* ============================================
+   URGENT PULSE ANIMATION
+   ============================================ */
+.urgent-pulse {
+  animation: urgentPulse 1s steps(2) infinite;
+}
+
+@keyframes urgentPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ============================================
+   PIXEL DECORATIONS
+   ============================================ */
+.pixel-divider {
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--border) 0px,
+    var(--border) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  margin: 32px 0;
+}
+
+.corner-ornament {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--border);
+}
+
+/* ============================================
+   ROW LAYOUTS
+   ============================================ */
+.variant-row {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.variant-row .card-showcase {
+  flex: 1;
+  min-width: 280px;
+  max-width: 360px;
+}
+
+.variant-row-wide .card-showcase {
+  max-width: 420px;
+}
+
+/* Full width showcase */
+.full-width-showcase {
+  max-width: 100%;
+}
+
+/* ============================================
+   INFO ANNOTATION BOXES
+   ============================================ */
+.annotation {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--border);
+  background: rgba(255,255,255,0.015);
+}
+
+.annotation .bullet {
+  color: var(--orange);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.annotation p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.annotation code {
+  color: var(--orange);
+  background: rgba(255,112,0,0.08);
+  padding: 1px 4px;
+  font-size: 9px;
+}
+
+/* ============================================
+   RESPONSIVE TWEAKS (for viewport flexibility)
+   ============================================ */
+@media (max-width: 1200px) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="page-container">
+
+  <!-- ==========================================
+       PAGE HEADER
+       ========================================== -->
+  <div class="page-header">
+    <div class="page-title-bar">
+      <h1>AGENT 2: TASK CARD — ALL PIXEL VARIANTS</h1>
+      <div class="window-controls">
+        <span>-</span>
+        <span>□</span>
+        <span>X</span>
+      </div>
+    </div>
+    <div class="page-header-content">
+      <div class="pixel-icon">🃏</div>
+      <p>
+        Comprehensive design sheet for every quest card state and variant.
+        Each card is styled as an RPG quest entry with pixel borders, chunky elements,
+        and game-UI interaction patterns. Cards are the core interactive unit of the kanban board.
+      </p>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       SECTION 1: DEFAULT QUEST CARDS (BY PRIORITY)
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-number pixel-font">01</span>
+      <span class="section-title">DEFAULT QUEST CARDS BY PRIORITY</span>
+      <span class="section-desc">// base card, 5 priority levels</span>
+    </div>
+
+    <div class="card-grid">
+
+      <!-- URGENT — Skull / Boss Fight -->
+      <div class="card-showcase">
+        <div class="card-label">URGENT — BOSS FIGHT ☠</div>
+        <div class="quest-card urgent-pulse">
+          <div class="card-priority-stripe urgent"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="priority-badge urgent">
+                <span class="icon">💀</span> URGENT
+              </div>
+              <span class="card-quest-id">#QST-091</span>
+            </div>
+            <div class="card-title">Fix auth token refresh causing infinite loop</div>
+            <div class="card-desc">Production users getting logged out randomly. Token refresh hitting rate limits and cascading failures across services.</div>
+            <div class="card-labels">
+              <span class="label-pill bug">BUG</span>
+              <span class="label-pill backend">BACKEND</span>
+              <span class="label-pill urgent-label">HOTFIX</span>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">
+                  🧙
+                  <div class="status-dot"></div>
+                </div>
+                <span class="agent-name">Agent-1 / Coder</span>
+              </div>
+              <div class="xp-reward">
+                <span class="star">★</span> +80 XP
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="annotation">
+          <span class="bullet">▸</span>
+          <p>Red <code>priority-stripe</code> top bar. Pulsing opacity animation (<code>steps(2)</code>). Skull icon. Urgent cards demand immediate attention.</p>
+        </div>
+      </div>
+
+      <!-- HIGH — Orange Double Arrow / Elite -->
+      <div class="card-showcase">
+        <div class="card-label">HIGH — ELITE ENEMY ⬆⬆</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe high"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="priority-badge high">
+                <span class="icon">⬆</span> HIGH
+              </div>
+              <span class="card-quest-id">#QST-142</span>
+            </div>
+            <div class="card-title">Implement real-time sync via Convex subscriptions</div>
+            <div class="card-desc">Set up live query subscriptions for board state. All connected clients should see card moves instantly.</div>
+            <div class="card-labels">
+              <span class="label-pill feature">FEATURE</span>
+              <span class="label-pill backend">BACKEND</span>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">
+                  🤖
+                  <div class="status-dot"></div>
+                </div>
+                <span class="agent-name">Agent-3 / DevOps</span>
+              </div>
+              <div class="xp-reward">
+                <span class="star">★</span> +60 XP
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEDIUM — Yellow Arrow / Standard Quest -->
+      <div class="card-showcase">
+        <div class="card-label">MEDIUM — STANDARD QUEST ▲</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe medium"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="priority-badge medium">
+                <span class="icon">▲</span> MEDIUM
+              </div>
+              <span class="card-quest-id">#QST-207</span>
+            </div>
+            <div class="card-title">Add pixel avatar selection in agent profile</div>
+            <div class="card-desc">Users should be able to pick from a set of 16x16 pixel sprites for their agent characters.</div>
+            <div class="card-labels">
+              <span class="label-pill frontend">FRONTEND</span>
+              <span class="label-pill design">DESIGN</span>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">
+                  🎨
+                  <div class="status-dot" style="background:var(--yellow)"></div>
+                </div>
+                <span class="agent-name">Agent-5 / Designer</span>
+              </div>
+              <div class="xp-reward">
+                <span class="star">★</span> +40 XP
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOW — Gray Feather / Side Quest -->
+      <div class="card-showcase">
+        <div class="card-label">LOW — SIDE QUEST 🪶</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe low"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="priority-badge low">
+                <span class="icon">🪶</span> LOW
+              </div>
+              <span class="card-quest-id">#QST-315</span>
+            </div>
+            <div class="card-title">Update README with setup instructions</div>
+            <div class="card-desc">Documentation is outdated. Needs new environment variable list and Convex setup steps.</div>
+            <div class="card-labels">
+              <span class="label-pill docs">DOCS</span>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">
+                  📚
+                  <div class="status-dot" style="background:var(--text-muted)"></div>
+                </div>
+                <span class="agent-name">Agent-7 / Researcher</span>
+              </div>
+              <div class="xp-reward">
+                <span class="star">★</span> +15 XP
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="pixel-divider"></div>
+
+  <!-- ==========================================
+       SECTION 2: SUBTASK PROGRESS (HP BAR)
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-number pixel-font">02</span>
+      <span class="section-title">SUBTASK PROGRESS — HP BAR STYLE</span>
+      <span class="section-desc">// segmented, not smooth</span>
+    </div>
+
+    <div class="variant-row">
+
+      <!-- High progress -->
+      <div class="card-showcase">
+        <div class="card-label">HIGH COMPLETION (5/6)</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe high"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="priority-badge high">
+                <span class="icon">⬆</span> HIGH
+              </div>
+              <span class="card-quest-id">#QST-108</span>
+            </div>
+            <div class="card-title">Build pixel sprite editor component</div>
+            <div class="subtask-bar">
+              <div class="subtask-label">
+                <span>SUBTASKS</span>
+                <span class="count">5/6</span>
+              </div>
+              <div class="hp-bar">
+                <div class="hp-segment filled"></div>
+                <div class="hp-segment filled"></div>
+                <div class="hp-segment filled"></div>
+                <div class="hp-segment filled"></div>
+                <div class="hp-segment filled"></div>
+                <div class="hp-segment"></div>
+              </div>
+            </div>
+            <div class="card-labels">
+              <span class="label-pill frontend">FRONTEND</span>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">🎨<div class="status-dot"></div></div>
+                <span class="agent-name">Agent-5</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +55 XP</div>
+            </div>
+          </div>
+        </div>
+        <div class="annotation">
+          <span class="bullet">▸</span>
+          <p>Green segments = complete subtasks. <code>flex: 1</code> per segment with <code>2px</code> gap. Chunky and readable at a glance.</p>
+        </div>
+      </div>
+
+      <!-- Mid progress (warning) -->
+      <div class="card-showcase">
+        <div class="card-label">PARTIAL (3/8) — WARNING COLOR</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe medium"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="priority-badge medium">
+                <span class="icon">▲</span> MEDIUM
+              </div>
+              <span class="card-quest-id">#QST-223</span>
+            </div>
+            <div class="card-title">Integrate Mistral API for agent chat</div>
+            <div class="subtask-bar">
+              <div class="subtask-label">
+                <span>SUBTASKS</span>
+                <span class="count" style="color:var(--yellow)">3/8</span>
+              </div>
+              <div class="hp-bar">
+                <div class="hp-segment filled warning"></div>
+                <div class="hp-segment filled warning"></div>
+                <div class="hp-segment filled warning"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+              </div>
+            </div>
+            <div class="card-labels">
+              <span class="label-pill backend">BACKEND</span>
+              <span class="label-pill feature">FEATURE</span>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">🤖<div class="status-dot" style="background:var(--orange)"></div></div>
+                <span class="agent-name">Agent-2</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +45 XP</div>
+            </div>
+          </div>
+        </div>
+        <div class="annotation">
+          <span class="bullet">▸</span>
+          <p>Yellow (warning) when below 50%. Below 25% turns <code>red (danger)</code>. Color thresholds give quick progress feedback.</p>
+        </div>
+      </div>
+
+      <!-- Danger progress -->
+      <div class="card-showcase">
+        <div class="card-label">CRITICAL LOW (1/7) — DANGER</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe urgent"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="priority-badge urgent">
+                <span class="icon">💀</span> URGENT
+              </div>
+              <span class="card-quest-id">#QST-044</span>
+            </div>
+            <div class="card-title">Migrate database to new schema</div>
+            <div class="subtask-bar">
+              <div class="subtask-label">
+                <span>SUBTASKS</span>
+                <span class="count" style="color:var(--red)">1/7</span>
+              </div>
+              <div class="hp-bar">
+                <div class="hp-segment filled danger"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+              </div>
+            </div>
+            <div class="card-labels">
+              <span class="label-pill devops">DEVOPS</span>
+              <span class="label-pill backend">BACKEND</span>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">🧙<div class="status-dot"></div></div>
+                <span class="agent-name">Agent-1</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +70 XP</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="pixel-divider"></div>
+
+  <!-- ==========================================
+       SECTION 3: DUE DATE VARIANTS
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-number pixel-font">03</span>
+      <span class="section-title">DUE DATE — COUNTDOWN STYLE</span>
+      <span class="section-desc">// hourglass + countdown text</span>
+    </div>
+
+    <div class="variant-row">
+
+      <!-- Overdue -->
+      <div class="card-showcase">
+        <div class="card-label">OVERDUE — RED ALERT</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe urgent"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="priority-badge urgent">
+                <span class="icon">💀</span> URGENT
+              </div>
+              <span class="card-quest-id">#QST-077</span>
+            </div>
+            <div class="card-title">Deploy hotfix to production</div>
+            <div class="due-date overdue">
+              <span class="hourglass">⏳</span>
+              <span class="countdown">2 DAYS OVERDUE!</span>
+            </div>
+            <div class="card-labels">
+              <span class="label-pill devops">DEVOPS</span>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">🤖<div class="status-dot"></div></div>
+                <span class="agent-name">Agent-3</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +90 XP</div>
+            </div>
+          </div>
+        </div>
+        <div class="annotation">
+          <span class="bullet">▸</span>
+          <p>Red text + spinning hourglass. <code>steps(4)</code> rotation animation gives pixel-perfect feel. Overdue state is unmissable.</p>
+        </div>
+      </div>
+
+      <!-- Due soon -->
+      <div class="card-showcase">
+        <div class="card-label">DUE SOON — WARNING</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe medium"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="priority-badge medium">
+                <span class="icon">▲</span> MEDIUM
+              </div>
+              <span class="card-quest-id">#QST-198</span>
+            </div>
+            <div class="card-title">Design notification system mockups</div>
+            <div class="due-date soon">
+              <span class="hourglass">⏳</span>
+              <span class="countdown">1 DAY LEFT</span>
+            </div>
+            <div class="card-labels">
+              <span class="label-pill design">DESIGN</span>
+              <span class="label-pill frontend">FRONTEND</span>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">🎨<div class="status-dot" style="background:var(--yellow)"></div></div>
+                <span class="agent-name">Agent-5</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +35 XP</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plenty of time -->
+      <div class="card-showcase">
+        <div class="card-label">ON TRACK — CALM</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe low"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="priority-badge low">
+                <span class="icon">🪶</span> LOW
+              </div>
+              <span class="card-quest-id">#QST-331</span>
+            </div>
+            <div class="card-title">Write unit tests for agent scheduler</div>
+            <div class="due-date ok">
+              <span class="hourglass">⌛</span>
+              <span class="countdown">12 DAYS LEFT</span>
+            </div>
+            <div class="card-labels">
+              <span class="label-pill backend">BACKEND</span>
+              <span class="label-pill docs">TESTS</span>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">📚<div class="status-dot" style="background:var(--text-muted)"></div></div>
+                <span class="agent-name">Agent-7</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +20 XP</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="pixel-divider"></div>
+
+  <!-- ==========================================
+       SECTION 4: DRAG STATES
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-number pixel-font">04</span>
+      <span class="section-title">DRAG & DROP STATES</span>
+      <span class="section-desc">// dragged card + drop target</span>
+    </div>
+
+    <div class="variant-row">
+
+      <!-- Dragged card -->
+      <div class="card-showcase">
+        <div class="card-label">CARD BEING DRAGGED</div>
+        <div class="quest-card dragged">
+          <div class="card-priority-stripe high"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="priority-badge high">
+                <span class="icon">⬆</span> HIGH
+              </div>
+              <span class="card-quest-id">#QST-142</span>
+            </div>
+            <div class="card-title">Implement real-time sync via Convex</div>
+            <div class="card-labels">
+              <span class="label-pill feature">FEATURE</span>
+              <span class="label-pill backend">BACKEND</span>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">🤖<div class="status-dot"></div></div>
+                <span class="agent-name">Agent-3</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +60 XP</div>
+            </div>
+          </div>
+        </div>
+        <div class="annotation">
+          <span class="bullet">▸</span>
+          <p>Hard <code>4px</code> pixel shadow offset (no blur). Orange border. Slight rotation <code>-1deg</code> + <code>scale(1.03)</code>. No smooth transitions — pixel-snapped.</p>
+        </div>
+      </div>
+
+      <!-- Drop target -->
+      <div class="card-showcase">
+        <div class="card-label">DROP TARGET — BLINKING BORDER</div>
+        <div class="quest-card drop-target">
+          <div class="drop-target-inner">
+            <span class="icon">⬇</span>
+            <span class="text">DROP HERE</span>
+          </div>
+        </div>
+        <div class="annotation">
+          <span class="bullet">▸</span>
+          <p>Dashed orange border with <code>steps(1)</code> blink animation at <code>0.6s</code>. Subtle orange tint background. Arrow bounces with <code>steps(4)</code>.</p>
+        </div>
+      </div>
+
+      <!-- Source gap -->
+      <div class="card-showcase">
+        <div class="card-label">SOURCE GAP — CARD ORIGIN</div>
+        <div style="border: 2px dashed var(--border); min-height: 100px; display: flex; align-items: center; justify-content: center; animation: sourceGapBlink 1s steps(1) infinite;">
+          <span style="font-family: 'Press Start 2P', monospace; font-size: 7px; color: var(--text-muted); letter-spacing: 1px;">· · ·</span>
+        </div>
+        <style>
+          @keyframes sourceGapBlink {
+            0%, 100% { border-color: var(--border); }
+            50% { border-color: var(--text-muted); }
+          }
+        </style>
+        <div class="annotation">
+          <span class="bullet">▸</span>
+          <p>Dashed border placeholder where card was picked up. Subtle blink between two grays. Ellipsis dots for visual marker.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="pixel-divider"></div>
+
+  <!-- ==========================================
+       SECTION 5: COMPACT CARD — RPG MENU STYLE
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-number pixel-font">05</span>
+      <span class="section-title">COMPACT CARDS — RPG MENU ITEMS</span>
+      <span class="section-desc">// single-line list view</span>
+    </div>
+
+    <div class="variant-row variant-row-wide">
+
+      <div class="card-showcase full-width-showcase" style="max-width:680px">
+        <div class="card-label">LIST VIEW — COMPACT QUEST ENTRIES</div>
+        <div class="compact-list">
+
+          <div class="compact-card">
+            <span class="selector">▶</span>
+            <span class="priority-icon">💀</span>
+            <span class="title">Fix auth token refresh infinite loop</span>
+            <div class="meta">
+              <span class="label-pill bug" style="font-size:5px; padding: 2px 5px;">BUG</span>
+              <span class="id">#091</span>
+              <span class="xp">+80XP</span>
+              <span class="mini-avatar">🧙</span>
+            </div>
+          </div>
+
+          <div class="compact-card" style="border-color: var(--border-hover); background: var(--bg-elevated);">
+            <span class="selector" style="opacity:1">▶</span>
+            <span class="priority-icon">⬆</span>
+            <span class="title">Implement real-time sync via Convex subscriptions</span>
+            <div class="meta">
+              <span class="label-pill feature" style="font-size:5px; padding: 2px 5px;">FEAT</span>
+              <span class="id">#142</span>
+              <span class="xp">+60XP</span>
+              <span class="mini-avatar">🤖</span>
+            </div>
+          </div>
+
+          <div class="compact-card">
+            <span class="selector">▶</span>
+            <span class="priority-icon">▲</span>
+            <span class="title">Add pixel avatar selection in agent profile</span>
+            <div class="meta">
+              <span class="label-pill design" style="font-size:5px; padding: 2px 5px;">UI</span>
+              <span class="id">#207</span>
+              <span class="xp">+40XP</span>
+              <span class="mini-avatar">🎨</span>
+            </div>
+          </div>
+
+          <div class="compact-card">
+            <span class="selector">▶</span>
+            <span class="priority-icon">▲</span>
+            <span class="title">Integrate Mistral API for agent chat intelligence</span>
+            <div class="meta">
+              <span class="label-pill backend" style="font-size:5px; padding: 2px 5px;">API</span>
+              <span class="id">#223</span>
+              <span class="xp">+45XP</span>
+              <span class="mini-avatar">🤖</span>
+            </div>
+          </div>
+
+          <div class="compact-card">
+            <span class="selector">▶</span>
+            <span class="priority-icon">🪶</span>
+            <span class="title">Update README with setup instructions</span>
+            <div class="meta">
+              <span class="label-pill docs" style="font-size:5px; padding: 2px 5px;">DOCS</span>
+              <span class="id">#315</span>
+              <span class="xp">+15XP</span>
+              <span class="mini-avatar">📚</span>
+            </div>
+          </div>
+
+          <div class="compact-card" style="opacity: 0.5; text-decoration: line-through;">
+            <span class="selector">▶</span>
+            <span class="priority-icon" style="filter: grayscale(1);">▲</span>
+            <span class="title" style="color: var(--text-muted);">Set up CI/CD pipeline for staging</span>
+            <div class="meta">
+              <span class="label-pill devops" style="font-size:5px; padding: 2px 5px; opacity: 0.5;">OPS</span>
+              <span class="id" style="color: var(--green);">DONE</span>
+              <span class="xp">+50XP</span>
+              <span class="mini-avatar" style="opacity: 0.5;">🤖</span>
+            </div>
+          </div>
+
+        </div>
+        <div class="annotation">
+          <span class="bullet">▸</span>
+          <p>RPG menu-item style. <code>▶</code> selector appears on hover. 2nd row shows active/selected state. Last row shows completed (struck-through, dimmed). Alternating subtle background.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="pixel-divider"></div>
+
+  <!-- ==========================================
+       SECTION 6: ATTACHMENTS
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-number pixel-font">06</span>
+      <span class="section-title">CARD WITH ATTACHMENTS</span>
+      <span class="section-desc">// pixel scroll/file icons</span>
+    </div>
+
+    <div class="variant-row">
+
+      <div class="card-showcase">
+        <div class="card-label">MULTIPLE ATTACHMENTS</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe medium"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="priority-badge medium">
+                <span class="icon">▲</span> MEDIUM
+              </div>
+              <span class="card-quest-id">#QST-256</span>
+            </div>
+            <div class="card-title">Review UI mockups for dashboard</div>
+            <div class="card-desc">Finalize the pixel art dashboard mockups. Check alignment with design system colors and spacing.</div>
+            <div class="card-attachments">
+              <div class="attachment-chip">
+                <span class="file-icon">📜</span>
+                <span>mockup-v3.fig</span>
+                <span class="file-size">2.4MB</span>
+              </div>
+              <div class="attachment-chip">
+                <span class="file-icon">🗺</span>
+                <span>sitemap.pdf</span>
+                <span class="file-size">840KB</span>
+              </div>
+              <div class="attachment-chip">
+                <span class="file-icon">📋</span>
+                <span>notes.txt</span>
+                <span class="file-size">12KB</span>
+              </div>
+            </div>
+            <div class="card-labels">
+              <span class="label-pill design">DESIGN</span>
+              <span class="label-pill frontend">FRONTEND</span>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">🎨<div class="status-dot"></div></div>
+                <span class="agent-name">Agent-5</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +30 XP</div>
+            </div>
+          </div>
+        </div>
+        <div class="annotation">
+          <span class="bullet">▸</span>
+          <p>Scroll/file/map emoji icons per file type. Pixel border chips with filename + size. Hover brightens text. Chips wrap on overflow.</p>
+        </div>
+      </div>
+
+      <div class="card-showcase">
+        <div class="card-label">IMAGE ATTACHMENT PREVIEW</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe high"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="priority-badge high">
+                <span class="icon">⬆</span> HIGH
+              </div>
+              <span class="card-quest-id">#QST-189</span>
+            </div>
+            <div class="card-title">Create pixel sprite sheet for agents</div>
+            <!-- Pixel art image preview -->
+            <div style="
+              border: 2px solid var(--border);
+              background: var(--bg-elevated);
+              padding: 8px;
+              margin-bottom: 10px;
+              display: flex;
+              align-items: center;
+              gap: 12px;
+            ">
+              <!-- Fake pixel art thumbnail -->
+              <div style="
+                width: 48px;
+                height: 48px;
+                background: var(--bg-deep);
+                border: 2px solid var(--border);
+                display: grid;
+                grid-template-columns: repeat(8,1fr);
+                grid-template-rows: repeat(8,1fr);
+                image-rendering: pixelated;
+                flex-shrink: 0;
+              ">
+                <!-- Mini pixel character drawn with grid cells -->
+                <div style="grid-column:4/6;grid-row:1/2;background:var(--orange)"></div>
+                <div style="grid-column:3/7;grid-row:2/3;background:var(--orange)"></div>
+                <div style="grid-column:3/7;grid-row:3/4;background:var(--white)"></div>
+                <div style="grid-column:4;grid-row:3;background:var(--blue)"></div>
+                <div style="grid-column:5;grid-row:3;background:var(--blue)"></div>
+                <div style="grid-column:3/7;grid-row:4/5;background:var(--white)"></div>
+                <div style="grid-column:2/8;grid-row:5/6;background:var(--orange)"></div>
+                <div style="grid-column:3/7;grid-row:6/7;background:var(--orange)"></div>
+                <div style="grid-column:3/4;grid-row:7/8;background:var(--blue)"></div>
+                <div style="grid-column:6/7;grid-row:7/8;background:var(--blue)"></div>
+                <div style="grid-column:3/4;grid-row:8/9;background:var(--text-muted)"></div>
+                <div style="grid-column:6/7;grid-row:8/9;background:var(--text-muted)"></div>
+              </div>
+              <div>
+                <div style="font-family:'Press Start 2P',monospace; font-size:7px; color:var(--text-primary); margin-bottom:4px;">sprite-agent.png</div>
+                <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted);">128x128 · 24KB · PNG</div>
+              </div>
+            </div>
+            <div class="card-labels">
+              <span class="label-pill design">DESIGN</span>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">🎨<div class="status-dot"></div></div>
+                <span class="agent-name">Agent-5</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +50 XP</div>
+            </div>
+          </div>
+        </div>
+        <div class="annotation">
+          <span class="bullet">▸</span>
+          <p>Inline image preview with pixel thumbnail rendered via CSS grid. Shows filename, dimensions, and file size. Pixel border frame.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="pixel-divider"></div>
+
+  <!-- ==========================================
+       SECTION 7: STATUS BADGE SHOWCASE
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-number pixel-font">07</span>
+      <span class="section-title">CARDS WITH STATUS BADGES</span>
+      <span class="section-desc">// gamified status indicators</span>
+    </div>
+
+    <div class="card-grid">
+
+      <!-- Backlog -->
+      <div class="card-showcase">
+        <div class="card-label">BACKLOG — QUEST LOG</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe none"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="status-badge backlog">
+                <span class="status-icon">📜</span> BACKLOG
+              </div>
+              <span class="card-quest-id">#QST-400</span>
+            </div>
+            <div class="card-title">Research WebSocket alternatives</div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar" style="border-color:var(--border);">?</div>
+                <span class="agent-name" style="color:var(--text-muted)">Unassigned</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +20 XP</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- In Progress -->
+      <div class="card-showcase">
+        <div class="card-label">IN PROGRESS — IN BATTLE</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe high"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="status-badge progress">
+                <span class="status-icon">🔥</span> IN PROGRESS
+              </div>
+              <span class="card-quest-id">#QST-142</span>
+            </div>
+            <div class="card-title">Implement real-time sync via Convex</div>
+            <div class="subtask-bar">
+              <div class="subtask-label">
+                <span>SUBTASKS</span>
+                <span class="count" style="color:var(--yellow)">2/5</span>
+              </div>
+              <div class="hp-bar">
+                <div class="hp-segment filled warning"></div>
+                <div class="hp-segment filled warning"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+              </div>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">🤖<div class="status-dot"></div></div>
+                <span class="agent-name">Agent-3</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +60 XP</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Review -->
+      <div class="card-showcase">
+        <div class="card-label">REVIEW — INSPECTION</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe medium"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="status-badge review">
+                <span class="status-icon">👁</span> REVIEW
+              </div>
+              <span class="card-quest-id">#QST-189</span>
+            </div>
+            <div class="card-title">Create pixel sprite sheet for agents</div>
+            <div class="card-labels">
+              <span class="label-pill design">DESIGN</span>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">🎨<div class="status-dot" style="background:var(--yellow)"></div></div>
+                <span class="agent-name">Agent-5</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +50 XP</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Done -->
+      <div class="card-showcase">
+        <div class="card-label">DONE — VICTORY!</div>
+        <div class="quest-card" style="opacity: 0.75;">
+          <div class="card-priority-stripe" style="background: var(--green);"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="status-badge done">
+                <span class="status-icon">⭐</span> COMPLETE
+              </div>
+              <span class="card-quest-id">#QST-088</span>
+            </div>
+            <div class="card-title" style="text-decoration: line-through; color: var(--text-secondary);">Set up CI/CD pipeline for staging</div>
+            <div class="subtask-bar">
+              <div class="subtask-label">
+                <span>SUBTASKS</span>
+                <span class="count">6/6</span>
+              </div>
+              <div class="hp-bar">
+                <div class="hp-segment filled"></div>
+                <div class="hp-segment filled"></div>
+                <div class="hp-segment filled"></div>
+                <div class="hp-segment filled"></div>
+                <div class="hp-segment filled"></div>
+                <div class="hp-segment filled"></div>
+              </div>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">🤖<div class="status-dot"></div></div>
+                <span class="agent-name">Agent-3</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +50 XP</div>
+            </div>
+          </div>
+        </div>
+        <div class="annotation">
+          <span class="bullet">▸</span>
+          <p>Completed cards: dimmed to <code>0.75 opacity</code>, title struck through, green top stripe, all HP segments filled. Visual de-emphasis.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="pixel-divider"></div>
+
+  <!-- ==========================================
+       SECTION 8: EPIC QUEST — GOLDEN VARIANT
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-number pixel-font" style="background: var(--gold); color: var(--bg-deep);">★</span>
+      <span class="section-title" style="color: var(--gold);">BONUS: EPIC QUEST — GOLDEN BORDER + SPARKLES</span>
+      <span class="section-desc">// legendary variant</span>
+    </div>
+
+    <div class="variant-row">
+
+      <div class="card-showcase" style="max-width: 400px;">
+        <div class="card-label" style="color: var(--gold);">EPIC QUEST CARD — LEGENDARY</div>
+        <div class="quest-card epic">
+          <!-- Sparkle particles -->
+          <div class="sparkle-container">
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+          </div>
+
+          <div class="card-priority-stripe" style="background: linear-gradient(90deg, var(--gold-dark), var(--gold), var(--gold-dark)); height: 6px;"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="epic-badge">
+                <span class="crown">👑</span> EPIC QUEST
+              </div>
+              <span class="card-quest-id" style="color: var(--gold);">#QST-001</span>
+            </div>
+            <div class="card-title" style="color: var(--gold); font-size: 9px; line-height: 2;">
+              Ship v1.0 of AI Office Platform
+            </div>
+            <div class="card-desc" style="color: var(--text-primary);">
+              Complete end-to-end implementation of the AI Office kanban with Mistral-powered agents,
+              real-time collaboration, and pixel-art interface. The ultimate quest.
+            </div>
+            <div class="subtask-bar">
+              <div class="subtask-label">
+                <span style="color: var(--gold);">MILESTONES</span>
+                <span class="count" style="color: var(--gold);">7/12</span>
+              </div>
+              <div class="hp-bar" style="height: 12px;">
+                <div class="hp-segment" style="background: var(--gold);"></div>
+                <div class="hp-segment" style="background: var(--gold);"></div>
+                <div class="hp-segment" style="background: var(--gold);"></div>
+                <div class="hp-segment" style="background: var(--gold);"></div>
+                <div class="hp-segment" style="background: var(--gold);"></div>
+                <div class="hp-segment" style="background: var(--gold);"></div>
+                <div class="hp-segment" style="background: var(--gold);"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+              </div>
+            </div>
+            <div class="due-date" style="color: var(--gold);">
+              <span class="hourglass">⏳</span>
+              <span class="countdown">5 DAYS LEFT</span>
+            </div>
+            <div class="card-labels">
+              <span class="label-pill" style="color: var(--gold); border-color: var(--gold); background: rgba(255,215,0,0.1);">MILESTONE</span>
+              <span class="label-pill feature">FEATURE</span>
+              <span class="label-pill frontend">FRONTEND</span>
+              <span class="label-pill backend">BACKEND</span>
+            </div>
+            <div class="card-footer" style="border-top-color: rgba(255,215,0,0.3);">
+              <div class="agent-sprite">
+                <div class="agent-avatar" style="border-color: var(--gold);">
+                  ⚔
+                  <div class="status-dot" style="background: var(--gold);"></div>
+                </div>
+                <span class="agent-name" style="color: var(--gold);">TEAM / Party</span>
+              </div>
+              <div class="xp-reward" style="font-size: 8px;">
+                <span class="star">★</span> +500 XP
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="annotation">
+          <span class="bullet" style="color: var(--gold);">▸</span>
+          <p>Golden border with outer glow ring (<code>epic::after</code>). CSS sparkle crosses positioned absolutely, animated with <code>steps(3)</code>. Thicker priority stripe. Gold HP bar. Higher XP reward. Crown badge.</p>
+        </div>
+      </div>
+
+      <!-- Epic comparison: normal vs epic side by side note -->
+      <div class="card-showcase" style="max-width: 400px;">
+        <div class="card-label" style="color: var(--gold);">EPIC VS NORMAL — COMPARISON</div>
+
+        <!-- Normal for comparison -->
+        <div class="quest-card" style="margin-bottom: 16px;">
+          <div class="card-priority-stripe high"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="priority-badge high">
+                <span class="icon">⬆</span> HIGH
+              </div>
+              <span class="card-quest-id">#QST-142</span>
+            </div>
+            <div class="card-title">Regular quest for comparison</div>
+            <div class="card-labels">
+              <span class="label-pill feature">FEATURE</span>
+            </div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar">🤖<div class="status-dot"></div></div>
+                <span class="agent-name">Agent-3</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +60 XP</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mini epic -->
+        <div class="quest-card epic">
+          <div class="sparkle-container">
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+          </div>
+          <div class="card-priority-stripe" style="background: linear-gradient(90deg, var(--gold-dark), var(--gold), var(--gold-dark)); height: 6px;"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="epic-badge">
+                <span class="crown">👑</span> EPIC QUEST
+              </div>
+              <span class="card-quest-id" style="color: var(--gold);">#QST-002</span>
+            </div>
+            <div class="card-title" style="color: var(--gold);">Same content, epic treatment</div>
+            <div class="card-labels">
+              <span class="label-pill" style="color: var(--gold); border-color: var(--gold); background: rgba(255,215,0,0.1);">MILESTONE</span>
+            </div>
+            <div class="card-footer" style="border-top-color: rgba(255,215,0,0.3);">
+              <div class="agent-sprite">
+                <div class="agent-avatar" style="border-color: var(--gold);">⚔<div class="status-dot" style="background:var(--gold)"></div></div>
+                <span class="agent-name" style="color: var(--gold);">TEAM</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +200 XP</div>
+            </div>
+          </div>
+        </div>
+        <div class="annotation">
+          <span class="bullet" style="color: var(--gold);">▸</span>
+          <p>Direct comparison: standard 3px gray border vs golden border + glow ring + sparkles + gradient stripe. Epic treatment is additive — card structure stays identical.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="pixel-divider"></div>
+
+  <!-- ==========================================
+       SECTION 9: COMBINED / KITCHEN SINK
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-number pixel-font">09</span>
+      <span class="section-title">COMBINED FEATURES — KITCHEN SINK</span>
+      <span class="section-desc">// all features on one card</span>
+    </div>
+
+    <div class="variant-row">
+
+      <div class="card-showcase" style="max-width: 400px;">
+        <div class="card-label">FULL-FEATURED QUEST CARD</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe urgent"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="status-badge progress">
+                <span class="status-icon">🔥</span> IN PROGRESS
+              </div>
+              <span class="card-quest-id">#QST-077</span>
+            </div>
+
+            <div style="display:flex; align-items:center; gap: 8px; margin-bottom: 4px;">
+              <div class="priority-badge urgent" style="margin:0;">
+                <span class="icon">💀</span> URGENT
+              </div>
+            </div>
+
+            <div class="card-title">Deploy hotfix for auth token cascade failure</div>
+
+            <div class="card-desc">
+              Token refresh endpoint hitting rate limits. Users experiencing random logouts. Requires coordinated backend + infra fix.
+            </div>
+
+            <div class="due-date overdue">
+              <span class="hourglass">⏳</span>
+              <span class="countdown">2 DAYS OVERDUE!</span>
+            </div>
+
+            <div class="subtask-bar">
+              <div class="subtask-label">
+                <span>SUBTASKS</span>
+                <span class="count" style="color:var(--red)">2/6</span>
+              </div>
+              <div class="hp-bar">
+                <div class="hp-segment filled danger"></div>
+                <div class="hp-segment filled danger"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+                <div class="hp-segment"></div>
+              </div>
+            </div>
+
+            <div class="card-attachments">
+              <div class="attachment-chip">
+                <span class="file-icon">📋</span>
+                <span>postmortem.md</span>
+                <span class="file-size">8KB</span>
+              </div>
+              <div class="attachment-chip">
+                <span class="file-icon">📜</span>
+                <span>fix-plan.txt</span>
+                <span class="file-size">3KB</span>
+              </div>
+            </div>
+
+            <div class="card-labels">
+              <span class="label-pill bug">BUG</span>
+              <span class="label-pill backend">BACKEND</span>
+              <span class="label-pill devops">DEVOPS</span>
+              <span class="label-pill urgent-label">HOTFIX</span>
+            </div>
+
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div style="display:flex; gap: 0;">
+                  <div class="agent-avatar" style="z-index:2;">🧙<div class="status-dot"></div></div>
+                  <div class="agent-avatar" style="margin-left:-6px; z-index:1;">🤖<div class="status-dot"></div></div>
+                </div>
+                <span class="agent-name">Agent-1, Agent-3</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +90 XP</div>
+            </div>
+          </div>
+        </div>
+        <div class="annotation">
+          <span class="bullet">▸</span>
+          <p>All features combined: status badge, priority, title, description, due date (overdue), subtask HP bar (danger), attachments, labels, stacked agent avatars, XP reward. Maximum information density while staying readable.</p>
+        </div>
+      </div>
+
+      <!-- Minimal card for contrast -->
+      <div class="card-showcase" style="max-width: 400px;">
+        <div class="card-label">MINIMAL CARD — BARE ESSENTIALS</div>
+        <div class="quest-card">
+          <div class="card-priority-stripe none"></div>
+          <div class="card-body">
+            <div class="card-header-row">
+              <div class="priority-badge low">
+                <span class="icon">🪶</span> LOW
+              </div>
+              <span class="card-quest-id">#QST-412</span>
+            </div>
+            <div class="card-title">Quick typo fix in onboarding copy</div>
+            <div class="card-footer">
+              <div class="agent-sprite">
+                <div class="agent-avatar" style="border-color:var(--border);">?</div>
+                <span class="agent-name" style="color:var(--text-muted)">Unassigned</span>
+              </div>
+              <div class="xp-reward"><span class="star">★</span> +5 XP</div>
+            </div>
+          </div>
+        </div>
+        <div class="annotation">
+          <span class="bullet">▸</span>
+          <p>Minimal variant: just priority, title, unassigned avatar, XP. No labels, no description, no subtasks. Cards gracefully handle missing optional data.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="pixel-divider"></div>
+
+  <!-- ==========================================
+       SECTION 10: CSS SPEC REFERENCE
+       ========================================== -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-number pixel-font">10</span>
+      <span class="section-title">CSS IMPLEMENTATION SPEC</span>
+      <span class="section-desc">// pixel rules reference</span>
+    </div>
+
+    <div style="
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    ">
+      <!-- Spec box 1: Borders -->
+      <div style="border: 2px solid var(--border); padding: 14px; background: var(--bg-surface);">
+        <div style="font-family:'Press Start 2P',monospace; font-size:7px; color:var(--orange); margin-bottom:10px;">PIXEL BORDERS</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-secondary); line-height:1.8;">
+          border: 3px solid<br>
+          Inner: 1px inset glow<br>
+          Hover: border-color swap<br>
+          No border-radius ever<br>
+          box-shadow: hard only<br>
+          Drag: 4px 4px 0 0
+        </div>
+      </div>
+
+      <!-- Spec box 2: Typography -->
+      <div style="border: 2px solid var(--border); padding: 14px; background: var(--bg-surface);">
+        <div style="font-family:'Press Start 2P',monospace; font-size:7px; color:var(--orange); margin-bottom:10px;">TYPOGRAPHY</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-secondary); line-height:1.8;">
+          Headings: Press Start 2P<br>
+          Labels: 6-7px pixel font<br>
+          Body: 11px Inter<br>
+          Code/IDs: JetBrains Mono<br>
+          -webkit-font-smoothing: none<br>
+          Sizes: multiples of 2px
+        </div>
+      </div>
+
+      <!-- Spec box 3: Animations -->
+      <div style="border: 2px solid var(--border); padding: 14px; background: var(--bg-surface);">
+        <div style="font-family:'Press Start 2P',monospace; font-size:7px; color:var(--orange); margin-bottom:10px;">ANIMATIONS</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-secondary); line-height:1.8;">
+          Use steps() not ease<br>
+          Blink: steps(1) 0.6s<br>
+          Pulse: steps(2) 1s<br>
+          Bounce: steps(4) 0.8s<br>
+          Sparkle: steps(3) 1.5s<br>
+          Spin: steps(4) 2s
+        </div>
+      </div>
+
+      <!-- Spec box 4: Colors -->
+      <div style="border: 2px solid var(--border); padding: 14px; background: var(--bg-surface);">
+        <div style="font-family:'Press Start 2P',monospace; font-size:7px; color:var(--orange); margin-bottom:10px;">HP BAR THRESHOLDS</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-secondary); line-height:1.8;">
+          >50%: <span style="color:var(--green)">Green (healthy)</span><br>
+          25-50%: <span style="color:var(--yellow)">Yellow (warn)</span><br>
+          &lt;25%: <span style="color:var(--red)">Red (danger)</span><br>
+          100%: <span style="color:var(--green)">Full + done state</span><br>
+          Segments: flex:1, 2px gap<br>
+          Height: 10-12px
+        </div>
+      </div>
+
+      <!-- Spec box 5: Card anatomy -->
+      <div style="border: 2px solid var(--border); padding: 14px; background: var(--bg-surface);">
+        <div style="font-family:'Press Start 2P',monospace; font-size:7px; color:var(--orange); margin-bottom:10px;">CARD ANATOMY</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-secondary); line-height:1.8;">
+          1. Priority stripe (4px)<br>
+          2. Header (priority+ID)<br>
+          3. Title (pixel font)<br>
+          4. Description (body)<br>
+          5. Due date (optional)<br>
+          6. HP bar (optional)<br>
+          7. Attachments (optional)<br>
+          8. Labels<br>
+          9. Footer (agent+XP)
+        </div>
+      </div>
+
+      <!-- Spec box 6: States -->
+      <div style="border: 2px solid var(--border); padding: 14px; background: var(--bg-surface);">
+        <div style="font-family:'Press Start 2P',monospace; font-size:7px; color:var(--orange); margin-bottom:10px;">INTERACTION STATES</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-secondary); line-height:1.8;">
+          Default: 3px border<br>
+          Hover: border-hover color<br>
+          Dragged: 4px shadow+rotate<br>
+          Drop target: dashed blink<br>
+          Selected: orange border<br>
+          Done: 0.75 opacity<br>
+          Epic: gold+sparkles+glow
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="
+    margin-top: 48px;
+    padding: 16px 0;
+    border-top: 2px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  ">
+    <div style="font-family:'Press Start 2P',monospace; font-size:7px; color:var(--text-muted); letter-spacing:0.5px;">
+      AGENT 2 / TASK CARD VARIANTS / PIXEL KANBAN DESIGN SPRINT
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted);">
+      2026-02-28 · 10 sections · 20+ variants
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

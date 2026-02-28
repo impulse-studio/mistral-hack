@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent 9 — Drag & Drop Interaction States</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  /* Mistral Palette */
+  --bg-base:      #0A0A0B;
+  --bg-surface:   #111113;
+  --bg-elevated:  #1A1A1D;
+  --bg-hover:     #222225;
+  --border:       #2A2A2E;
+  --border-hover: #3A3A3E;
+  --text-primary: #FAFAFA;
+  --text-secondary: #A0A0A8;
+  --text-tertiary:  #6B6B73;
+  --orange:       #FF7000;
+  --orange-dim:   rgba(255, 112, 0, 0.15);
+  --orange-glow:  rgba(255, 112, 0, 0.25);
+  --red:          #FD3F29;
+  --red-dim:      rgba(253, 63, 41, 0.12);
+  --red-glow:     rgba(253, 63, 41, 0.3);
+  --yellow:       #FFCB00;
+  --green:        #22C55E;
+  --blue:         #3B82F6;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+html { font-size: 13px; }
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   PAGE LAYOUT
+   ============================================================ */
+.page-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(10, 10, 11, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 48px;
+  display: flex; align-items: baseline; gap: 16px;
+}
+.page-header h1 {
+  font-size: 20px; font-weight: 700; letter-spacing: -0.02em;
+}
+.page-header h1 span { color: var(--orange); }
+.page-header .subtitle {
+  font-size: 12px; color: var(--text-tertiary); font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+.scenes {
+  padding: 40px 48px 80px;
+  display: flex; flex-direction: column; gap: 64px;
+}
+
+/* ============================================================
+   SCENE CONTAINER
+   ============================================================ */
+.scene {
+  display: flex; flex-direction: column; gap: 16px;
+}
+.scene-label {
+  display: flex; align-items: center; gap: 10px;
+}
+.scene-number {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 500;
+  color: var(--orange);
+  background: var(--orange-dim);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.04em;
+}
+.scene-title {
+  font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
+}
+.scene-desc {
+  font-size: 11px; color: var(--text-tertiary); margin-top: -8px; max-width: 600px;
+}
+.scene-canvas {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ============================================================
+   COLUMN
+   ============================================================ */
+.board {
+  display: flex; gap: 16px;
+}
+.column {
+  flex: 0 0 240px;
+  display: flex; flex-direction: column; gap: 0;
+}
+.column-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 4px 12px;
+}
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.status-dot.orange { background: var(--orange); }
+.status-dot.white  { border: 1.5px solid var(--text-primary); }
+.status-dot.yellow { background: var(--yellow); }
+.status-dot.green  { background: var(--green); }
+.status-dot.gray   { background: var(--text-tertiary); }
+.column-name {
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--text-secondary);
+}
+.column-count {
+  font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono);
+  margin-left: auto;
+}
+.column-body {
+  display: flex; flex-direction: column; gap: 6px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  min-height: 120px;
+  position: relative;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+/* ============================================================
+   TASK CARD
+   ============================================================ */
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 6px;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.15s ease;
+  position: relative;
+}
+.card-id {
+  font-family: var(--font-mono);
+  font-size: 10px; color: var(--text-tertiary); font-weight: 500;
+}
+.card-title {
+  font-size: 13px; font-weight: 500; line-height: 1.4;
+  color: var(--text-primary);
+}
+.card-meta {
+  display: flex; align-items: center; gap: 6px; margin-top: 2px;
+}
+.card-label {
+  font-size: 10px; font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--text-primary);
+}
+.card-label.orange { background: rgba(255,112,0,0.18); color: #ff9d4d; }
+.card-label.blue   { background: rgba(59,130,246,0.18); color: #6da8ff; }
+.card-label.green  { background: rgba(34,197,94,0.18);  color: #5dd98b; }
+.card-label.red    { background: rgba(253,63,41,0.18);  color: #ff7b6a; }
+.card-label.yellow { background: rgba(255,203,0,0.18);  color: #ffd84d; }
+.card-label.purple { background: rgba(139,92,246,0.18); color: #a78bfa; }
+
+.priority-icon {
+  width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;
+}
+.priority-icon svg { width: 12px; height: 12px; }
+
+.card-avatar {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--border-hover);
+  margin-left: auto;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 600; color: var(--text-secondary);
+}
+
+/* ============================================================
+   SCENE 1: CARD BEING PICKED UP
+   ============================================================ */
+.card-dragging {
+  transform: scale(1.04) rotate(-1.5deg);
+  box-shadow:
+    0 8px 30px rgba(0,0,0,0.45),
+    0 2px 8px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(255,112,0,0.2);
+  border-color: var(--orange);
+  z-index: 10;
+  cursor: grabbing;
+  animation: drag-float 2s ease-in-out infinite;
+}
+@keyframes drag-float {
+  0%, 100% { transform: scale(1.04) rotate(-1.5deg) translateY(0); }
+  50%      { transform: scale(1.04) rotate(-1deg) translateY(-3px); }
+}
+
+.card-ghost {
+  opacity: 0; pointer-events: none;
+}
+.card-source-placeholder {
+  border: 1.5px dashed var(--border-hover);
+  border-radius: var(--radius-md);
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    rgba(42,42,46,0.25) 4px,
+    rgba(42,42,46,0.25) 8px
+  );
+  min-height: 72px;
+  position: relative;
+}
+.card-source-placeholder::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: var(--radius-md);
+  animation: placeholder-pulse 2s ease-in-out infinite;
+}
+@keyframes placeholder-pulse {
+  0%, 100% { background: rgba(42,42,46,0.0); }
+  50%      { background: rgba(42,42,46,0.15); }
+}
+
+/* ============================================================
+   SCENE 2: INSERTION INDICATOR
+   ============================================================ */
+.insertion-line {
+  height: 2px;
+  background: var(--orange);
+  border-radius: 1px;
+  margin: 2px 0;
+  position: relative;
+  box-shadow: 0 0 8px var(--orange-glow);
+  animation: line-glow 1.5s ease-in-out infinite;
+}
+@keyframes line-glow {
+  0%, 100% { box-shadow: 0 0 6px var(--orange-glow); }
+  50%      { box-shadow: 0 0 14px var(--orange-glow), 0 0 4px var(--orange); }
+}
+.insertion-line::before,
+.insertion-line::after {
+  content: '';
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 6px; height: 6px;
+  background: var(--orange);
+  border-radius: 50%;
+}
+.insertion-line::before { left: -3px; }
+.insertion-line::after  { right: -3px; }
+
+/* ============================================================
+   SCENE 3: CARDS SPREADING APART
+   ============================================================ */
+.card-spread-above {
+  transform: translateY(-6px);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.card-spread-below {
+  transform: translateY(6px);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ============================================================
+   SCENE 4: EMPTY COLUMN DROP TARGET
+   ============================================================ */
+.column-body.drop-target-empty {
+  border-color: var(--orange);
+  border-style: dashed;
+  background: var(--orange-dim);
+  animation: empty-col-pulse 2s ease-in-out infinite;
+}
+@keyframes empty-col-pulse {
+  0%, 100% { background: rgba(255,112,0,0.06); }
+  50%      { background: rgba(255,112,0,0.12); }
+}
+.empty-drop-hint {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; padding: 24px 0;
+  color: var(--orange);
+  font-size: 11px; font-weight: 500;
+  opacity: 0.8;
+}
+.empty-drop-icon {
+  width: 32px; height: 32px;
+  border: 1.5px dashed var(--orange);
+  border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center;
+  animation: icon-bounce 2s ease-in-out infinite;
+}
+@keyframes icon-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+
+/* ============================================================
+   SCENE 5: INVALID DROP ZONE
+   ============================================================ */
+.column-body.invalid-zone {
+  border-color: var(--red);
+  animation: invalid-flash 0.6s ease-out;
+  position: relative;
+}
+@keyframes invalid-flash {
+  0%   { background: var(--red-dim); border-color: var(--red); box-shadow: inset 0 0 20px var(--red-glow); }
+  40%  { background: rgba(253,63,41,0.04); }
+  100% { background: var(--bg-base); border-color: var(--border); box-shadow: none; }
+}
+.column-body.invalid-zone-persistent {
+  border-color: var(--red);
+  background: var(--red-dim);
+  animation: invalid-pulse 1.2s ease-in-out infinite;
+}
+@keyframes invalid-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 rgba(253,63,41,0); background: rgba(253,63,41,0.04); }
+  50%      { box-shadow: inset 0 0 15px rgba(253,63,41,0.08); background: rgba(253,63,41,0.08); }
+}
+.invalid-badge {
+  position: absolute; top: 8px; right: 8px;
+  font-size: 10px; font-weight: 600;
+  color: var(--red);
+  background: rgba(253,63,41,0.12);
+  border: 1px solid rgba(253,63,41,0.25);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; gap: 4px;
+  animation: badge-in 0.2s ease-out;
+}
+@keyframes badge-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   SCENE 6: MULTI-SELECT DRAG
+   ============================================================ */
+.multi-drag-stack {
+  position: relative;
+  width: 240px;
+  animation: stack-float 2.5s ease-in-out infinite;
+}
+@keyframes stack-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50%      { transform: translateY(-4px) rotate(-0.5deg); }
+}
+.multi-drag-stack .card:nth-child(1) {
+  position: relative; z-index: 3;
+  transform: rotate(-2deg);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,112,0,0.2);
+  border-color: var(--orange);
+}
+.multi-drag-stack .card:nth-child(2) {
+  position: absolute; top: 4px; left: 6px; right: -6px; z-index: 2;
+  transform: rotate(0.5deg);
+  opacity: 0.75;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.multi-drag-stack .card:nth-child(3) {
+  position: absolute; top: 8px; left: 12px; right: -12px; z-index: 1;
+  transform: rotate(2.5deg);
+  opacity: 0.5;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.count-badge {
+  position: absolute; top: -8px; right: -10px; z-index: 10;
+  background: var(--orange);
+  color: #fff;
+  font-size: 11px; font-weight: 700;
+  width: 28px; height: 20px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(255,112,0,0.4);
+  animation: badge-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes badge-pop {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
+
+/* Multi-select checkmark */
+.card-selected {
+  border-color: var(--orange);
+  background: linear-gradient(to right, rgba(255,112,0,0.06), var(--bg-elevated));
+}
+.card-selected::before {
+  content: '';
+  position: absolute; top: 8px; left: -1px;
+  width: 3px; height: 14px;
+  background: var(--orange);
+  border-radius: 0 2px 2px 0;
+}
+
+/* ============================================================
+   SCENE 7: FULL FLOW TIMELINE
+   ============================================================ */
+.timeline {
+  display: flex; gap: 12px; overflow-x: auto; padding: 8px 0;
+}
+.timeline-step {
+  flex: 0 0 200px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.timeline-step-label {
+  display: flex; align-items: center; gap: 6px;
+}
+.step-number {
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 600;
+  color: var(--bg-base);
+  background: var(--orange);
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.step-name {
+  font-size: 11px; font-weight: 500; color: var(--text-secondary);
+}
+.timeline-mini-board {
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  height: 100px;
+  position: relative;
+}
+
+/* Mini card for timeline */
+.mini-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 9px;
+  color: var(--text-secondary);
+  margin-bottom: 3px;
+}
+.mini-card.dragging {
+  border-color: var(--orange);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+  transform: rotate(-1.5deg) scale(1.04);
+}
+.mini-card.ghost {
+  opacity: 0.2;
+  border-style: dashed;
+}
+.mini-card.placeholder {
+  border: 1.5px dashed var(--border-hover);
+  background: transparent;
+}
+.mini-insertion {
+  height: 2px; background: var(--orange); border-radius: 1px;
+  margin: 2px 0;
+}
+
+/* ============================================================
+   CURSOR SIMULATION
+   ============================================================ */
+.cursor-sim {
+  position: absolute;
+  z-index: 50;
+  pointer-events: none;
+}
+.cursor-icon {
+  width: 20px; height: 26px;
+}
+.cursor-grabbing {
+  animation: cursor-move 3s ease-in-out infinite;
+}
+
+/* ============================================================
+   ANNOTATIONS
+   ============================================================ */
+.annotation {
+  position: absolute;
+  font-size: 10px; font-weight: 500;
+  color: var(--orange);
+  display: flex; align-items: center; gap: 4px;
+  white-space: nowrap;
+}
+.annotation-line {
+  width: 24px; height: 1px; background: var(--orange); opacity: 0.5;
+}
+.annotation.with-arrow::before {
+  content: '';
+  width: 0; height: 0;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  border-right: 5px solid var(--orange);
+  opacity: 0.5;
+}
+
+/* ============================================================
+   RESPONSIVE & PREFERS MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+     HEADER
+     ================================================================ -->
+<header class="page-header">
+  <h1>Drag & Drop <span>Interaction States</span></h1>
+  <span class="subtitle">Agent 9 / Kanban Design Sprint</span>
+</header>
+
+<main class="scenes">
+
+<!-- ================================================================
+     SCENE 1: CARD PICKED UP + SOURCE GAP
+     ================================================================ -->
+<section class="scene">
+  <div class="scene-label">
+    <span class="scene-number">01</span>
+    <span class="scene-title">Card Picked Up &mdash; Lift &amp; Source Gap</span>
+  </div>
+  <p class="scene-desc">
+    On mousedown + slight drag, the card lifts with 4% scale, subtle tilt, elevated shadow, and an orange border glow. The source position shows a dashed placeholder with a subtle pulse.
+  </p>
+  <div class="scene-canvas">
+    <div class="board">
+      <!-- Source Column -->
+      <div class="column">
+        <div class="column-header">
+          <div class="status-dot orange"></div>
+          <span class="column-name">In Progress</span>
+          <span class="column-count">3</span>
+        </div>
+        <div class="column-body">
+          <div class="card">
+            <span class="card-id">TSK-041</span>
+            <span class="card-title">Set up WebSocket handlers</span>
+            <div class="card-meta">
+              <span class="card-label blue">Backend</span>
+              <span class="card-avatar">JK</span>
+            </div>
+          </div>
+          <!-- Placeholder where the dragged card was -->
+          <div class="card-source-placeholder"></div>
+          <div class="card">
+            <span class="card-id">TSK-039</span>
+            <span class="card-title">Create auth middleware</span>
+            <div class="card-meta">
+              <span class="card-label purple">Security</span>
+              <span class="card-avatar">AL</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- The dragged card, floating -->
+      <div style="position: relative; flex: 0 0 240px; padding-top: 36px;">
+        <div class="card card-dragging" style="position: relative; z-index: 10;">
+          <span class="card-id">TSK-042</span>
+          <span class="card-title">Implement drag & drop reorder</span>
+          <div class="card-meta">
+            <span class="card-label orange">Feature</span>
+            <span class="card-avatar">MR</span>
+          </div>
+        </div>
+        <!-- Cursor simulation -->
+        <svg class="cursor-sim" style="top: 6px; left: 110px;" width="16" height="22" viewBox="0 0 16 22" fill="none">
+          <path d="M1 1L1 16.5L4.5 13L8 20L10.5 19L7 12L12 12L1 1Z" fill="var(--text-primary)" stroke="var(--bg-base)" stroke-width="1"/>
+        </svg>
+        <div class="annotation" style="bottom: -8px; left: 0;">
+          <span class="annotation-line"></span>
+          scale(1.04) rotate(-1.5deg) + elevated shadow
+        </div>
+      </div>
+      <!-- Neighbor Column -->
+      <div class="column">
+        <div class="column-header">
+          <div class="status-dot yellow"></div>
+          <span class="column-name">Review</span>
+          <span class="column-count">2</span>
+        </div>
+        <div class="column-body">
+          <div class="card">
+            <span class="card-id">TSK-036</span>
+            <span class="card-title">Review API endpoints spec</span>
+            <div class="card-meta">
+              <span class="card-label green">Docs</span>
+              <span class="card-avatar">SN</span>
+            </div>
+          </div>
+          <div class="card">
+            <span class="card-id">TSK-037</span>
+            <span class="card-title">Validate schema migrations</span>
+            <div class="card-meta">
+              <span class="card-label blue">Backend</span>
+              <span class="card-avatar">TW</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SCENE 2: INSERTION INDICATOR
+     ================================================================ -->
+<section class="scene">
+  <div class="scene-label">
+    <span class="scene-number">02</span>
+    <span class="scene-title">Insertion Indicator &mdash; Orange Line Between Cards</span>
+  </div>
+  <p class="scene-desc">
+    As the dragged card hovers over a target column, a glowing orange insertion line with endpoint dots appears between cards to indicate where the card will land.
+  </p>
+  <div class="scene-canvas">
+    <div class="board">
+      <!-- Source column with gap -->
+      <div class="column">
+        <div class="column-header">
+          <div class="status-dot white"></div>
+          <span class="column-name">Todo</span>
+          <span class="column-count">3</span>
+        </div>
+        <div class="column-body">
+          <div class="card">
+            <span class="card-id">TSK-051</span>
+            <span class="card-title">Design onboarding flow</span>
+            <div class="card-meta">
+              <span class="card-label orange">Design</span>
+              <span class="card-avatar">EM</span>
+            </div>
+          </div>
+          <div class="card-source-placeholder" style="min-height: 58px;"></div>
+          <div class="card">
+            <span class="card-id">TSK-053</span>
+            <span class="card-title">Add keyboard shortcuts</span>
+            <div class="card-meta">
+              <span class="card-label blue">Frontend</span>
+              <span class="card-avatar">KP</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Target column with insertion line -->
+      <div class="column">
+        <div class="column-header">
+          <div class="status-dot orange"></div>
+          <span class="column-name">In Progress</span>
+          <span class="column-count">2</span>
+        </div>
+        <div class="column-body" style="border-color: var(--border-hover); background: rgba(255,112,0,0.02);">
+          <div class="card">
+            <span class="card-id">TSK-044</span>
+            <span class="card-title">Build notification system</span>
+            <div class="card-meta">
+              <span class="card-label purple">Feature</span>
+              <span class="card-avatar">JK</span>
+            </div>
+          </div>
+          <!-- Insertion indicator -->
+          <div class="insertion-line"></div>
+          <div class="card">
+            <span class="card-id">TSK-045</span>
+            <span class="card-title">Optimize query performance</span>
+            <div class="card-meta">
+              <span class="card-label green">Perf</span>
+              <span class="card-avatar">AL</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Floating card near target -->
+      <div style="position: relative; flex: 0 0 240px; padding-top: 52px;">
+        <div class="card card-dragging" style="transform: scale(1.04) rotate(-1deg);">
+          <span class="card-id">TSK-052</span>
+          <span class="card-title">Write unit tests for auth</span>
+          <div class="card-meta">
+            <span class="card-label red">Testing</span>
+            <span class="card-avatar">MR</span>
+          </div>
+        </div>
+        <div class="annotation" style="top: 34px; right: -8px;">
+          glowing insertion line
+          <span class="annotation-line"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SCENE 3: CARDS SPREADING APART
+     ================================================================ -->
+<section class="scene">
+  <div class="scene-label">
+    <span class="scene-number">03</span>
+    <span class="scene-title">Cards Spreading Apart &mdash; Making Room</span>
+  </div>
+  <p class="scene-desc">
+    When the dragged card hovers between two cards, the neighboring cards smoothly translate apart (6px each direction) with a spring-like ease, creating a visible gap and insertion indicator.
+  </p>
+  <div class="scene-canvas">
+    <div class="board">
+      <div class="column" style="flex: 0 0 260px;">
+        <div class="column-header">
+          <div class="status-dot orange"></div>
+          <span class="column-name">In Progress</span>
+          <span class="column-count">4</span>
+        </div>
+        <div class="column-body" style="border-color: var(--border-hover); background: rgba(255,112,0,0.02);">
+          <div class="card card-spread-above">
+            <span class="card-id">TSK-060</span>
+            <span class="card-title">Integrate Mistral API client</span>
+            <div class="card-meta">
+              <span class="card-label orange">Integration</span>
+              <span class="card-avatar">SN</span>
+            </div>
+          </div>
+          <div class="card card-spread-above">
+            <span class="card-id">TSK-061</span>
+            <span class="card-title">Build agent orchestration layer</span>
+            <div class="card-meta">
+              <span class="card-label blue">Backend</span>
+              <span class="card-avatar">TW</span>
+            </div>
+          </div>
+          <!-- Gap with insertion line -->
+          <div style="padding: 4px 0;">
+            <div class="insertion-line"></div>
+          </div>
+          <div class="card card-spread-below">
+            <span class="card-id">TSK-062</span>
+            <span class="card-title">Add real-time cursor presence</span>
+            <div class="card-meta">
+              <span class="card-label green">Feature</span>
+              <span class="card-avatar">EM</span>
+            </div>
+          </div>
+          <div class="card card-spread-below">
+            <span class="card-id">TSK-063</span>
+            <span class="card-title">Style scrollbar for board</span>
+            <div class="card-meta">
+              <span class="card-label purple">UI</span>
+              <span class="card-avatar">KP</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Side annotation panel -->
+      <div style="flex: 0 0 300px; padding: 32px 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
+            <path d="M8 2L8 14M8 2L4 6M8 2L12 6" stroke="var(--orange)" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span style="font-size: 11px; color: var(--text-secondary);">Cards above: <code style="font-family: var(--font-mono); color: var(--orange); font-size: 10px;">translateY(-6px)</code></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
+            <path d="M8 14L8 2M8 14L4 10M8 14L12 10" stroke="var(--orange)" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span style="font-size: 11px; color: var(--text-secondary);">Cards below: <code style="font-family: var(--font-mono); color: var(--orange); font-size: 10px;">translateY(+6px)</code></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
+            <circle cx="8" cy="8" r="4" stroke="var(--orange)" stroke-width="1.5" fill="none"/>
+          </svg>
+          <span style="font-size: 11px; color: var(--text-secondary);">Easing: <code style="font-family: var(--font-mono); color: var(--orange); font-size: 10px;">cubic-bezier(0.22, 1, 0.36, 1)</code></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
+            <rect x="2" y="2" width="12" height="12" rx="2" stroke="var(--orange)" stroke-width="1.5" fill="none"/>
+          </svg>
+          <span style="font-size: 11px; color: var(--text-secondary);">Duration: <code style="font-family: var(--font-mono); color: var(--orange); font-size: 10px;">250ms</code></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SCENE 4: DROPPING INTO EMPTY COLUMN
+     ================================================================ -->
+<section class="scene">
+  <div class="scene-label">
+    <span class="scene-number">04</span>
+    <span class="scene-title">Dropping Into Empty Column</span>
+  </div>
+  <p class="scene-desc">
+    When hovering over an empty column, its border becomes a dashed orange line, the background pulses with a subtle orange tint, and a centered icon + label hint appears to invite the drop.
+  </p>
+  <div class="scene-canvas">
+    <div class="board">
+      <div class="column">
+        <div class="column-header">
+          <div class="status-dot white"></div>
+          <span class="column-name">Todo</span>
+          <span class="column-count">2</span>
+        </div>
+        <div class="column-body">
+          <div class="card">
+            <span class="card-id">TSK-070</span>
+            <span class="card-title">Design color palette tokens</span>
+            <div class="card-meta">
+              <span class="card-label orange">Design</span>
+              <span class="card-avatar">EM</span>
+            </div>
+          </div>
+          <div class="card-source-placeholder" style="min-height: 68px;"></div>
+        </div>
+      </div>
+      <!-- Empty target column -->
+      <div class="column">
+        <div class="column-header">
+          <div class="status-dot orange"></div>
+          <span class="column-name">In Progress</span>
+          <span class="column-count">0</span>
+        </div>
+        <div class="column-body drop-target-empty">
+          <div class="empty-drop-hint">
+            <div class="empty-drop-icon">
+              <svg width="14" height="14" fill="none" viewBox="0 0 14 14">
+                <path d="M7 2V12M2 7H12" stroke="var(--orange)" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <span>Drop here to move</span>
+          </div>
+        </div>
+      </div>
+      <!-- Floating dragged card -->
+      <div style="position: relative; flex: 0 0 240px; padding-top: 28px;">
+        <div class="card card-dragging" style="transform: scale(1.04) rotate(-0.8deg);">
+          <span class="card-id">TSK-071</span>
+          <span class="card-title">Build component library</span>
+          <div class="card-meta">
+            <span class="card-label blue">Frontend</span>
+            <span class="card-avatar">MR</span>
+          </div>
+        </div>
+      </div>
+      <div class="column">
+        <div class="column-header">
+          <div class="status-dot yellow"></div>
+          <span class="column-name">Review</span>
+          <span class="column-count">1</span>
+        </div>
+        <div class="column-body">
+          <div class="card">
+            <span class="card-id">TSK-038</span>
+            <span class="card-title">Audit accessibility contrast</span>
+            <div class="card-meta">
+              <span class="card-label green">QA</span>
+              <span class="card-avatar">SN</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SCENE 5: INVALID DROP ZONE
+     ================================================================ -->
+<section class="scene">
+  <div class="scene-label">
+    <span class="scene-number">05</span>
+    <span class="scene-title">Invalid Drop Zone &mdash; Rejection Indicator</span>
+  </div>
+  <p class="scene-desc">
+    When dragging over an area that cannot accept the drop (e.g., a locked or full column), the border flashes red, a subtle red glow pulses inward, and a "Cannot drop here" badge appears.
+  </p>
+  <div class="scene-canvas">
+    <div class="board">
+      <div class="column">
+        <div class="column-header">
+          <div class="status-dot orange"></div>
+          <span class="column-name">In Progress</span>
+          <span class="column-count">2</span>
+        </div>
+        <div class="column-body">
+          <div class="card">
+            <span class="card-id">TSK-080</span>
+            <span class="card-title">Refactor state management</span>
+            <div class="card-meta">
+              <span class="card-label blue">Frontend</span>
+              <span class="card-avatar">AL</span>
+            </div>
+          </div>
+          <div class="card-source-placeholder" style="min-height: 58px;"></div>
+        </div>
+      </div>
+      <!-- Invalid target -->
+      <div class="column">
+        <div class="column-header">
+          <div class="status-dot green"></div>
+          <span class="column-name">Done</span>
+          <span class="column-count">3</span>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="margin-left: 4px;">
+            <rect x="2" y="5" width="8" height="6" rx="1" stroke="var(--text-tertiary)" stroke-width="1.2"/>
+            <path d="M4 5V3.5a2 2 0 114 0V5" stroke="var(--text-tertiary)" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="column-body invalid-zone-persistent" style="position: relative;">
+          <div class="invalid-badge">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <circle cx="5" cy="5" r="4" stroke="var(--red)" stroke-width="1.2"/>
+              <path d="M3 3L7 7M7 3L3 7" stroke="var(--red)" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+            Cannot drop here
+          </div>
+          <div class="card" style="opacity: 0.6;">
+            <span class="card-id">TSK-022</span>
+            <span class="card-title">Setup CI/CD pipeline</span>
+            <div class="card-meta">
+              <span class="card-label green">DevOps</span>
+              <span class="card-avatar">TW</span>
+            </div>
+          </div>
+          <div class="card" style="opacity: 0.6;">
+            <span class="card-id">TSK-023</span>
+            <span class="card-title">Add error boundary</span>
+            <div class="card-meta">
+              <span class="card-label blue">Frontend</span>
+              <span class="card-avatar">KP</span>
+            </div>
+          </div>
+          <div class="card" style="opacity: 0.6;">
+            <span class="card-id">TSK-024</span>
+            <span class="card-title">Write seed data scripts</span>
+            <div class="card-meta">
+              <span class="card-label purple">Data</span>
+              <span class="card-avatar">JK</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Floating card headed toward invalid zone -->
+      <div style="position: relative; flex: 0 0 240px; padding-top: 40px;">
+        <div class="card card-dragging" style="transform: scale(1.04) rotate(0.8deg);">
+          <span class="card-id">TSK-081</span>
+          <span class="card-title">Update user permissions</span>
+          <div class="card-meta">
+            <span class="card-label red">Security</span>
+            <span class="card-avatar">MR</span>
+          </div>
+        </div>
+        <div class="annotation" style="top: 12px; left: -120px;">
+          red flash + inward glow
+          <span class="annotation-line"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SCENE 6: MULTI-SELECT DRAG
+     ================================================================ -->
+<section class="scene">
+  <div class="scene-label">
+    <span class="scene-number">06</span>
+    <span class="scene-title">Multi-Select Drag &mdash; Stacked Cards with Count Badge</span>
+  </div>
+  <p class="scene-desc">
+    When multiple cards are selected (Shift/Cmd+Click), dragging lifts them as a fanned stack. The top card is most visible, subsequent cards peek out with decreasing opacity. An orange badge shows the count.
+  </p>
+  <div class="scene-canvas">
+    <div class="board">
+      <!-- Source column with selected cards -->
+      <div class="column" style="flex: 0 0 260px;">
+        <div class="column-header">
+          <div class="status-dot white"></div>
+          <span class="column-name">Todo</span>
+          <span class="column-count">5</span>
+        </div>
+        <div class="column-body">
+          <div class="card card-selected">
+            <span class="card-id">TSK-090</span>
+            <span class="card-title">Create dark mode tokens</span>
+            <div class="card-meta">
+              <span class="card-label orange">Design</span>
+              <span class="card-avatar">EM</span>
+            </div>
+          </div>
+          <div class="card-source-placeholder" style="min-height: 58px;"></div>
+          <div class="card-source-placeholder" style="min-height: 58px;"></div>
+          <div class="card-source-placeholder" style="min-height: 58px;"></div>
+          <div class="card">
+            <span class="card-id">TSK-094</span>
+            <span class="card-title">Add tooltip component</span>
+            <div class="card-meta">
+              <span class="card-label blue">Frontend</span>
+              <span class="card-avatar">KP</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- The multi-drag stack -->
+      <div style="flex: 0 0 280px; padding: 32px 16px; position: relative;">
+        <div class="multi-drag-stack">
+          <div class="count-badge">3</div>
+          <div class="card">
+            <span class="card-id">TSK-091</span>
+            <span class="card-title">Build avatar upload flow</span>
+            <div class="card-meta">
+              <span class="card-label green">Feature</span>
+              <span class="card-avatar">JK</span>
+            </div>
+          </div>
+          <div class="card">
+            <span class="card-id">TSK-092</span>
+            <span class="card-title">Implement filter chips</span>
+            <div class="card-meta">
+              <span class="card-label blue">Frontend</span>
+              <span class="card-avatar">AL</span>
+            </div>
+          </div>
+          <div class="card">
+            <span class="card-id">TSK-093</span>
+            <span class="card-title">Add batch actions bar</span>
+            <div class="card-meta">
+              <span class="card-label purple">UI</span>
+              <span class="card-avatar">SN</span>
+            </div>
+          </div>
+        </div>
+        <div class="annotation" style="bottom: 16px; left: 24px;">
+          <span class="annotation-line"></span>
+          fanned stack: rotate(-2deg/+0.5deg/+2.5deg)
+        </div>
+      </div>
+      <!-- Target column with insertion -->
+      <div class="column" style="flex: 0 0 260px;">
+        <div class="column-header">
+          <div class="status-dot orange"></div>
+          <span class="column-name">In Progress</span>
+          <span class="column-count">1</span>
+        </div>
+        <div class="column-body" style="border-color: var(--border-hover); background: rgba(255,112,0,0.02);">
+          <div class="card">
+            <span class="card-id">TSK-046</span>
+            <span class="card-title">Wire up Convex subscriptions</span>
+            <div class="card-meta">
+              <span class="card-label orange">Integration</span>
+              <span class="card-avatar">TW</span>
+            </div>
+          </div>
+          <div class="insertion-line"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SCENE 7: FULL DRAG LIFECYCLE (TIMELINE)
+     ================================================================ -->
+<section class="scene">
+  <div class="scene-label">
+    <span class="scene-number">07</span>
+    <span class="scene-title">Full Drag Lifecycle &mdash; Step-by-Step Timeline</span>
+  </div>
+  <p class="scene-desc">
+    The complete drag-and-drop interaction lifecycle, from initial grab through to the settling animation. Each phase has specific timing and easing.
+  </p>
+  <div class="scene-canvas" style="overflow-x: auto;">
+    <div class="timeline">
+      <!-- Step 1: Idle -->
+      <div class="timeline-step">
+        <div class="timeline-step-label">
+          <span class="step-number">1</span>
+          <span class="step-name">Idle</span>
+        </div>
+        <div class="timeline-mini-board">
+          <div class="mini-card">TSK-041 Set up handlers</div>
+          <div class="mini-card" style="border-color: var(--border-hover);">TSK-042 Drag & drop</div>
+          <div class="mini-card">TSK-043 Auth middleware</div>
+        </div>
+        <div style="font-size: 10px; color: var(--text-tertiary); font-family: var(--font-mono);">cursor: grab</div>
+      </div>
+      <!-- Step 2: Grab (150ms) -->
+      <div class="timeline-step">
+        <div class="timeline-step-label">
+          <span class="step-number">2</span>
+          <span class="step-name">Grab &mdash; 150ms</span>
+        </div>
+        <div class="timeline-mini-board">
+          <div class="mini-card">TSK-041 Set up handlers</div>
+          <div class="mini-card dragging">TSK-042 Drag & drop</div>
+          <div class="mini-card">TSK-043 Auth middleware</div>
+        </div>
+        <div style="font-size: 10px; color: var(--text-tertiary); font-family: var(--font-mono);">scale(1.04) + shadow</div>
+      </div>
+      <!-- Step 3: Lift -->
+      <div class="timeline-step">
+        <div class="timeline-step-label">
+          <span class="step-number">3</span>
+          <span class="step-name">Lift &mdash; 200ms</span>
+        </div>
+        <div class="timeline-mini-board" style="position: relative;">
+          <div class="mini-card">TSK-041 Set up handlers</div>
+          <div class="mini-card ghost">TSK-042 Drag & drop</div>
+          <div class="mini-card">TSK-043 Auth middleware</div>
+          <div class="mini-card dragging" style="position: absolute; top: 20px; left: 40px;">TSK-042</div>
+        </div>
+        <div style="font-size: 10px; color: var(--text-tertiary); font-family: var(--font-mono);">ghost placeholder</div>
+      </div>
+      <!-- Step 4: Hover target -->
+      <div class="timeline-step">
+        <div class="timeline-step-label">
+          <span class="step-number">4</span>
+          <span class="step-name">Hover Target &mdash; 250ms</span>
+        </div>
+        <div class="timeline-mini-board">
+          <div class="mini-card" style="transform: translateY(-2px);">TSK-060 Integrate API</div>
+          <div class="mini-insertion"></div>
+          <div class="mini-card" style="transform: translateY(2px);">TSK-061 Orchestration</div>
+        </div>
+        <div style="font-size: 10px; color: var(--text-tertiary); font-family: var(--font-mono);">insertion line + spread</div>
+      </div>
+      <!-- Step 5: Drop -->
+      <div class="timeline-step">
+        <div class="timeline-step-label">
+          <span class="step-number">5</span>
+          <span class="step-name">Drop &mdash; 200ms</span>
+        </div>
+        <div class="timeline-mini-board">
+          <div class="mini-card">TSK-060 Integrate API</div>
+          <div class="mini-card" style="border-color: var(--orange); animation: drop-settle 0.8s ease-out infinite;">TSK-042 Drag & drop</div>
+          <div class="mini-card">TSK-061 Orchestration</div>
+        </div>
+        <div style="font-size: 10px; color: var(--text-tertiary); font-family: var(--font-mono);">ease-out settle</div>
+      </div>
+      <!-- Step 6: Settled -->
+      <div class="timeline-step">
+        <div class="timeline-step-label">
+          <span class="step-number">6</span>
+          <span class="step-name">Settled &mdash; 300ms</span>
+        </div>
+        <div class="timeline-mini-board">
+          <div class="mini-card">TSK-060 Integrate API</div>
+          <div class="mini-card" style="background: rgba(255,112,0,0.08); border-color: var(--orange);">TSK-042 Drag & drop</div>
+          <div class="mini-card">TSK-061 Orchestration</div>
+        </div>
+        <div style="font-size: 10px; color: var(--text-tertiary); font-family: var(--font-mono);">brief highlight, then idle</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+@keyframes drop-settle {
+  0%   { transform: scale(1.03); opacity: 0.9; }
+  40%  { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+</style>
+
+<!-- ================================================================
+     SCENE 8: INTERACTIVE DEMO
+     ================================================================ -->
+<section class="scene">
+  <div class="scene-label">
+    <span class="scene-number">08</span>
+    <span class="scene-title">Interactive Demo &mdash; Try Dragging</span>
+  </div>
+  <p class="scene-desc">
+    A working interactive demo. Click and drag cards between columns to see all the interaction states in action.
+  </p>
+  <div class="scene-canvas" id="interactive-demo">
+    <div class="board" id="demo-board">
+      <div class="column" data-col="todo">
+        <div class="column-header">
+          <div class="status-dot white"></div>
+          <span class="column-name">Todo</span>
+          <span class="column-count" id="count-todo">3</span>
+        </div>
+        <div class="column-body" id="col-todo">
+          <div class="card" draggable="true" data-id="d1">
+            <span class="card-id">TSK-101</span>
+            <span class="card-title">Design system tokens</span>
+            <div class="card-meta">
+              <span class="card-label orange">Design</span>
+              <span class="card-avatar">EM</span>
+            </div>
+          </div>
+          <div class="card" draggable="true" data-id="d2">
+            <span class="card-id">TSK-102</span>
+            <span class="card-title">Write API documentation</span>
+            <div class="card-meta">
+              <span class="card-label green">Docs</span>
+              <span class="card-avatar">SN</span>
+            </div>
+          </div>
+          <div class="card" draggable="true" data-id="d3">
+            <span class="card-id">TSK-103</span>
+            <span class="card-title">Scaffold route structure</span>
+            <div class="card-meta">
+              <span class="card-label blue">Frontend</span>
+              <span class="card-avatar">KP</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="column" data-col="progress">
+        <div class="column-header">
+          <div class="status-dot orange"></div>
+          <span class="column-name">In Progress</span>
+          <span class="column-count" id="count-progress">1</span>
+        </div>
+        <div class="column-body" id="col-progress">
+          <div class="card" draggable="true" data-id="d4">
+            <span class="card-id">TSK-104</span>
+            <span class="card-title">Implement Convex schema</span>
+            <div class="card-meta">
+              <span class="card-label purple">Backend</span>
+              <span class="card-avatar">AL</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="column" data-col="review">
+        <div class="column-header">
+          <div class="status-dot yellow"></div>
+          <span class="column-name">Review</span>
+          <span class="column-count" id="count-review">1</span>
+        </div>
+        <div class="column-body" id="col-review">
+          <div class="card" draggable="true" data-id="d5">
+            <span class="card-id">TSK-105</span>
+            <span class="card-title">Validate auth flow edge cases</span>
+            <div class="card-meta">
+              <span class="card-label red">Testing</span>
+              <span class="card-avatar">TW</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="column" data-col="done">
+        <div class="column-header">
+          <div class="status-dot green"></div>
+          <span class="column-name">Done</span>
+          <span class="column-count" id="count-done">0</span>
+        </div>
+        <div class="column-body" id="col-done">
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ================================================================
+     INTERACTIVE DRAG & DROP JS
+     ================================================================ -->
+<script>
+(function() {
+  const board = document.getElementById('demo-board');
+  if (!board) return;
+
+  let draggedCard = null;
+  let draggedGhost = null;
+  let insertionLine = null;
+  let sourceCol = null;
+
+  // Helpers
+  function getColumnBody(el) {
+    return el.closest('.column-body');
+  }
+
+  function createInsertionLine() {
+    const line = document.createElement('div');
+    line.className = 'insertion-line';
+    line.style.transition = 'opacity 0.15s ease';
+    return line;
+  }
+
+  function removeInsertionLine() {
+    if (insertionLine && insertionLine.parentNode) {
+      insertionLine.parentNode.removeChild(insertionLine);
+    }
+    insertionLine = null;
+  }
+
+  function updateCounts() {
+    ['todo', 'progress', 'review', 'done'].forEach(col => {
+      const body = document.getElementById('col-' + col);
+      const counter = document.getElementById('count-' + col);
+      if (body && counter) {
+        counter.textContent = body.querySelectorAll('.card[draggable]').length;
+      }
+    });
+  }
+
+  // Drag start
+  board.addEventListener('dragstart', function(e) {
+    const card = e.target.closest('.card[draggable]');
+    if (!card) return;
+
+    draggedCard = card;
+    sourceCol = getColumnBody(card);
+
+    // Apply dragging styles after a frame
+    requestAnimationFrame(() => {
+      card.style.opacity = '0.3';
+      card.style.borderStyle = 'dashed';
+    });
+
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', card.dataset.id);
+  });
+
+  // Drag over columns
+  board.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+
+    const colBody = getColumnBody(e.target);
+    if (!colBody) return;
+
+    // Highlight column
+    colBody.style.borderColor = 'var(--border-hover)';
+    colBody.style.background = 'rgba(255,112,0,0.02)';
+
+    // Remove old insertion line
+    removeInsertionLine();
+
+    // Find nearest card to insert before/after
+    const cards = [...colBody.querySelectorAll('.card[draggable]')].filter(c => c !== draggedCard);
+    let insertBefore = null;
+
+    for (const c of cards) {
+      const rect = c.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      if (e.clientY < midY) {
+        insertBefore = c;
+        break;
+      }
+    }
+
+    insertionLine = createInsertionLine();
+    if (insertBefore) {
+      colBody.insertBefore(insertionLine, insertBefore);
+    } else {
+      colBody.appendChild(insertionLine);
+    }
+  });
+
+  // Drag leave
+  board.addEventListener('dragleave', function(e) {
+    const colBody = getColumnBody(e.target);
+    if (colBody && !colBody.contains(e.relatedTarget)) {
+      colBody.style.borderColor = '';
+      colBody.style.background = '';
+      removeInsertionLine();
+    }
+  });
+
+  // Drop
+  board.addEventListener('drop', function(e) {
+    e.preventDefault();
+    const colBody = getColumnBody(e.target);
+    if (!colBody || !draggedCard) return;
+
+    // Reset column styles
+    colBody.style.borderColor = '';
+    colBody.style.background = '';
+
+    // Insert card at insertion line position
+    if (insertionLine && insertionLine.parentNode === colBody) {
+      colBody.insertBefore(draggedCard, insertionLine);
+    } else {
+      colBody.appendChild(draggedCard);
+    }
+
+    removeInsertionLine();
+
+    // Settle animation
+    draggedCard.style.opacity = '1';
+    draggedCard.style.borderStyle = 'solid';
+    draggedCard.style.borderColor = 'var(--orange)';
+    draggedCard.style.background = 'rgba(255,112,0,0.06)';
+    draggedCard.style.transition = 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)';
+
+    const settled = draggedCard;
+    setTimeout(() => {
+      settled.style.borderColor = '';
+      settled.style.background = '';
+    }, 500);
+
+    draggedCard = null;
+    sourceCol = null;
+    updateCounts();
+  });
+
+  // Drag end (cleanup)
+  board.addEventListener('dragend', function(e) {
+    if (draggedCard) {
+      draggedCard.style.opacity = '1';
+      draggedCard.style.borderStyle = 'solid';
+    }
+    removeInsertionLine();
+
+    // Reset all column styles
+    board.querySelectorAll('.column-body').forEach(col => {
+      col.style.borderColor = '';
+      col.style.background = '';
+    });
+
+    draggedCard = null;
+    sourceCol = null;
+  });
+})();
+</script>
+
+</body>
+</html>

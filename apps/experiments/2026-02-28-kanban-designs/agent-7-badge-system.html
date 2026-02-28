@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Badge System — AI Office Design System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ========================================
+       RESET & BASE
+       ======================================== */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* Backgrounds */
+      --bg-base: #0A0A0B;
+      --bg-surface: #111113;
+      --bg-elevated: #1A1A1D;
+      --bg-sunken: #07070A;
+
+      /* Borders */
+      --border-subtle: #2A2A2E;
+      --border-hover: #3A3A3E;
+      --border-focus: #4A4A4E;
+
+      /* Text */
+      --text-primary: #FAFAFA;
+      --text-secondary: #A0A0A8;
+      --text-tertiary: #6B6B73;
+      --text-quaternary: #4A4A50;
+
+      /* Accent — Mistral */
+      --orange: #FF7000;
+      --orange-dim: rgba(255, 112, 0, 0.12);
+      --orange-muted: rgba(255, 112, 0, 0.25);
+      --red: #FD3F29;
+      --red-dim: rgba(253, 63, 41, 0.12);
+      --red-muted: rgba(253, 63, 41, 0.25);
+      --yellow: #FFCB00;
+      --yellow-dim: rgba(255, 203, 0, 0.10);
+      --yellow-muted: rgba(255, 203, 0, 0.22);
+      --green: #22C55E;
+      --green-dim: rgba(34, 197, 94, 0.12);
+      --green-muted: rgba(34, 197, 94, 0.25);
+      --blue: #3B82F6;
+      --blue-dim: rgba(59, 130, 246, 0.12);
+      --blue-muted: rgba(59, 130, 246, 0.25);
+      --purple: #A855F7;
+      --purple-dim: rgba(168, 85, 247, 0.12);
+      --pink: #EC4899;
+      --pink-dim: rgba(236, 72, 153, 0.12);
+      --gray-label: #6B6B73;
+      --gray-label-dim: rgba(107, 107, 115, 0.15);
+
+      /* Radii */
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --radius-full: 9999px;
+
+      /* Transitions */
+      --transition-fast: 150ms ease;
+      --transition-base: 200ms ease;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
+    }
+
+    /* ========================================
+       LAYOUT
+       ======================================== */
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 48px 40px 80px;
+    }
+
+    .page-header {
+      margin-bottom: 56px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .page-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--orange) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .page-header p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      max-width: 600px;
+    }
+
+    .page-header .meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      font-size: 11px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .meta-dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--text-quaternary);
+    }
+
+    /* Sections */
+    .section {
+      margin-bottom: 56px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .section-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      color: var(--text-primary);
+    }
+
+    .section-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: var(--radius-sm);
+      background: var(--orange-dim);
+      color: var(--orange);
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .section-description {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      margin-bottom: 24px;
+      padding-left: 32px;
+    }
+
+    .section-content {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+    }
+
+    /* Showcase rows */
+    .showcase-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .showcase-row + .showcase-row {
+      margin-top: 20px;
+    }
+
+    .showcase-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      min-width: 100px;
+      flex-shrink: 0;
+    }
+
+    .showcase-items {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .showcase-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .showcase-group-label {
+      font-size: 10px;
+      color: var(--text-quaternary);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-weight: 500;
+    }
+
+    /* Dividers */
+    .divider {
+      height: 1px;
+      background: var(--border-subtle);
+      margin: 24px 0;
+    }
+
+    /* Sub-section label */
+    .sub-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      letter-spacing: -0.1px;
+    }
+
+    /* ========================================
+       1. STATUS BADGES
+       ======================================== */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px 4px 7px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: background var(--transition-fast);
+      cursor: default;
+    }
+
+    .status-badge:hover {
+      filter: brightness(1.15);
+    }
+
+    .status-icon {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .status-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Backlog */
+    .status-badge--backlog {
+      background: var(--gray-label-dim);
+      color: var(--text-secondary);
+    }
+
+    /* Todo */
+    .status-badge--todo {
+      background: rgba(250, 250, 250, 0.06);
+      color: var(--text-primary);
+    }
+
+    /* In Progress */
+    .status-badge--in-progress {
+      background: var(--orange-dim);
+      color: var(--orange);
+    }
+
+    /* Review */
+    .status-badge--review {
+      background: var(--yellow-dim);
+      color: var(--yellow);
+    }
+
+    /* Done */
+    .status-badge--done {
+      background: var(--green-dim);
+      color: var(--green);
+    }
+
+    /* Status dot-only variants */
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .status-dot--backlog { background: var(--gray-label); }
+    .status-dot--todo { background: transparent; border: 1.5px solid var(--text-primary); }
+    .status-dot--in-progress {
+      background: conic-gradient(var(--orange) 0deg, var(--orange) 180deg, transparent 180deg, transparent 360deg);
+      border-radius: 50%;
+    }
+    .status-dot--review { background: var(--yellow); }
+    .status-dot--done { background: var(--green); }
+
+    .status-dot--in-progress::after {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      background: var(--bg-surface);
+      border-radius: 50%;
+    }
+
+    /* ========================================
+       2. PRIORITY BADGES
+       ======================================== */
+    .priority-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px 4px 6px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: background var(--transition-fast);
+      cursor: default;
+    }
+
+    .priority-badge:hover {
+      filter: brightness(1.15);
+    }
+
+    .priority-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .priority-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .priority-badge--urgent {
+      background: var(--red-dim);
+      color: var(--red);
+    }
+
+    .priority-badge--high {
+      background: var(--orange-dim);
+      color: var(--orange);
+    }
+
+    .priority-badge--medium {
+      background: var(--yellow-dim);
+      color: var(--yellow);
+    }
+
+    .priority-badge--low {
+      background: var(--gray-label-dim);
+      color: var(--text-secondary);
+    }
+
+    .priority-badge--none {
+      background: rgba(250, 250, 250, 0.04);
+      color: var(--text-tertiary);
+    }
+
+    /* Icon-only priority */
+    .priority-icon-only {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: var(--radius-sm);
+      transition: background var(--transition-fast);
+      cursor: default;
+    }
+
+    .priority-icon-only:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .priority-icon-only svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .priority-icon-only--urgent svg { color: var(--red); }
+    .priority-icon-only--high svg { color: var(--orange); }
+    .priority-icon-only--medium svg { color: var(--yellow); }
+    .priority-icon-only--low svg { color: var(--text-tertiary); }
+    .priority-icon-only--none svg { color: var(--text-quaternary); }
+
+    /* ========================================
+       3. LABEL CHIPS
+       ======================================== */
+    .label-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+      cursor: default;
+      transition: all var(--transition-fast);
+    }
+
+    .label-chip:hover {
+      filter: brightness(1.2);
+    }
+
+    .label-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .label-chip--red    { background: rgba(253, 63, 41, 0.12); color: #FD6B59; }
+    .label-chip--red .label-dot { background: #FD3F29; }
+
+    .label-chip--orange { background: rgba(255, 112, 0, 0.12); color: #FF8C33; }
+    .label-chip--orange .label-dot { background: #FF7000; }
+
+    .label-chip--yellow { background: rgba(255, 203, 0, 0.10); color: #FFD633; }
+    .label-chip--yellow .label-dot { background: #FFCB00; }
+
+    .label-chip--green  { background: rgba(34, 197, 94, 0.12); color: #4ADE80; }
+    .label-chip--green .label-dot { background: #22C55E; }
+
+    .label-chip--blue   { background: rgba(59, 130, 246, 0.12); color: #60A5FA; }
+    .label-chip--blue .label-dot { background: #3B82F6; }
+
+    .label-chip--purple { background: rgba(168, 85, 247, 0.12); color: #C084FC; }
+    .label-chip--purple .label-dot { background: #A855F7; }
+
+    .label-chip--pink   { background: rgba(236, 72, 153, 0.12); color: #F472B6; }
+    .label-chip--pink .label-dot { background: #EC4899; }
+
+    .label-chip--gray   { background: rgba(107, 107, 115, 0.15); color: #9CA3AF; }
+    .label-chip--gray .label-dot { background: #6B7280; }
+
+    /* Compact label (no text) */
+    .label-pip {
+      width: 14px;
+      height: 6px;
+      border-radius: var(--radius-full);
+      cursor: default;
+    }
+
+    .label-pip--red    { background: #FD3F29; }
+    .label-pip--orange { background: #FF7000; }
+    .label-pip--yellow { background: #FFCB00; }
+    .label-pip--green  { background: #22C55E; }
+    .label-pip--blue   { background: #3B82F6; }
+    .label-pip--purple { background: #A855F7; }
+    .label-pip--pink   { background: #EC4899; }
+    .label-pip--gray   { background: #6B7280; }
+
+    /* ========================================
+       4. ASSIGNEE AVATARS
+       ======================================== */
+    .avatar {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 600;
+      color: white;
+      flex-shrink: 0;
+      border: 2px solid var(--bg-surface);
+      position: relative;
+      cursor: default;
+    }
+
+    .avatar--sm { width: 24px; height: 24px; font-size: 10px; }
+    .avatar--md { width: 28px; height: 28px; font-size: 11px; }
+    .avatar--lg { width: 32px; height: 32px; font-size: 12px; }
+
+    .avatar--1 { background: linear-gradient(135deg, #FF7000, #FD3F29); }
+    .avatar--2 { background: linear-gradient(135deg, #3B82F6, #8B5CF6); }
+    .avatar--3 { background: linear-gradient(135deg, #22C55E, #14B8A6); }
+    .avatar--4 { background: linear-gradient(135deg, #A855F7, #EC4899); }
+    .avatar--5 { background: linear-gradient(135deg, #FFCB00, #FF7000); }
+    .avatar--6 { background: linear-gradient(135deg, #EC4899, #FD3F29); }
+
+    .avatar-online::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      right: -1px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      border: 2px solid var(--bg-surface);
+    }
+
+    /* Stacked avatars */
+    .avatar-stack {
+      display: flex;
+      align-items: center;
+    }
+
+    .avatar-stack .avatar {
+      margin-left: -8px;
+    }
+
+    .avatar-stack .avatar:first-child {
+      margin-left: 0;
+    }
+
+    .avatar-stack .avatar:hover {
+      z-index: 10;
+      transform: translateY(-2px);
+      transition: transform var(--transition-fast);
+    }
+
+    /* Overflow badge */
+    .avatar-overflow {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--bg-elevated);
+      border: 2px solid var(--bg-surface);
+      color: var(--text-secondary);
+      font-size: 10px;
+      font-weight: 600;
+      cursor: default;
+      margin-left: -8px;
+    }
+
+    .avatar-overflow--sm { width: 24px; height: 24px; }
+    .avatar-overflow--md { width: 28px; height: 28px; }
+    .avatar-overflow--lg { width: 32px; height: 32px; }
+
+    /* Avatar with name */
+    .avatar-name {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .avatar-name span {
+      font-size: 13px;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* ========================================
+       5. DUE DATE BADGES
+       ======================================== */
+    .due-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+      cursor: default;
+      transition: all var(--transition-fast);
+    }
+
+    .due-badge svg {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+    }
+
+    .due-badge--overdue {
+      background: var(--red-dim);
+      color: var(--red);
+    }
+
+    .due-badge--today {
+      background: var(--orange-dim);
+      color: var(--orange);
+    }
+
+    .due-badge--week {
+      background: rgba(250, 250, 250, 0.06);
+      color: var(--text-secondary);
+    }
+
+    .due-badge--far {
+      background: transparent;
+      color: var(--text-tertiary);
+    }
+
+    /* Pulsing overdue indicator */
+    .due-badge--overdue .due-pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--red);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* ========================================
+       6. SUBTASK PROGRESS
+       ======================================== */
+    .subtask-progress {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: default;
+    }
+
+    .subtask-fraction {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+    }
+
+    .subtask-bar {
+      width: 48px;
+      height: 4px;
+      background: var(--bg-elevated);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .subtask-bar-fill {
+      height: 100%;
+      border-radius: var(--radius-full);
+      transition: width 300ms ease;
+    }
+
+    .subtask-bar-fill--low { background: var(--text-tertiary); }
+    .subtask-bar-fill--mid { background: var(--orange); }
+    .subtask-bar-fill--high { background: var(--yellow); }
+    .subtask-bar-fill--done { background: var(--green); }
+
+    /* Subtask with checkbox icon */
+    .subtask-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      background: rgba(250, 250, 250, 0.04);
+      cursor: default;
+    }
+
+    .subtask-indicator svg {
+      width: 14px;
+      height: 14px;
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+
+    /* ========================================
+       7. TASK ID BADGES
+       ======================================== */
+    .task-id {
+      display: inline-flex;
+      align-items: center;
+      gap: 0;
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      background: rgba(250, 250, 250, 0.04);
+      cursor: default;
+      white-space: nowrap;
+      transition: all var(--transition-fast);
+      letter-spacing: 0.2px;
+    }
+
+    .task-id:hover {
+      background: rgba(250, 250, 250, 0.08);
+      color: var(--text-secondary);
+    }
+
+    .task-id .hash {
+      color: var(--text-quaternary);
+      margin-right: 1px;
+    }
+
+    .task-id--linked {
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .task-id--linked:hover {
+      color: var(--orange);
+      background: var(--orange-dim);
+    }
+
+    /* ========================================
+       COMPOSITE DEMO (CARD PREVIEW)
+       ======================================== */
+    .card-demo {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      max-width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color var(--transition-fast);
+    }
+
+    .card-demo:hover {
+      border-color: var(--border-hover);
+    }
+
+    .card-demo-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-demo-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .card-demo-labels {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .card-demo-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-demo-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ========================================
+       GRID LAYOUTS
+       ======================================== */
+    .badge-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .badge-grid-item {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 16px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      transition: border-color var(--transition-fast);
+    }
+
+    .badge-grid-item:hover {
+      border-color: var(--border-hover);
+    }
+
+    .badge-grid-item-label {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-quaternary);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    /* Two-column layout */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 800px) {
+      .two-col { grid-template-columns: 1fr; }
+    }
+
+    /* ========================================
+       SIZE VARIANTS TABLE
+       ======================================== */
+    .variant-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .variant-table th {
+      text-align: left;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-quaternary);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 0 16px 12px 0;
+    }
+
+    .variant-table td {
+      padding: 10px 16px 10px 0;
+      vertical-align: middle;
+    }
+
+    .variant-table tr + tr td {
+      border-top: 1px solid rgba(42, 42, 46, 0.5);
+    }
+
+    /* ========================================
+       ANIMATION: STAGGER ENTRANCE
+       ======================================== */
+    .section {
+      animation: fadeSlideUp 400ms ease-out both;
+    }
+
+    .section:nth-child(2) { animation-delay: 50ms; }
+    .section:nth-child(3) { animation-delay: 100ms; }
+    .section:nth-child(4) { animation-delay: 150ms; }
+    .section:nth-child(5) { animation-delay: 200ms; }
+    .section:nth-child(6) { animation-delay: 250ms; }
+    .section:nth-child(7) { animation-delay: 300ms; }
+    .section:nth-child(8) { animation-delay: 350ms; }
+    .section:nth-child(9) { animation-delay: 400ms; }
+
+    @keyframes fadeSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- ================================ HEADER ================================ -->
+    <header class="page-header">
+      <h1>Badge &amp; Indicator System</h1>
+      <p>Complete reference for status, priority, label, avatar, date, progress, and ID components used throughout the AI Office kanban interface.</p>
+      <div class="meta">
+        <span>Agent 7</span>
+        <span class="meta-dot"></span>
+        <span>Mistral Hackathon 2026</span>
+        <span class="meta-dot"></span>
+        <span>Dark Theme</span>
+        <span class="meta-dot"></span>
+        <span>v1.0</span>
+      </div>
+    </header>
+
+    <!-- ================================ 1. STATUS BADGES ================================ -->
+    <section class="section">
+      <div class="section-header">
+        <span class="section-number">1</span>
+        <h2>Status Badges</h2>
+      </div>
+      <p class="section-description">Task lifecycle states. Each status has a unique icon shape and semantic color.</p>
+
+      <div class="section-content">
+        <div class="sub-label">Full Badges</div>
+        <div class="showcase-row">
+          <div class="showcase-items">
+
+            <!-- Backlog -->
+            <div class="status-badge status-badge--backlog">
+              <span class="status-icon">
+                <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" fill="currentColor" opacity="0.6"/></svg>
+              </span>
+              Backlog
+            </div>
+
+            <!-- Todo -->
+            <div class="status-badge status-badge--todo">
+              <span class="status-icon">
+                <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="4" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+              </span>
+              Todo
+            </div>
+
+            <!-- In Progress -->
+            <div class="status-badge status-badge--in-progress">
+              <span class="status-icon">
+                <svg viewBox="0 0 14 14" fill="none">
+                  <circle cx="7" cy="7" r="4" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.3"/>
+                  <path d="M7 3 A4 4 0 0 1 11 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                  <circle cx="7" cy="7" r="1.5" fill="currentColor"/>
+                </svg>
+              </span>
+              In Progress
+            </div>
+
+            <!-- Review -->
+            <div class="status-badge status-badge--review">
+              <span class="status-icon">
+                <svg viewBox="0 0 14 14" fill="none">
+                  <circle cx="7" cy="7" r="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                  <circle cx="7" cy="7" r="2" fill="currentColor"/>
+                </svg>
+              </span>
+              Review
+            </div>
+
+            <!-- Done -->
+            <div class="status-badge status-badge--done">
+              <span class="status-icon">
+                <svg viewBox="0 0 14 14" fill="none">
+                  <circle cx="7" cy="7" r="5" fill="currentColor" opacity="0.15"/>
+                  <circle cx="7" cy="7" r="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                  <path d="M4.5 7 L6.2 8.8 L9.5 5.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+              </span>
+              Done
+            </div>
+
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="sub-label">Dot-Only Variants (for inline use)</div>
+        <div class="showcase-row">
+          <div class="showcase-items">
+            <div class="showcase-group">
+              <div class="status-dot status-dot--backlog"></div>
+              <span class="showcase-group-label">Backlog</span>
+            </div>
+            <div class="showcase-group">
+              <div class="status-dot status-dot--todo"></div>
+              <span class="showcase-group-label">Todo</span>
+            </div>
+            <div class="showcase-group">
+              <div class="status-dot status-dot--in-progress"></div>
+              <span class="showcase-group-label">In Prog.</span>
+            </div>
+            <div class="showcase-group">
+              <div class="status-dot status-dot--review"></div>
+              <span class="showcase-group-label">Review</span>
+            </div>
+            <div class="showcase-group">
+              <div class="status-dot status-dot--done"></div>
+              <span class="showcase-group-label">Done</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="sub-label">Contextual Usage</div>
+        <div class="showcase-row" style="gap: 24px;">
+          <!-- In a list row context -->
+          <div style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bg-elevated); border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+            <div class="status-dot status-dot--in-progress"></div>
+            <span style="font-size: 13px; color: var(--text-primary);">Implement drag-and-drop</span>
+            <span class="task-id" style="margin-left: auto;"><span class="hash">#</span>TSK-042</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bg-elevated); border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+            <div class="status-dot status-dot--done"></div>
+            <span style="font-size: 13px; color: var(--text-primary); text-decoration: line-through; color: var(--text-tertiary);">Set up authentication</span>
+            <span class="task-id" style="margin-left: auto;"><span class="hash">#</span>TSK-019</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================ 2. PRIORITY BADGES ================================ -->
+    <section class="section">
+      <div class="section-header">
+        <span class="section-number">2</span>
+        <h2>Priority Levels</h2>
+      </div>
+      <p class="section-description">Five priority tiers with decreasing visual urgency. Urgent uses filled warning triangles; None uses dashes.</p>
+
+      <div class="section-content">
+        <div class="sub-label">Full Badges</div>
+        <div class="showcase-row">
+          <div class="showcase-items">
+
+            <!-- Urgent -->
+            <div class="priority-badge priority-badge--urgent">
+              <span class="priority-icon">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2L14 13H2L8 2Z" fill="currentColor"/>
+                  <path d="M8 6.5V9.5" stroke="var(--bg-surface)" stroke-width="1.5" stroke-linecap="round"/>
+                  <circle cx="8" cy="11" r="0.75" fill="var(--bg-surface)"/>
+                </svg>
+              </span>
+              Urgent
+            </div>
+
+            <!-- High -->
+            <div class="priority-badge priority-badge--high">
+              <span class="priority-icon">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <rect x="3" y="3" width="10" height="10" rx="1.5" fill="currentColor"/>
+                  <path d="M6 10V8M8 10V6M10 10V7" stroke="var(--bg-surface)" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </span>
+              High
+            </div>
+
+            <!-- Medium -->
+            <div class="priority-badge priority-badge--medium">
+              <span class="priority-icon">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <rect x="3" y="3" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+                  <path d="M5.5 8H10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                  <path d="M5.5 10.5H10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </span>
+              Medium
+            </div>
+
+            <!-- Low -->
+            <div class="priority-badge priority-badge--low">
+              <span class="priority-icon">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <rect x="3" y="3" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+                  <path d="M5.5 8H10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </span>
+              Low
+            </div>
+
+            <!-- None -->
+            <div class="priority-badge priority-badge--none">
+              <span class="priority-icon">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <path d="M5 8H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="1.5 2.5"/>
+                </svg>
+              </span>
+              None
+            </div>
+
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="sub-label">Icon-Only Variants (for compact views)</div>
+        <div class="showcase-row">
+          <div class="showcase-items">
+            <div class="showcase-group">
+              <div class="priority-icon-only priority-icon-only--urgent">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2L14 13H2L8 2Z" fill="currentColor"/>
+                  <path d="M8 6.5V9.5" stroke="var(--bg-base)" stroke-width="1.5" stroke-linecap="round"/>
+                  <circle cx="8" cy="11" r="0.75" fill="var(--bg-base)"/>
+                </svg>
+              </div>
+              <span class="showcase-group-label">Urgent</span>
+            </div>
+            <div class="showcase-group">
+              <div class="priority-icon-only priority-icon-only--high">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <rect x="3" y="3" width="10" height="10" rx="1.5" fill="currentColor"/>
+                  <path d="M6 10V8M8 10V6M10 10V7" stroke="var(--bg-base)" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <span class="showcase-group-label">High</span>
+            </div>
+            <div class="showcase-group">
+              <div class="priority-icon-only priority-icon-only--medium">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <rect x="3" y="3" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+                  <path d="M5.5 8H10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                  <path d="M5.5 10.5H10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <span class="showcase-group-label">Medium</span>
+            </div>
+            <div class="showcase-group">
+              <div class="priority-icon-only priority-icon-only--low">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <rect x="3" y="3" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+                  <path d="M5.5 8H10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <span class="showcase-group-label">Low</span>
+            </div>
+            <div class="showcase-group">
+              <div class="priority-icon-only priority-icon-only--none">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <path d="M5 8H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="1.5 2.5"/>
+                </svg>
+              </div>
+              <span class="showcase-group-label">None</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================ 3. LABEL CHIPS ================================ -->
+    <section class="section">
+      <div class="section-header">
+        <span class="section-number">3</span>
+        <h2>Label Chips</h2>
+      </div>
+      <p class="section-description">Categorical labels in 8 predefined colors. Shown as pills with a leading color dot, or as compact pips for dense layouts.</p>
+
+      <div class="section-content">
+        <div class="sub-label">Full Label Chips</div>
+        <div class="showcase-row">
+          <div class="showcase-items">
+            <div class="label-chip label-chip--red"><span class="label-dot"></span>Bug</div>
+            <div class="label-chip label-chip--orange"><span class="label-dot"></span>Feature</div>
+            <div class="label-chip label-chip--yellow"><span class="label-dot"></span>Enhancement</div>
+            <div class="label-chip label-chip--green"><span class="label-dot"></span>Ready</div>
+            <div class="label-chip label-chip--blue"><span class="label-dot"></span>Frontend</div>
+            <div class="label-chip label-chip--purple"><span class="label-dot"></span>Backend</div>
+            <div class="label-chip label-chip--pink"><span class="label-dot"></span>Design</div>
+            <div class="label-chip label-chip--gray"><span class="label-dot"></span>Chore</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="sub-label">Compact Pip Variants (card-level)</div>
+        <div class="showcase-row">
+          <div class="showcase-items" style="gap: 6px;">
+            <div class="showcase-group">
+              <div class="label-pip label-pip--red"></div>
+              <span class="showcase-group-label">Red</span>
+            </div>
+            <div class="showcase-group">
+              <div class="label-pip label-pip--orange"></div>
+              <span class="showcase-group-label">Orange</span>
+            </div>
+            <div class="showcase-group">
+              <div class="label-pip label-pip--yellow"></div>
+              <span class="showcase-group-label">Yellow</span>
+            </div>
+            <div class="showcase-group">
+              <div class="label-pip label-pip--green"></div>
+              <span class="showcase-group-label">Green</span>
+            </div>
+            <div class="showcase-group">
+              <div class="label-pip label-pip--blue"></div>
+              <span class="showcase-group-label">Blue</span>
+            </div>
+            <div class="showcase-group">
+              <div class="label-pip label-pip--purple"></div>
+              <span class="showcase-group-label">Purple</span>
+            </div>
+            <div class="showcase-group">
+              <div class="label-pip label-pip--pink"></div>
+              <span class="showcase-group-label">Pink</span>
+            </div>
+            <div class="showcase-group">
+              <div class="label-pip label-pip--gray"></div>
+              <span class="showcase-group-label">Gray</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="sub-label">Multi-Label Combinations</div>
+        <div class="showcase-row">
+          <div class="showcase-items" style="gap: 6px;">
+            <div class="label-chip label-chip--red"><span class="label-dot"></span>Bug</div>
+            <div class="label-chip label-chip--orange"><span class="label-dot"></span>Urgent</div>
+            <div class="label-chip label-chip--blue"><span class="label-dot"></span>Frontend</div>
+          </div>
+        </div>
+        <div class="showcase-row" style="margin-top: 8px;">
+          <div class="showcase-items" style="gap: 6px;">
+            <div class="label-chip label-chip--green"><span class="label-dot"></span>Ready</div>
+            <div class="label-chip label-chip--purple"><span class="label-dot"></span>Backend</div>
+          </div>
+        </div>
+        <div class="showcase-row" style="margin-top: 8px;">
+          <div class="showcase-items" style="gap: 4px;">
+            <div class="label-pip label-pip--red"></div>
+            <div class="label-pip label-pip--blue"></div>
+            <div class="label-pip label-pip--purple"></div>
+            <span style="font-size: 11px; color: var(--text-tertiary); margin-left: 4px;">3 labels (compact)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================ 4. ASSIGNEE AVATARS ================================ -->
+    <section class="section">
+      <div class="section-header">
+        <span class="section-number">4</span>
+        <h2>Assignee Avatars</h2>
+      </div>
+      <p class="section-description">User identity shown via gradient-backed initials. Supports single, stacked groups, and overflow indicators.</p>
+
+      <div class="section-content">
+        <div class="two-col">
+          <div>
+            <div class="sub-label">Sizes</div>
+            <table class="variant-table">
+              <thead>
+                <tr><th>Size</th><th>Avatar</th><th>With Name</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span style="font-size: 11px; color: var(--text-tertiary); font-family: 'JetBrains Mono', monospace;">24px sm</span></td>
+                  <td><div class="avatar avatar--sm avatar--1">AM</div></td>
+                  <td>
+                    <div class="avatar-name">
+                      <div class="avatar avatar--sm avatar--1">AM</div>
+                      <span style="font-size: 12px;">Alice M.</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span style="font-size: 11px; color: var(--text-tertiary); font-family: 'JetBrains Mono', monospace;">28px md</span></td>
+                  <td><div class="avatar avatar--md avatar--2">BK</div></td>
+                  <td>
+                    <div class="avatar-name">
+                      <div class="avatar avatar--md avatar--2">BK</div>
+                      <span>Bob K.</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span style="font-size: 11px; color: var(--text-tertiary); font-family: 'JetBrains Mono', monospace;">32px lg</span></td>
+                  <td><div class="avatar avatar--lg avatar--3 avatar-online">CS</div></td>
+                  <td>
+                    <div class="avatar-name">
+                      <div class="avatar avatar--lg avatar--3 avatar-online">CS</div>
+                      <span>Carol S.</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <div class="sub-label">Stacked Groups</div>
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+
+              <!-- 2 avatars -->
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <span class="showcase-group-label" style="min-width: 80px;">2 members</span>
+                <div class="avatar-stack">
+                  <div class="avatar avatar--md avatar--1">AM</div>
+                  <div class="avatar avatar--md avatar--2">BK</div>
+                </div>
+              </div>
+
+              <!-- 3 avatars -->
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <span class="showcase-group-label" style="min-width: 80px;">3 members</span>
+                <div class="avatar-stack">
+                  <div class="avatar avatar--md avatar--1">AM</div>
+                  <div class="avatar avatar--md avatar--2">BK</div>
+                  <div class="avatar avatar--md avatar--3">CS</div>
+                </div>
+              </div>
+
+              <!-- 4 avatars -->
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <span class="showcase-group-label" style="min-width: 80px;">4 members</span>
+                <div class="avatar-stack">
+                  <div class="avatar avatar--md avatar--4">DL</div>
+                  <div class="avatar avatar--md avatar--5">ER</div>
+                  <div class="avatar avatar--md avatar--1">AM</div>
+                  <div class="avatar avatar--md avatar--6">FW</div>
+                </div>
+              </div>
+
+              <!-- Overflow -->
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <span class="showcase-group-label" style="min-width: 80px;">+N overflow</span>
+                <div class="avatar-stack">
+                  <div class="avatar avatar--md avatar--2">BK</div>
+                  <div class="avatar avatar--md avatar--3">CS</div>
+                  <div class="avatar avatar--md avatar--4">DL</div>
+                  <div class="avatar-overflow avatar-overflow--md">+5</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="sub-label">Color Palette (6 gradient presets)</div>
+        <div class="showcase-row">
+          <div class="showcase-items" style="gap: 8px;">
+            <div class="showcase-group">
+              <div class="avatar avatar--lg avatar--1">A1</div>
+              <span class="showcase-group-label">Flame</span>
+            </div>
+            <div class="showcase-group">
+              <div class="avatar avatar--lg avatar--2">B2</div>
+              <span class="showcase-group-label">Ocean</span>
+            </div>
+            <div class="showcase-group">
+              <div class="avatar avatar--lg avatar--3">C3</div>
+              <span class="showcase-group-label">Forest</span>
+            </div>
+            <div class="showcase-group">
+              <div class="avatar avatar--lg avatar--4">D4</div>
+              <span class="showcase-group-label">Violet</span>
+            </div>
+            <div class="showcase-group">
+              <div class="avatar avatar--lg avatar--5">E5</div>
+              <span class="showcase-group-label">Amber</span>
+            </div>
+            <div class="showcase-group">
+              <div class="avatar avatar--lg avatar--6">F6</div>
+              <span class="showcase-group-label">Rose</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================ 5. DUE DATE BADGES ================================ -->
+    <section class="section">
+      <div class="section-header">
+        <span class="section-number">5</span>
+        <h2>Due Date Badges</h2>
+      </div>
+      <p class="section-description">Time-sensitive indicators with urgency-mapped colors. Overdue pulses for attention.</p>
+
+      <div class="section-content">
+        <div class="badge-grid">
+
+          <!-- Overdue -->
+          <div class="badge-grid-item">
+            <span class="badge-grid-item-label">Overdue</span>
+            <div class="due-badge due-badge--overdue">
+              <div class="due-pulse"></div>
+              <svg viewBox="0 0 12 12" fill="none">
+                <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M4 6H8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M6 4V8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+              Feb 20
+            </div>
+            <div class="due-badge due-badge--overdue">
+              <div class="due-pulse"></div>
+              <svg viewBox="0 0 12 12" fill="none">
+                <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M4 6H8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M6 4V8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+              3 days ago
+            </div>
+          </div>
+
+          <!-- Today -->
+          <div class="badge-grid-item">
+            <span class="badge-grid-item-label">Today</span>
+            <div class="due-badge due-badge--today">
+              <svg viewBox="0 0 12 12" fill="none">
+                <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M4 6H8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M6 4V8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+              Today
+            </div>
+            <div class="due-badge due-badge--today">
+              <svg viewBox="0 0 12 12" fill="none">
+                <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M4 6H8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M6 4V8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+              Feb 28
+            </div>
+          </div>
+
+          <!-- This Week -->
+          <div class="badge-grid-item">
+            <span class="badge-grid-item-label">This Week</span>
+            <div class="due-badge due-badge--week">
+              <svg viewBox="0 0 12 12" fill="none">
+                <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M4 6H8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M6 4V8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+              Mar 2
+            </div>
+            <div class="due-badge due-badge--week">
+              <svg viewBox="0 0 12 12" fill="none">
+                <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M4 6H8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M6 4V8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+              In 4 days
+            </div>
+          </div>
+
+          <!-- Far -->
+          <div class="badge-grid-item">
+            <span class="badge-grid-item-label">Far Future</span>
+            <div class="due-badge due-badge--far">
+              <svg viewBox="0 0 12 12" fill="none">
+                <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M4 6H8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M6 4V8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+              Apr 15
+            </div>
+            <div class="due-badge due-badge--far">
+              <svg viewBox="0 0 12 12" fill="none">
+                <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M4 6H8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M6 4V8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+              In 46 days
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================ 6. SUBTASK PROGRESS ================================ -->
+    <section class="section">
+      <div class="section-header">
+        <span class="section-number">6</span>
+        <h2>Subtask Progress</h2>
+      </div>
+      <p class="section-description">Fraction display with mini progress bars. Bar color shifts from gray to green as completion increases.</p>
+
+      <div class="section-content">
+        <div class="sub-label">Progress States</div>
+        <div class="badge-grid">
+
+          <div class="badge-grid-item">
+            <span class="badge-grid-item-label">0% — Empty</span>
+            <div class="subtask-progress">
+              <div class="subtask-indicator">
+                <svg viewBox="0 0 14 14" fill="none">
+                  <rect x="2" y="2" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.3"/>
+                </svg>
+                <span class="subtask-fraction">0/5</span>
+              </div>
+              <div class="subtask-bar">
+                <div class="subtask-bar-fill subtask-bar-fill--low" style="width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="badge-grid-item">
+            <span class="badge-grid-item-label">~30% — Low</span>
+            <div class="subtask-progress">
+              <div class="subtask-indicator">
+                <svg viewBox="0 0 14 14" fill="none">
+                  <rect x="2" y="2" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.3"/>
+                </svg>
+                <span class="subtask-fraction">2/7</span>
+              </div>
+              <div class="subtask-bar">
+                <div class="subtask-bar-fill subtask-bar-fill--low" style="width: 28%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="badge-grid-item">
+            <span class="badge-grid-item-label">~43% — Mid</span>
+            <div class="subtask-progress">
+              <div class="subtask-indicator">
+                <svg viewBox="0 0 14 14" fill="none">
+                  <rect x="2" y="2" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.3"/>
+                  <path d="M4.5 7.5L6 9L9.5 5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
+                </svg>
+                <span class="subtask-fraction">3/7</span>
+              </div>
+              <div class="subtask-bar">
+                <div class="subtask-bar-fill subtask-bar-fill--mid" style="width: 43%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="badge-grid-item">
+            <span class="badge-grid-item-label">~75% — High</span>
+            <div class="subtask-progress">
+              <div class="subtask-indicator">
+                <svg viewBox="0 0 14 14" fill="none">
+                  <rect x="2" y="2" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.3"/>
+                  <path d="M4.5 7.5L6 9L9.5 5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+                </svg>
+                <span class="subtask-fraction">6/8</span>
+              </div>
+              <div class="subtask-bar">
+                <div class="subtask-bar-fill subtask-bar-fill--high" style="width: 75%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="badge-grid-item">
+            <span class="badge-grid-item-label">100% — Complete</span>
+            <div class="subtask-progress">
+              <div class="subtask-indicator" style="background: var(--green-dim);">
+                <svg viewBox="0 0 14 14" fill="none" style="color: var(--green);">
+                  <rect x="2" y="2" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.3"/>
+                  <path d="M4.5 7.5L6 9L9.5 5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="subtask-fraction" style="color: var(--green);">4/4</span>
+              </div>
+              <div class="subtask-bar">
+                <div class="subtask-bar-fill subtask-bar-fill--done" style="width: 100%;"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================ 7. TASK ID BADGES ================================ -->
+    <section class="section">
+      <div class="section-header">
+        <span class="section-number">7</span>
+        <h2>Task ID Badges</h2>
+      </div>
+      <p class="section-description">Monospaced identifiers with a hash prefix. Linkable variant highlights on hover with the Mistral accent.</p>
+
+      <div class="section-content">
+        <div class="sub-label">Standard IDs</div>
+        <div class="showcase-row">
+          <div class="showcase-items">
+            <span class="task-id"><span class="hash">#</span>TSK-001</span>
+            <span class="task-id"><span class="hash">#</span>TSK-042</span>
+            <span class="task-id"><span class="hash">#</span>TSK-123</span>
+            <span class="task-id"><span class="hash">#</span>TSK-789</span>
+            <span class="task-id"><span class="hash">#</span>TSK-1024</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="sub-label">Linkable IDs (hover for accent)</div>
+        <div class="showcase-row">
+          <div class="showcase-items">
+            <a class="task-id task-id--linked" href="#"><span class="hash">#</span>TSK-007</a>
+            <a class="task-id task-id--linked" href="#"><span class="hash">#</span>TSK-099</a>
+            <a class="task-id task-id--linked" href="#"><span class="hash">#</span>TSK-256</a>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="sub-label">In Context</div>
+        <div class="showcase-row">
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary);">
+            <span>Parent:</span>
+            <a class="task-id task-id--linked" href="#"><span class="hash">#</span>TSK-040</a>
+            <span style="color: var(--text-quaternary);">/</span>
+            <span class="task-id"><span class="hash">#</span>TSK-042</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================ 8. COMPOSITE DEMO ================================ -->
+    <section class="section">
+      <div class="section-header">
+        <span class="section-number">8</span>
+        <h2>Composite Preview</h2>
+      </div>
+      <p class="section-description">All badge types assembled together in realistic task card contexts.</p>
+
+      <div class="section-content">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
+
+          <!-- Card 1: Urgent bug -->
+          <div class="card-demo">
+            <div class="card-demo-top">
+              <span class="task-id"><span class="hash">#</span>TSK-087</span>
+              <div class="priority-icon-only priority-icon-only--urgent">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2L14 13H2L8 2Z" fill="currentColor"/>
+                  <path d="M8 6.5V9.5" stroke="var(--bg-elevated)" stroke-width="1.5" stroke-linecap="round"/>
+                  <circle cx="8" cy="11" r="0.75" fill="var(--bg-elevated)"/>
+                </svg>
+              </div>
+            </div>
+            <div class="card-demo-title">Fix authentication flow crash on token refresh</div>
+            <div class="card-demo-labels">
+              <div class="label-chip label-chip--red"><span class="label-dot"></span>Bug</div>
+              <div class="label-chip label-chip--orange"><span class="label-dot"></span>Urgent</div>
+            </div>
+            <div class="card-demo-bottom">
+              <div class="card-demo-meta">
+                <div class="due-badge due-badge--overdue">
+                  <div class="due-pulse"></div>
+                  Feb 25
+                </div>
+                <div class="subtask-progress">
+                  <span class="subtask-fraction">1/3</span>
+                  <div class="subtask-bar" style="width: 36px;">
+                    <div class="subtask-bar-fill subtask-bar-fill--low" style="width: 33%;"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="avatar avatar--sm avatar--1">AM</div>
+            </div>
+          </div>
+
+          <!-- Card 2: In progress feature -->
+          <div class="card-demo">
+            <div class="card-demo-top">
+              <span class="task-id"><span class="hash">#</span>TSK-102</span>
+              <div class="priority-icon-only priority-icon-only--high">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <rect x="3" y="3" width="10" height="10" rx="1.5" fill="currentColor"/>
+                  <path d="M6 10V8M8 10V6M10 10V7" stroke="var(--bg-elevated)" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </div>
+            </div>
+            <div class="card-demo-title">Implement real-time kanban drag and drop</div>
+            <div class="card-demo-labels">
+              <div class="label-chip label-chip--blue"><span class="label-dot"></span>Frontend</div>
+              <div class="label-chip label-chip--yellow"><span class="label-dot"></span>Enhancement</div>
+            </div>
+            <div class="card-demo-bottom">
+              <div class="card-demo-meta">
+                <div class="status-badge status-badge--in-progress" style="padding: 2px 8px 2px 5px; font-size: 11px;">
+                  <span class="status-icon" style="width: 12px; height: 12px;">
+                    <svg viewBox="0 0 14 14" fill="none" style="width: 12px; height: 12px;">
+                      <circle cx="7" cy="7" r="4" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.3"/>
+                      <path d="M7 3 A4 4 0 0 1 11 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                      <circle cx="7" cy="7" r="1.5" fill="currentColor"/>
+                    </svg>
+                  </span>
+                  In Progress
+                </div>
+                <div class="subtask-progress">
+                  <span class="subtask-fraction">5/8</span>
+                  <div class="subtask-bar" style="width: 36px;">
+                    <div class="subtask-bar-fill subtask-bar-fill--mid" style="width: 62%;"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="avatar-stack">
+                <div class="avatar avatar--sm avatar--2">BK</div>
+                <div class="avatar avatar--sm avatar--3">CS</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Done task -->
+          <div class="card-demo">
+            <div class="card-demo-top">
+              <span class="task-id"><span class="hash">#</span>TSK-078</span>
+              <div class="priority-icon-only priority-icon-only--medium">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <rect x="3" y="3" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+                  <path d="M5.5 8H10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                  <path d="M5.5 10.5H10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </div>
+            </div>
+            <div class="card-demo-title" style="text-decoration: line-through; color: var(--text-tertiary);">Set up CI/CD pipeline with GitHub Actions</div>
+            <div class="card-demo-labels">
+              <div class="label-chip label-chip--gray"><span class="label-dot"></span>Chore</div>
+              <div class="label-chip label-chip--purple"><span class="label-dot"></span>Backend</div>
+            </div>
+            <div class="card-demo-bottom">
+              <div class="card-demo-meta">
+                <div class="status-badge status-badge--done" style="padding: 2px 8px 2px 5px; font-size: 11px;">
+                  <span class="status-icon" style="width: 12px; height: 12px;">
+                    <svg viewBox="0 0 14 14" fill="none" style="width: 12px; height: 12px;">
+                      <circle cx="7" cy="7" r="5" fill="currentColor" opacity="0.15"/>
+                      <circle cx="7" cy="7" r="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                      <path d="M4.5 7 L6.2 8.8 L9.5 5.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                  </span>
+                  Done
+                </div>
+                <div class="subtask-progress">
+                  <span class="subtask-fraction" style="color: var(--green);">4/4</span>
+                  <div class="subtask-bar" style="width: 36px;">
+                    <div class="subtask-bar-fill subtask-bar-fill--done" style="width: 100%;"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="avatar-stack">
+                <div class="avatar avatar--sm avatar--4">DL</div>
+                <div class="avatar avatar--sm avatar--5">ER</div>
+                <div class="avatar avatar--sm avatar--6">FW</div>
+                <div class="avatar-overflow avatar-overflow--sm">+2</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================ FOOTER ================================ -->
+    <footer style="text-align: center; padding: 24px 0; border-top: 1px solid var(--border-subtle); margin-top: 16px;">
+      <p style="font-size: 11px; color: var(--text-quaternary); letter-spacing: 0.5px;">
+        AI OFFICE DESIGN SYSTEM &middot; BADGE &amp; INDICATOR REFERENCE &middot; AGENT 7 &middot; MISTRAL HACKATHON 2026
+      </p>
+    </footer>
+
+  </div>
+</body>
+</html>

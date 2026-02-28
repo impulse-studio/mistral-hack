@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent 6 — Board Header & Toolbar</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ================================================================
+     RESET & BASE
+     ================================================================ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* Backgrounds */
+    --bg-base:      #0A0A0B;
+    --bg-surface:   #111113;
+    --bg-elevated:  #1A1A1D;
+    --bg-hover:     #1F1F22;
+    --bg-active:    #252528;
+
+    /* Borders */
+    --border-subtle:  #2A2A2E;
+    --border-hover:   #3A3A3E;
+    --border-focus:   #4A4A4E;
+
+    /* Text */
+    --text-primary:   #FAFAFA;
+    --text-secondary: #A0A0A8;
+    --text-tertiary:  #6B6B73;
+    --text-disabled:  #4A4A50;
+
+    /* Accent — Mistral Orange */
+    --orange:       #FF7000;
+    --orange-hover: #FF8522;
+    --orange-muted: rgba(255, 112, 0, 0.12);
+    --orange-border:rgba(255, 112, 0, 0.25);
+
+    /* Semantic */
+    --red:          #FD3F29;
+    --red-muted:    rgba(253, 63, 41, 0.12);
+    --yellow:       #FFCB00;
+    --yellow-muted: rgba(255, 203, 0, 0.12);
+    --green:        #22C55E;
+    --green-muted:  rgba(34, 197, 94, 0.12);
+    --blue:         #3B82F6;
+    --blue-muted:   rgba(59, 130, 246, 0.12);
+    --purple:       #A855F7;
+    --purple-muted: rgba(168, 85, 247, 0.12);
+
+    /* Sizing */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 10px;
+    --radius-full: 9999px;
+
+    /* Timing */
+    --transition-fast: 120ms ease-out;
+    --transition-base: 150ms ease-out;
+    --transition-slow: 250ms ease-out;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ================================================================
+     PAGE LAYOUT — Showcase wrapper
+     ================================================================ */
+  .showcase {
+    max-width: 1440px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 64px;
+    padding: 48px 0 80px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-subtle);
+  }
+
+  /* ================================================================
+     HEADER BAR — Top-level navigation
+     ================================================================ */
+  .header-bar {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    height: 52px;
+    gap: 0;
+    position: relative;
+  }
+
+  /* Project title + icon */
+  .project-identity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-right: 20px;
+    border-right: 1px solid var(--border-subtle);
+    margin-right: 4px;
+    cursor: pointer;
+    height: 100%;
+    flex-shrink: 0;
+  }
+
+  .project-icon {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, var(--orange), #FF9640);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.5px;
+    box-shadow: 0 0 0 1px rgba(255,112,0,0.2), 0 2px 8px rgba(255,112,0,0.15);
+  }
+
+  .project-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+
+  .project-chevron {
+    color: var(--text-tertiary);
+    font-size: 10px;
+    margin-left: 2px;
+    transition: transform var(--transition-fast);
+  }
+
+  .project-identity:hover .project-chevron {
+    transform: translateY(1px);
+  }
+
+  .project-identity:hover .project-name {
+    color: #fff;
+  }
+
+  /* View toggles */
+  .view-toggles {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    padding: 0 12px;
+    height: 100%;
+    flex-shrink: 0;
+  }
+
+  .view-toggle {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    background: transparent;
+    border: none;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all var(--transition-fast);
+    position: relative;
+    height: 32px;
+    white-space: nowrap;
+  }
+
+  .view-toggle:hover {
+    color: var(--text-secondary);
+    background: var(--bg-hover);
+  }
+
+  .view-toggle.active {
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+  }
+
+  .view-toggle.active::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 8px);
+    height: 2px;
+    background: var(--orange);
+    border-radius: 1px 1px 0 0;
+  }
+
+  .view-toggle svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+
+  /* Separator */
+  .header-sep {
+    width: 1px;
+    height: 24px;
+    background: var(--border-subtle);
+    margin: 0 8px;
+    flex-shrink: 0;
+  }
+
+  /* Header spacer */
+  .header-spacer {
+    flex: 1;
+  }
+
+  /* Team avatars */
+  .team-avatars {
+    display: flex;
+    align-items: center;
+    margin-right: 16px;
+    flex-shrink: 0;
+  }
+
+  .avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    border: 2px solid var(--bg-surface);
+    background: var(--bg-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-left: -6px;
+    position: relative;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    overflow: hidden;
+  }
+
+  .avatar:first-child {
+    margin-left: 0;
+  }
+
+  .avatar:hover {
+    transform: translateY(-2px);
+    z-index: 2;
+    border-color: var(--border-hover);
+  }
+
+  .avatar.online::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 8px;
+    height: 8px;
+    background: var(--green);
+    border: 2px solid var(--bg-surface);
+    border-radius: var(--radius-full);
+  }
+
+  .avatar-overflow {
+    background: var(--bg-active);
+    color: var(--text-tertiary);
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Avatar colors */
+  .avatar.a1 { background: linear-gradient(135deg, #4F46E5, #6366F1); color: #E0E7FF; }
+  .avatar.a2 { background: linear-gradient(135deg, #0891B2, #22D3EE); color: #CFFAFE; }
+  .avatar.a3 { background: linear-gradient(135deg, #7C3AED, #A78BFA); color: #EDE9FE; }
+  .avatar.a4 { background: linear-gradient(135deg, #059669, #34D399); color: #D1FAE5; }
+  .avatar.a5 { background: linear-gradient(135deg, #DC2626, #F87171); color: #FEE2E2; }
+
+  /* New Task button */
+  .btn-new-task {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 14px;
+    height: 32px;
+    background: var(--orange);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+
+  .btn-new-task:hover {
+    background: var(--orange-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255,112,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+
+  .btn-new-task:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+
+  .btn-new-task svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* ================================================================
+     TOOLBAR — Filter/Sort/Search bar
+     ================================================================ */
+  .toolbar {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    height: 44px;
+    gap: 6px;
+    position: relative;
+  }
+
+  /* Toolbar button (filter, sort, group by) */
+  .toolbar-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 10px;
+    height: 28px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-family: inherit;
+  }
+
+  .toolbar-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--border-subtle);
+  }
+
+  .toolbar-btn.active {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+  }
+
+  .toolbar-btn svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+
+  .toolbar-btn:hover svg {
+    opacity: 1;
+  }
+
+  .toolbar-btn .count-badge {
+    background: var(--orange-muted);
+    color: var(--orange);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: var(--radius-full);
+    line-height: 1.4;
+  }
+
+  .toolbar-btn .chevron {
+    font-size: 9px;
+    color: var(--text-tertiary);
+    margin-left: -1px;
+  }
+
+  /* Search input */
+  .search-wrapper {
+    position: relative;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .search-input {
+    width: 220px;
+    height: 28px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 0 10px 0 30px;
+    color: var(--text-primary);
+    font-size: 12px;
+    font-family: inherit;
+    transition: all var(--transition-base);
+    outline: none;
+  }
+
+  .search-input::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  .search-input:hover {
+    border-color: var(--border-hover);
+  }
+
+  .search-input:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 2px var(--orange-muted);
+    width: 280px;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
+    pointer-events: none;
+  }
+
+  .search-icon svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .search-shortcut {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    pointer-events: none;
+  }
+
+  .kbd {
+    font-size: 10px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    color: var(--text-disabled);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    padding: 0px 4px;
+    line-height: 1.6;
+  }
+
+  /* ================================================================
+     FILTER CHIPS ROW
+     ================================================================ */
+  .filter-chips-row {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    height: 40px;
+    gap: 8px;
+  }
+
+  .filter-chips-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    margin-right: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    border: 1px solid;
+  }
+
+  .filter-chip .chip-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: var(--radius-full);
+    font-size: 10px;
+    line-height: 1;
+    opacity: 0.5;
+    transition: opacity var(--transition-fast);
+    margin-left: -2px;
+    margin-right: -4px;
+  }
+
+  .filter-chip:hover .chip-remove {
+    opacity: 1;
+  }
+
+  /* Chip color variants */
+  .filter-chip.chip-status {
+    background: var(--orange-muted);
+    color: var(--orange);
+    border-color: var(--orange-border);
+  }
+
+  .filter-chip.chip-status .chip-remove:hover { background: rgba(255,112,0,0.2); }
+
+  .filter-chip.chip-priority {
+    background: var(--red-muted);
+    color: var(--red);
+    border-color: rgba(253, 63, 41, 0.25);
+  }
+
+  .filter-chip.chip-priority .chip-remove:hover { background: rgba(253,63,41,0.2); }
+
+  .filter-chip.chip-assignee {
+    background: var(--blue-muted);
+    color: var(--blue);
+    border-color: rgba(59, 130, 246, 0.25);
+  }
+
+  .filter-chip.chip-assignee .chip-remove:hover { background: rgba(59,130,246,0.2); }
+
+  .filter-chip.chip-label {
+    background: var(--purple-muted);
+    color: var(--purple);
+    border-color: rgba(168, 85, 247, 0.25);
+  }
+
+  .filter-chip.chip-label .chip-remove:hover { background: rgba(168,85,247,0.2); }
+
+  .filter-chip.chip-date {
+    background: var(--yellow-muted);
+    color: var(--yellow);
+    border-color: rgba(255, 203, 0, 0.25);
+  }
+
+  .filter-chip .chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+  }
+
+  .chip-dot.dot-orange { background: var(--orange); }
+  .chip-dot.dot-red { background: var(--red); }
+  .chip-dot.dot-blue { background: var(--blue); }
+  .chip-dot.dot-purple { background: var(--purple); }
+  .chip-dot.dot-yellow { background: var(--yellow); }
+  .chip-dot.dot-green { background: var(--green); }
+
+  .filter-clear-all {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin-left: auto;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+    font-family: inherit;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .filter-clear-all:hover {
+    color: var(--text-secondary);
+    background: var(--bg-hover);
+  }
+
+  .filter-count-summary {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-left: 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ================================================================
+     DROPDOWN PREVIEW (static)
+     ================================================================ */
+  .dropdown-preview {
+    position: absolute;
+    top: calc(100% + 4px);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 4px;
+    min-width: 180px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 100;
+  }
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .dropdown-item:hover,
+  .dropdown-item.selected {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  .dropdown-item.selected {
+    color: var(--text-primary);
+  }
+
+  .dropdown-item svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+
+  .dropdown-item .check-icon {
+    margin-left: auto;
+    color: var(--orange);
+    opacity: 0;
+  }
+
+  .dropdown-item.selected .check-icon {
+    opacity: 1;
+  }
+
+  .dropdown-divider {
+    height: 1px;
+    background: var(--border-subtle);
+    margin: 4px 0;
+  }
+
+  /* ================================================================
+     CONTEXT ANNOTATIONS
+     ================================================================ */
+  .annotation {
+    position: absolute;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--orange);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .annotation::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    background: var(--orange);
+    border-radius: var(--radius-full);
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+
+  /* ================================================================
+     BOARD CONTENT HINT
+     ================================================================ */
+  .board-hint {
+    background: var(--bg-base);
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid var(--border-subtle);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .board-hint::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent calc(20% - 0.5px),
+      var(--border-subtle) calc(20% - 0.5px),
+      var(--border-subtle) calc(20% + 0.5px),
+      transparent calc(20% + 0.5px)
+    );
+    opacity: 0.5;
+  }
+
+  .board-hint-text {
+    font-size: 11px;
+    color: var(--text-disabled);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ================================================================
+     SORT DROPDOWN STATIC SHOWCASE
+     ================================================================ */
+  .toolbar-btn-with-dropdown {
+    position: relative;
+  }
+
+  /* ================================================================
+     COMPONENT SHOWCASE WRAPPER
+     ================================================================ */
+  .component-frame {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  }
+
+  /* ================================================================
+     TOOLBAR — EXPANDED FILTER DROPDOWNS (for variant 2)
+     ================================================================ */
+  .status-filter-dropdown {
+    left: 0;
+  }
+
+  .assignee-filter-dropdown {
+    left: 0;
+  }
+
+  .dropdown-item .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+  }
+
+  .status-dot.backlog { background: var(--text-tertiary); }
+  .status-dot.todo { background: transparent; border: 1.5px solid var(--text-primary); }
+  .status-dot.in-progress { background: conic-gradient(var(--orange) 50%, transparent 50%); border: 1.5px solid var(--orange); }
+  .status-dot.review { background: var(--yellow); }
+  .status-dot.done { background: var(--green); }
+
+  .dropdown-item .priority-icon {
+    flex-shrink: 0;
+  }
+
+  /* Avatar small in dropdown */
+  .dropdown-avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  /* ================================================================
+     FOCUS STATE: SEARCH EXPANDED
+     ================================================================ */
+  .search-expanded .search-input {
+    width: 320px;
+    border-color: var(--orange);
+    box-shadow: 0 0 0 2px var(--orange-muted);
+  }
+
+  .search-expanded .search-shortcut {
+    display: none;
+  }
+
+  /* ================================================================
+     VARIANT LABEL
+     ================================================================ */
+  .variant-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 32px;
+    margin-top: -32px;
+    margin-bottom: -8px;
+  }
+
+  .variant-label span {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .variant-tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--orange);
+    background: var(--orange-muted);
+    border: 1px solid var(--orange-border);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+  }
+
+  /* ================================================================
+     SUBTLE GRADIENT TOP LINE
+     ================================================================ */
+  .accent-line {
+    height: 2px;
+    background: linear-gradient(90deg, var(--orange), var(--orange-hover), var(--yellow), var(--orange));
+    background-size: 300% 100%;
+    animation: shimmer-line 8s ease infinite;
+    opacity: 0.8;
+  }
+
+  @keyframes shimmer-line {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* ================================================================
+     INTERACTIVE HOVER STATES
+     ================================================================ */
+  .toolbar-btn:active {
+    transform: scale(0.97);
+  }
+
+  .view-toggle:active {
+    transform: scale(0.97);
+  }
+
+  .filter-chip:hover {
+    filter: brightness(1.15);
+  }
+
+  .filter-chip:active {
+    transform: scale(0.97);
+  }
+
+  /* ================================================================
+     STACKED FILTERS INDICATOR
+     ================================================================ */
+  .filter-count-ring {
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-full);
+    background: var(--orange);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  /* ================================================================
+     SVG ICON HELPERS
+     ================================================================ */
+  .icon-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ================================================================
+     ANIMATION: Subtle pulse on New Task button
+     ================================================================ */
+  @keyframes subtle-glow {
+    0%, 100% { box-shadow: 0 1px 2px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 12px rgba(255,112,0,0.0); }
+    50% { box-shadow: 0 1px 2px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 16px rgba(255,112,0,0.15); }
+  }
+
+  .btn-new-task {
+    animation: subtle-glow 3s ease-in-out infinite;
+  }
+</style>
+</head>
+<body>
+
+<div class="showcase">
+
+  <!-- ============================================================
+       VARIANT 1: Default State — Clean Toolbar
+       ============================================================ -->
+  <div class="section-label">Variant 1 — Default State (No Active Filters)</div>
+
+  <div class="component-frame">
+    <!-- Accent line -->
+    <div class="accent-line"></div>
+
+    <!-- Header bar -->
+    <div class="header-bar">
+      <!-- Project identity -->
+      <div class="project-identity">
+        <div class="project-icon">AI</div>
+        <span class="project-name">AI Office</span>
+        <span class="project-chevron">&#9662;</span>
+      </div>
+
+      <!-- View toggles -->
+      <div class="view-toggles">
+        <button class="view-toggle active">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="2" width="4" height="12" rx="1"/>
+            <rect x="6" y="2" width="4" height="12" rx="1"/>
+            <rect x="11" y="2" width="4" height="12" rx="1"/>
+          </svg>
+          Board
+        </button>
+        <button class="view-toggle">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="4" x2="13" y2="4"/>
+            <line x1="3" y1="8" x2="13" y2="8"/>
+            <line x1="3" y1="12" x2="13" y2="12"/>
+          </svg>
+          List
+        </button>
+        <button class="view-toggle">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="3" width="6" height="3" rx="1"/>
+            <rect x="3" y="7" width="8" height="3" rx="1"/>
+            <rect x="5" y="11" width="10" height="3" rx="1"/>
+          </svg>
+          Timeline
+        </button>
+      </div>
+
+      <div class="header-sep"></div>
+
+      <div class="header-spacer"></div>
+
+      <!-- Team avatars -->
+      <div class="team-avatars">
+        <div class="avatar a1 online">EM</div>
+        <div class="avatar a2 online">SK</div>
+        <div class="avatar a3">JL</div>
+        <div class="avatar a4 online">AR</div>
+        <div class="avatar a5">MT</div>
+        <div class="avatar avatar-overflow">+3</div>
+      </div>
+
+      <!-- New Task button -->
+      <button class="btn-new-task">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="8" y1="3" x2="8" y2="13"/>
+          <line x1="3" y1="8" x2="13" y2="8"/>
+        </svg>
+        New Task
+      </button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <!-- Filter buttons -->
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="1,2 15,2 9,9 9,13 7,14 7,9"/>
+        </svg>
+        Filter
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="8" r="6"/>
+          <path d="M5 8 L7 10 L11 6"/>
+        </svg>
+        Status
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="5" r="3"/>
+          <path d="M2 14 C2 11 5 9 8 9 C11 9 14 11 14 14"/>
+        </svg>
+        Assignee
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="2" y1="4" x2="14" y2="4"/>
+          <line x1="2" y1="8" x2="10" y2="8"/>
+          <line x1="2" y1="12" x2="6" y2="12"/>
+        </svg>
+        Priority
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 2 L3 14"/>
+          <path d="M3 2 L7 6"/>
+          <path d="M3 14 L7 10"/>
+          <circle cx="12" cy="5" r="2"/>
+          <circle cx="12" cy="11" r="2"/>
+        </svg>
+        Label
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <div class="header-sep"></div>
+
+      <!-- Sort -->
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 2 L4 14 M4 14 L1 11 M4 14 L7 11"/>
+          <line x1="9" y1="4" x2="15" y2="4"/>
+          <line x1="9" y1="8" x2="13" y2="8"/>
+          <line x1="9" y1="12" x2="11" y2="12"/>
+        </svg>
+        Sort
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <!-- Group by -->
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="2" width="14" height="4" rx="1"/>
+          <rect x="1" y="10" width="14" height="4" rx="1"/>
+        </svg>
+        Group by
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <!-- Search -->
+      <div class="search-wrapper">
+        <div class="search-icon">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7" cy="7" r="4.5"/>
+            <line x1="10.5" y1="10.5" x2="14" y2="14"/>
+          </svg>
+        </div>
+        <input type="text" class="search-input" placeholder="Search tasks...">
+        <div class="search-shortcut">
+          <span class="kbd">&#8984;</span><span class="kbd">K</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Board content hint -->
+    <div class="board-hint">
+      <span class="board-hint-text">Board columns render below</span>
+    </div>
+  </div>
+
+
+  <!-- ============================================================
+       VARIANT 2: Active Filters Applied
+       ============================================================ -->
+  <div class="section-label">Variant 2 — Active Filters Applied (Filter Chips Visible)</div>
+
+  <div class="component-frame">
+    <!-- Accent line -->
+    <div class="accent-line"></div>
+
+    <!-- Header bar -->
+    <div class="header-bar">
+      <div class="project-identity">
+        <div class="project-icon">AI</div>
+        <span class="project-name">AI Office</span>
+        <span class="project-chevron">&#9662;</span>
+      </div>
+
+      <div class="view-toggles">
+        <button class="view-toggle active">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="2" width="4" height="12" rx="1"/>
+            <rect x="6" y="2" width="4" height="12" rx="1"/>
+            <rect x="11" y="2" width="4" height="12" rx="1"/>
+          </svg>
+          Board
+        </button>
+        <button class="view-toggle">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="4" x2="13" y2="4"/>
+            <line x1="3" y1="8" x2="13" y2="8"/>
+            <line x1="3" y1="12" x2="13" y2="12"/>
+          </svg>
+          List
+        </button>
+        <button class="view-toggle">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="3" width="6" height="3" rx="1"/>
+            <rect x="3" y="7" width="8" height="3" rx="1"/>
+            <rect x="5" y="11" width="10" height="3" rx="1"/>
+          </svg>
+          Timeline
+        </button>
+      </div>
+
+      <div class="header-sep"></div>
+
+      <div class="header-spacer"></div>
+
+      <div class="team-avatars">
+        <div class="avatar a1 online">EM</div>
+        <div class="avatar a2 online">SK</div>
+        <div class="avatar a3">JL</div>
+        <div class="avatar a4 online">AR</div>
+        <div class="avatar a5">MT</div>
+        <div class="avatar avatar-overflow">+3</div>
+      </div>
+
+      <button class="btn-new-task">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="8" y1="3" x2="8" y2="13"/>
+          <line x1="3" y1="8" x2="13" y2="8"/>
+        </svg>
+        New Task
+      </button>
+    </div>
+
+    <!-- Toolbar with active filter indicators -->
+    <div class="toolbar">
+      <button class="toolbar-btn active">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="1,2 15,2 9,9 9,13 7,14 7,9"/>
+        </svg>
+        Filter
+        <span class="count-badge">4</span>
+      </button>
+
+      <button class="toolbar-btn active">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="8" r="6"/>
+          <path d="M5 8 L7 10 L11 6"/>
+        </svg>
+        Status
+        <span class="count-badge">2</span>
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn active">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="5" r="3"/>
+          <path d="M2 14 C2 11 5 9 8 9 C11 9 14 11 14 14"/>
+        </svg>
+        Assignee
+        <span class="count-badge">1</span>
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn active">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="2" y1="4" x2="14" y2="4"/>
+          <line x1="2" y1="8" x2="10" y2="8"/>
+          <line x1="2" y1="12" x2="6" y2="12"/>
+        </svg>
+        Priority
+        <span class="count-badge">1</span>
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 2 L3 14"/>
+          <path d="M3 2 L7 6"/>
+          <path d="M3 14 L7 10"/>
+          <circle cx="12" cy="5" r="2"/>
+          <circle cx="12" cy="11" r="2"/>
+        </svg>
+        Label
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <div class="header-sep"></div>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 2 L4 14 M4 14 L1 11 M4 14 L7 11"/>
+          <line x1="9" y1="4" x2="15" y2="4"/>
+          <line x1="9" y1="8" x2="13" y2="8"/>
+          <line x1="9" y1="12" x2="11" y2="12"/>
+        </svg>
+        Sort: Priority
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="2" width="14" height="4" rx="1"/>
+          <rect x="1" y="10" width="14" height="4" rx="1"/>
+        </svg>
+        Group by: Status
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <div class="search-wrapper">
+        <div class="search-icon">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7" cy="7" r="4.5"/>
+            <line x1="10.5" y1="10.5" x2="14" y2="14"/>
+          </svg>
+        </div>
+        <input type="text" class="search-input" placeholder="Search tasks...">
+        <div class="search-shortcut">
+          <span class="kbd">&#8984;</span><span class="kbd">K</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter chips row -->
+    <div class="filter-chips-row">
+      <span class="filter-chips-label">Active filters:</span>
+
+      <div class="filter-chip chip-status">
+        <span class="chip-dot dot-orange"></span>
+        In Progress
+        <span class="chip-remove">&times;</span>
+      </div>
+
+      <div class="filter-chip chip-status">
+        <span class="chip-dot dot-yellow"></span>
+        Review
+        <span class="chip-remove">&times;</span>
+      </div>
+
+      <div class="filter-chip chip-priority">
+        <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><polygon points="8,1 15,15 1,15"/></svg>
+        Urgent
+        <span class="chip-remove">&times;</span>
+      </div>
+
+      <div class="filter-chip chip-assignee">
+        <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14 C2 11 5 9 8 9 C11 9 14 11 14 14"/></svg>
+        Emily M.
+        <span class="chip-remove">&times;</span>
+      </div>
+
+      <span class="filter-count-summary">Showing 7 of 24 tasks</span>
+
+      <button class="filter-clear-all">Clear all</button>
+    </div>
+
+    <!-- Board content hint -->
+    <div class="board-hint">
+      <span class="board-hint-text">Filtered board columns render below</span>
+    </div>
+  </div>
+
+
+  <!-- ============================================================
+       VARIANT 3: Sort Dropdown Open
+       ============================================================ -->
+  <div class="section-label">Variant 3 — Sort Dropdown Open</div>
+
+  <div class="component-frame">
+    <div class="accent-line"></div>
+
+    <div class="header-bar">
+      <div class="project-identity">
+        <div class="project-icon">AI</div>
+        <span class="project-name">AI Office</span>
+        <span class="project-chevron">&#9662;</span>
+      </div>
+
+      <div class="view-toggles">
+        <button class="view-toggle active">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="2" width="4" height="12" rx="1"/>
+            <rect x="6" y="2" width="4" height="12" rx="1"/>
+            <rect x="11" y="2" width="4" height="12" rx="1"/>
+          </svg>
+          Board
+        </button>
+        <button class="view-toggle">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="4" x2="13" y2="4"/>
+            <line x1="3" y1="8" x2="13" y2="8"/>
+            <line x1="3" y1="12" x2="13" y2="12"/>
+          </svg>
+          List
+        </button>
+        <button class="view-toggle">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="3" width="6" height="3" rx="1"/>
+            <rect x="3" y="7" width="8" height="3" rx="1"/>
+            <rect x="5" y="11" width="10" height="3" rx="1"/>
+          </svg>
+          Timeline
+        </button>
+      </div>
+
+      <div class="header-sep"></div>
+      <div class="header-spacer"></div>
+
+      <div class="team-avatars">
+        <div class="avatar a1 online">EM</div>
+        <div class="avatar a2 online">SK</div>
+        <div class="avatar a3">JL</div>
+        <div class="avatar a4 online">AR</div>
+        <div class="avatar a5">MT</div>
+        <div class="avatar avatar-overflow">+3</div>
+      </div>
+
+      <button class="btn-new-task">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="8" y1="3" x2="8" y2="13"/>
+          <line x1="3" y1="8" x2="13" y2="8"/>
+        </svg>
+        New Task
+      </button>
+    </div>
+
+    <div class="toolbar">
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="1,2 15,2 9,9 9,13 7,14 7,9"/>
+        </svg>
+        Filter
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="8" r="6"/>
+          <path d="M5 8 L7 10 L11 6"/>
+        </svg>
+        Status
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="5" r="3"/>
+          <path d="M2 14 C2 11 5 9 8 9 C11 9 14 11 14 14"/>
+        </svg>
+        Assignee
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="2" y1="4" x2="14" y2="4"/>
+          <line x1="2" y1="8" x2="10" y2="8"/>
+          <line x1="2" y1="12" x2="6" y2="12"/>
+        </svg>
+        Priority
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 2 L3 14"/>
+          <path d="M3 2 L7 6"/>
+          <path d="M3 14 L7 10"/>
+          <circle cx="12" cy="5" r="2"/>
+          <circle cx="12" cy="11" r="2"/>
+        </svg>
+        Label
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <div class="header-sep"></div>
+
+      <!-- Sort with open dropdown -->
+      <div class="toolbar-btn-with-dropdown">
+        <button class="toolbar-btn active">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 2 L4 14 M4 14 L1 11 M4 14 L7 11"/>
+            <line x1="9" y1="4" x2="15" y2="4"/>
+            <line x1="9" y1="8" x2="13" y2="8"/>
+            <line x1="9" y1="12" x2="11" y2="12"/>
+          </svg>
+          Sort
+          <span class="chevron">&#9652;</span>
+        </button>
+        <div class="dropdown-preview" style="left: 0; min-width: 200px;">
+          <div class="dropdown-item">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M2 8 L14 8"/><path d="M2 4 L14 4"/><path d="M2 12 L14 12"/></svg>
+            Manual
+            <svg class="check-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 8 L6 11 L13 4"/></svg>
+          </div>
+          <div class="dropdown-item selected">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="10" y2="8"/><line x1="2" y1="12" x2="6" y2="12"/></svg>
+            Priority
+            <svg class="check-icon" viewBox="0 0 16 16" fill="none" stroke="var(--orange)" stroke-width="2" width="14" height="14"><path d="M3 8 L6 11 L13 4"/></svg>
+          </div>
+          <div class="dropdown-item">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><circle cx="8" cy="8" r="6"/><path d="M8 4 L8 8 L11 10"/></svg>
+            Due Date
+            <svg class="check-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 8 L6 11 L13 4"/></svg>
+          </div>
+          <div class="dropdown-item">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 8 L11 8"/></svg>
+            Title (A-Z)
+            <svg class="check-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 8 L6 11 L13 4"/></svg>
+          </div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><circle cx="8" cy="8" r="6"/><path d="M8 5 L8 8 L10 10"/></svg>
+            Created
+            <svg class="check-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 8 L6 11 L13 4"/></svg>
+          </div>
+          <div class="dropdown-item">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M3 3 L13 3 L13 13 L3 13 Z"/><path d="M3 6 L13 6"/></svg>
+            Updated
+            <svg class="check-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 8 L6 11 L13 4"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="2" width="14" height="4" rx="1"/>
+          <rect x="1" y="10" width="14" height="4" rx="1"/>
+        </svg>
+        Group by
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <div class="search-wrapper">
+        <div class="search-icon">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7" cy="7" r="4.5"/>
+            <line x1="10.5" y1="10.5" x2="14" y2="14"/>
+          </svg>
+        </div>
+        <input type="text" class="search-input" placeholder="Search tasks...">
+        <div class="search-shortcut">
+          <span class="kbd">&#8984;</span><span class="kbd">K</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Extra space for dropdown to show -->
+    <div style="height: 180px; background: var(--bg-base); position: relative;">
+      <div class="board-hint" style="height: 100%; border-bottom: none;">
+        <span class="board-hint-text">Board columns render below</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================
+       VARIANT 4: Compact view with many filter chips
+       ============================================================ -->
+  <div class="section-label">Variant 4 — Dense Filter State (Multiple Chip Types)</div>
+
+  <div class="component-frame">
+    <div class="accent-line"></div>
+
+    <div class="header-bar">
+      <div class="project-identity">
+        <div class="project-icon">AI</div>
+        <span class="project-name">AI Office</span>
+        <span class="project-chevron">&#9662;</span>
+      </div>
+
+      <div class="view-toggles">
+        <button class="view-toggle active">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="2" width="4" height="12" rx="1"/>
+            <rect x="6" y="2" width="4" height="12" rx="1"/>
+            <rect x="11" y="2" width="4" height="12" rx="1"/>
+          </svg>
+          Board
+        </button>
+        <button class="view-toggle">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="4" x2="13" y2="4"/>
+            <line x1="3" y1="8" x2="13" y2="8"/>
+            <line x1="3" y1="12" x2="13" y2="12"/>
+          </svg>
+          List
+        </button>
+        <button class="view-toggle">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="3" width="6" height="3" rx="1"/>
+            <rect x="3" y="7" width="8" height="3" rx="1"/>
+            <rect x="5" y="11" width="10" height="3" rx="1"/>
+          </svg>
+          Timeline
+        </button>
+      </div>
+
+      <div class="header-sep"></div>
+      <div class="header-spacer"></div>
+
+      <div class="team-avatars">
+        <div class="avatar a1 online">EM</div>
+        <div class="avatar a2 online">SK</div>
+        <div class="avatar a3">JL</div>
+        <div class="avatar a4 online">AR</div>
+        <div class="avatar a5">MT</div>
+        <div class="avatar avatar-overflow">+3</div>
+      </div>
+
+      <button class="btn-new-task">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="8" y1="3" x2="8" y2="13"/>
+          <line x1="3" y1="8" x2="13" y2="8"/>
+        </svg>
+        New Task
+      </button>
+    </div>
+
+    <div class="toolbar">
+      <button class="toolbar-btn active">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="1,2 15,2 9,9 9,13 7,14 7,9"/>
+        </svg>
+        Filter
+        <span class="count-badge">7</span>
+      </button>
+
+      <button class="toolbar-btn active">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="8" r="6"/>
+          <path d="M5 8 L7 10 L11 6"/>
+        </svg>
+        Status
+        <span class="count-badge">3</span>
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn active">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="5" r="3"/>
+          <path d="M2 14 C2 11 5 9 8 9 C11 9 14 11 14 14"/>
+        </svg>
+        Assignee
+        <span class="count-badge">2</span>
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn active">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="2" y1="4" x2="14" y2="4"/>
+          <line x1="2" y1="8" x2="10" y2="8"/>
+          <line x1="2" y1="12" x2="6" y2="12"/>
+        </svg>
+        Priority
+        <span class="count-badge">1</span>
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn active">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 2 L3 14"/>
+          <path d="M3 2 L7 6"/>
+          <path d="M3 14 L7 10"/>
+          <circle cx="12" cy="5" r="2"/>
+          <circle cx="12" cy="11" r="2"/>
+        </svg>
+        Label
+        <span class="count-badge">1</span>
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <div class="header-sep"></div>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 2 L4 14 M4 14 L1 11 M4 14 L7 11"/>
+          <line x1="9" y1="4" x2="15" y2="4"/>
+          <line x1="9" y1="8" x2="13" y2="8"/>
+          <line x1="9" y1="12" x2="11" y2="12"/>
+        </svg>
+        Sort: Due Date
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="2" width="14" height="4" rx="1"/>
+          <rect x="1" y="10" width="14" height="4" rx="1"/>
+        </svg>
+        Group by: Assignee
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <div class="search-wrapper">
+        <div class="search-icon">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7" cy="7" r="4.5"/>
+            <line x1="10.5" y1="10.5" x2="14" y2="14"/>
+          </svg>
+        </div>
+        <input type="text" class="search-input" placeholder="Search tasks...">
+        <div class="search-shortcut">
+          <span class="kbd">&#8984;</span><span class="kbd">K</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dense filter chips row -->
+    <div class="filter-chips-row">
+      <span class="filter-chips-label">Active filters:</span>
+
+      <div class="filter-chip chip-status">
+        <span class="chip-dot dot-orange"></span>
+        In Progress
+        <span class="chip-remove">&times;</span>
+      </div>
+
+      <div class="filter-chip chip-status">
+        <span class="chip-dot dot-yellow"></span>
+        Review
+        <span class="chip-remove">&times;</span>
+      </div>
+
+      <div class="filter-chip chip-status">
+        <span class="chip-dot dot-green"></span>
+        Done
+        <span class="chip-remove">&times;</span>
+      </div>
+
+      <div class="filter-chip chip-priority">
+        <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><polygon points="8,1 15,15 1,15"/></svg>
+        High
+        <span class="chip-remove">&times;</span>
+      </div>
+
+      <div class="filter-chip chip-assignee">
+        <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14 C2 11 5 9 8 9 C11 9 14 11 14 14"/></svg>
+        Emily M.
+        <span class="chip-remove">&times;</span>
+      </div>
+
+      <div class="filter-chip chip-assignee">
+        <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14 C2 11 5 9 8 9 C11 9 14 11 14 14"/></svg>
+        Sarah K.
+        <span class="chip-remove">&times;</span>
+      </div>
+
+      <div class="filter-chip chip-label">
+        <span class="chip-dot dot-purple"></span>
+        Frontend
+        <span class="chip-remove">&times;</span>
+      </div>
+
+      <span class="filter-count-summary">Showing 3 of 24 tasks</span>
+
+      <button class="filter-clear-all">Clear all</button>
+    </div>
+
+    <div class="board-hint">
+      <span class="board-hint-text">Heavily filtered board columns render below</span>
+    </div>
+  </div>
+
+
+  <!-- ============================================================
+       VARIANT 5: List view active (different toggle state)
+       ============================================================ -->
+  <div class="section-label">Variant 5 — List View Active (View Toggle State Change)</div>
+
+  <div class="component-frame">
+    <div class="accent-line"></div>
+
+    <div class="header-bar">
+      <div class="project-identity">
+        <div class="project-icon">AI</div>
+        <span class="project-name">AI Office</span>
+        <span class="project-chevron">&#9662;</span>
+      </div>
+
+      <div class="view-toggles">
+        <button class="view-toggle">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="2" width="4" height="12" rx="1"/>
+            <rect x="6" y="2" width="4" height="12" rx="1"/>
+            <rect x="11" y="2" width="4" height="12" rx="1"/>
+          </svg>
+          Board
+        </button>
+        <button class="view-toggle active">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="4" x2="13" y2="4"/>
+            <line x1="3" y1="8" x2="13" y2="8"/>
+            <line x1="3" y1="12" x2="13" y2="12"/>
+          </svg>
+          List
+        </button>
+        <button class="view-toggle">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="3" width="6" height="3" rx="1"/>
+            <rect x="3" y="7" width="8" height="3" rx="1"/>
+            <rect x="5" y="11" width="10" height="3" rx="1"/>
+          </svg>
+          Timeline
+        </button>
+      </div>
+
+      <div class="header-sep"></div>
+      <div class="header-spacer"></div>
+
+      <div class="team-avatars">
+        <div class="avatar a1 online">EM</div>
+        <div class="avatar a2 online">SK</div>
+        <div class="avatar a3">JL</div>
+        <div class="avatar a4 online">AR</div>
+        <div class="avatar a5">MT</div>
+        <div class="avatar avatar-overflow">+3</div>
+      </div>
+
+      <button class="btn-new-task">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="8" y1="3" x2="8" y2="13"/>
+          <line x1="3" y1="8" x2="13" y2="8"/>
+        </svg>
+        New Task
+      </button>
+    </div>
+
+    <div class="toolbar">
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="1,2 15,2 9,9 9,13 7,14 7,9"/>
+        </svg>
+        Filter
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="8" r="6"/>
+          <path d="M5 8 L7 10 L11 6"/>
+        </svg>
+        Status
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="5" r="3"/>
+          <path d="M2 14 C2 11 5 9 8 9 C11 9 14 11 14 14"/>
+        </svg>
+        Assignee
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="2" y1="4" x2="14" y2="4"/>
+          <line x1="2" y1="8" x2="10" y2="8"/>
+          <line x1="2" y1="12" x2="6" y2="12"/>
+        </svg>
+        Priority
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 2 L3 14"/>
+          <path d="M3 2 L7 6"/>
+          <path d="M3 14 L7 10"/>
+          <circle cx="12" cy="5" r="2"/>
+          <circle cx="12" cy="11" r="2"/>
+        </svg>
+        Label
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <div class="header-sep"></div>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 2 L4 14 M4 14 L1 11 M4 14 L7 11"/>
+          <line x1="9" y1="4" x2="15" y2="4"/>
+          <line x1="9" y1="8" x2="13" y2="8"/>
+          <line x1="9" y1="12" x2="11" y2="12"/>
+        </svg>
+        Sort
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="2" width="14" height="4" rx="1"/>
+          <rect x="1" y="10" width="14" height="4" rx="1"/>
+        </svg>
+        Group by
+        <span class="chevron">&#9662;</span>
+      </button>
+
+      <div class="search-wrapper">
+        <div class="search-icon">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7" cy="7" r="4.5"/>
+            <line x1="10.5" y1="10.5" x2="14" y2="14"/>
+          </svg>
+        </div>
+        <input type="text" class="search-input" placeholder="Search tasks...">
+        <div class="search-shortcut">
+          <span class="kbd">&#8984;</span><span class="kbd">K</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- List view header columns -->
+    <div style="background: var(--bg-base); border-bottom: 1px solid var(--border-subtle); padding: 0 24px; display: flex; align-items: center; height: 36px; gap: 0;">
+      <div style="width: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+        <div style="width: 14px; height: 14px; border: 1.5px solid var(--border-hover); border-radius: 3px;"></div>
+      </div>
+      <div style="width: 60px; flex-shrink: 0; font-size: 11px; font-weight: 500; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px;">ID</div>
+      <div style="flex: 1; font-size: 11px; font-weight: 500; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px;">Title</div>
+      <div style="width: 100px; flex-shrink: 0; font-size: 11px; font-weight: 500; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px;">Status</div>
+      <div style="width: 80px; flex-shrink: 0; font-size: 11px; font-weight: 500; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px;">Priority</div>
+      <div style="width: 120px; flex-shrink: 0; font-size: 11px; font-weight: 500; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px;">Assignee</div>
+      <div style="width: 100px; flex-shrink: 0; font-size: 11px; font-weight: 500; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px;">Due Date</div>
+    </div>
+
+    <div class="board-hint" style="height: 40px;">
+      <span class="board-hint-text">List rows render below</span>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

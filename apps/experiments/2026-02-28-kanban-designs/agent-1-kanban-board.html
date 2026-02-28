@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>AI Office — Kanban Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ================================================================
+     RESET & BASE
+     ================================================================ */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    /* Backgrounds */
+    --bg-base:       #0A0A0B;
+    --bg-surface:    #111113;
+    --bg-elevated:   #1A1A1D;
+    --bg-hover:      #1F1F23;
+    --bg-active:     #242428;
+
+    /* Borders */
+    --border-subtle: #2A2A2E;
+    --border-hover:  #3A3A3E;
+    --border-focus:  #FF7000;
+
+    /* Text */
+    --text-primary:   #FAFAFA;
+    --text-secondary: #A0A0A8;
+    --text-tertiary:  #6B6B73;
+    --text-disabled:  #48484E;
+
+    /* Accent */
+    --orange:  #FF7000;
+    --orange-dim: rgba(255, 112, 0, 0.12);
+    --orange-subtle: rgba(255, 112, 0, 0.06);
+    --red:     #FD3F29;
+    --red-dim: rgba(253, 63, 41, 0.12);
+    --yellow:  #FFCB00;
+    --yellow-dim: rgba(255, 203, 0, 0.12);
+    --green:   #22C55E;
+    --green-dim: rgba(34, 197, 94, 0.12);
+    --blue:    #3B82F6;
+    --blue-dim: rgba(59, 130, 246, 0.12);
+    --purple:  #A855F7;
+    --purple-dim: rgba(168, 85, 247, 0.12);
+
+    /* Radii */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+
+    /* Transition */
+    --transition-fast: 150ms ease;
+    --transition-base: 200ms ease;
+  }
+
+  html {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ================================================================
+     HEADER BAR
+     ================================================================ */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .project-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--orange) 0%, #FF9E40 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .project-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+  }
+
+  .breadcrumb-sep {
+    color: var(--text-tertiary);
+    font-size: 14px;
+    user-select: none;
+  }
+
+  .board-name {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .view-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 2px;
+  }
+
+  .view-tab {
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    user-select: none;
+  }
+
+  .view-tab:hover {
+    color: var(--text-secondary);
+  }
+
+  .view-tab.active {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .header-search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-elevated);
+    cursor: pointer;
+    transition: border-color var(--transition-fast);
+  }
+
+  .header-search:hover {
+    border-color: var(--border-hover);
+  }
+
+  .header-search svg {
+    width: 14px;
+    height: 14px;
+    color: var(--text-tertiary);
+  }
+
+  .header-search span {
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+
+  .header-search kbd {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    color: var(--text-disabled);
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    padding: 1px 4px;
+    margin-left: 16px;
+  }
+
+  .filter-pills {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .filter-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .filter-pill:hover {
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+  }
+
+  .filter-pill svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .avatar-stack {
+    display: flex;
+    align-items: center;
+    margin-left: 4px;
+  }
+
+  .avatar-stack .avatar {
+    margin-left: -6px;
+    border: 2px solid var(--bg-surface);
+  }
+
+  .avatar-stack .avatar:first-child {
+    margin-left: 0;
+  }
+
+  .btn-new-task {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border-radius: var(--radius-md);
+    border: none;
+    background: var(--orange);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: inherit;
+    letter-spacing: 0.01em;
+  }
+
+  .btn-new-task:hover {
+    background: #e86500;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 112, 0, 0.25);
+  }
+
+  .btn-new-task:active {
+    transform: translateY(0);
+  }
+
+  .btn-new-task svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  /* ================================================================
+     SUB-TOOLBAR
+     ================================================================ */
+  .sub-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 40px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    flex-shrink: 0;
+  }
+
+  .sub-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .active-filters {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .active-filter {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--orange-dim);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--orange);
+  }
+
+  .active-filter .remove {
+    width: 12px;
+    height: 12px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity var(--transition-fast);
+  }
+
+  .active-filter .remove:hover {
+    opacity: 1;
+  }
+
+  .task-count-label {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+  }
+
+  .sub-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .toolbar-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: inherit;
+  }
+
+  .toolbar-btn:hover {
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+  }
+
+  .toolbar-btn svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  /* ================================================================
+     BOARD
+     ================================================================ */
+  .board {
+    flex: 1;
+    display: flex;
+    gap: 1px;
+    padding: 16px 16px 16px 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: var(--bg-base);
+  }
+
+  /* ================================================================
+     COLUMN
+     ================================================================ */
+  .column {
+    flex: 1;
+    min-width: 260px;
+    max-width: 320px;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    overflow: hidden;
+    transition: border-color var(--transition-fast);
+  }
+
+  .column:hover {
+    border-color: var(--border-hover);
+  }
+
+  .column-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px 10px 14px;
+    flex-shrink: 0;
+    border-bottom: 1px solid transparent;
+  }
+
+  .column-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .status-dot.backlog {
+    background: var(--text-tertiary);
+  }
+
+  .status-dot.todo {
+    background: transparent;
+    border: 1.5px solid var(--text-primary);
+  }
+
+  .status-dot.in-progress {
+    background: conic-gradient(var(--orange) 0deg, var(--orange) 180deg, transparent 180deg, transparent 360deg);
+    border: 1.5px solid var(--orange);
+  }
+
+  .status-dot.review {
+    background: var(--yellow);
+  }
+
+  .status-dot.done {
+    background: var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .status-dot.done::after {
+    content: '';
+    display: block;
+    width: 4px;
+    height: 4px;
+    /* checkmark effect with borders */
+    border-bottom: 1.5px solid var(--bg-surface);
+    border-right: 1.5px solid var(--bg-surface);
+    transform: rotate(45deg) translate(-0.5px, -0.5px);
+  }
+
+  .column-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+  }
+
+  .column-count {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    background: var(--bg-elevated);
+    padding: 1px 6px;
+    border-radius: 10px;
+    min-width: 20px;
+    text-align: center;
+  }
+
+  .column-header-right {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .col-action-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .col-action-btn:hover {
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+  }
+
+  .col-action-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* ================================================================
+     CARD LIST (SCROLLABLE)
+     ================================================================ */
+  .card-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 8px 4px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    /* Custom scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-subtle) transparent;
+  }
+
+  .card-list::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .card-list::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .card-list::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 2px;
+  }
+
+  .card-list::-webkit-scrollbar-thumb:hover {
+    background: var(--border-hover);
+  }
+
+  /* ================================================================
+     TASK CARD
+     ================================================================ */
+  .task-card {
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-elevated);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+  }
+
+  .task-card:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+
+  .task-card:active {
+    transform: translateY(0);
+  }
+
+  .card-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .task-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+  }
+
+  .priority-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+
+  .priority-icon.urgent { color: var(--red); }
+  .priority-icon.high { color: var(--orange); }
+  .priority-icon.medium { color: var(--yellow); }
+  .priority-icon.low { color: var(--text-tertiary); }
+
+  .task-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.45;
+    margin-bottom: 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    letter-spacing: -0.01em;
+  }
+
+  .card-labels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+
+  .label {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .label.frontend  { background: var(--blue-dim); color: var(--blue); }
+  .label.backend   { background: var(--purple-dim); color: var(--purple); }
+  .label.design    { background: rgba(236, 72, 153, 0.12); color: #EC4899; }
+  .label.bug       { background: var(--red-dim); color: var(--red); }
+  .label.feature   { background: var(--green-dim); color: var(--green); }
+  .label.infra     { background: var(--yellow-dim); color: var(--yellow); }
+  .label.agent     { background: var(--orange-dim); color: var(--orange); }
+  .label.ux        { background: rgba(236, 72, 153, 0.12); color: #EC4899; }
+
+  .card-bottom-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 2px;
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .subtask-progress {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+
+  .subtask-bar {
+    width: 32px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--bg-base);
+    overflow: hidden;
+  }
+
+  .subtask-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--text-tertiary);
+    transition: width var(--transition-base);
+  }
+
+  .subtask-bar-fill.done { background: var(--green); }
+
+  .due-date {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+  }
+
+  .due-date svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .due-date.overdue {
+    color: var(--red);
+  }
+
+  .due-date.today {
+    color: var(--orange);
+  }
+
+  .avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .avatar.sm {
+    width: 20px;
+    height: 20px;
+    font-size: 9px;
+  }
+
+  .avatar.av-1 { background: linear-gradient(135deg, #6366F1, #8B5CF6); }
+  .avatar.av-2 { background: linear-gradient(135deg, #06B6D4, #3B82F6); }
+  .avatar.av-3 { background: linear-gradient(135deg, #F97316, #EF4444); }
+  .avatar.av-4 { background: linear-gradient(135deg, #10B981, #22C55E); }
+  .avatar.av-5 { background: linear-gradient(135deg, #EC4899, #F43F5E); }
+
+  /* ================================================================
+     ADD TASK BUTTON
+     ================================================================ */
+  .add-task-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin: 4px 8px 8px 8px;
+    padding: 7px 0;
+    border-radius: var(--radius-md);
+    border: 1px dashed var(--border-subtle);
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+  }
+
+  .add-task-btn:hover {
+    border-color: var(--border-hover);
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+  }
+
+  .add-task-btn svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  /* ================================================================
+     PRIORITY ICONS (SVG inline)
+     ================================================================ */
+  .priority-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 1.5px;
+    height: 12px;
+  }
+
+  .priority-bars .bar {
+    width: 3px;
+    border-radius: 1px;
+  }
+
+  .priority-bars.urgent .bar { background: var(--red); }
+  .priority-bars.urgent .b1 { height: 4px; }
+  .priority-bars.urgent .b2 { height: 7px; }
+  .priority-bars.urgent .b3 { height: 10px; }
+  .priority-bars.urgent .b4 { height: 12px; }
+
+  .priority-bars.high .bar { background: var(--orange); }
+  .priority-bars.high .b1 { height: 4px; }
+  .priority-bars.high .b2 { height: 7px; }
+  .priority-bars.high .b3 { height: 10px; }
+  .priority-bars.high .b4 { height: 12px; background: var(--bg-active); }
+
+  .priority-bars.medium .b1 { height: 4px; background: var(--yellow); }
+  .priority-bars.medium .b2 { height: 7px; background: var(--yellow); }
+  .priority-bars.medium .b3 { height: 10px; background: var(--bg-active); }
+  .priority-bars.medium .b4 { height: 12px; background: var(--bg-active); }
+
+  .priority-bars.low .b1 { height: 4px; background: var(--text-disabled); }
+  .priority-bars.low .b2 { height: 7px; background: var(--bg-active); }
+  .priority-bars.low .b3 { height: 10px; background: var(--bg-active); }
+  .priority-bars.low .b4 { height: 12px; background: var(--bg-active); }
+
+  /* ================================================================
+     COLLAPSE COLUMN
+     ================================================================ */
+  .column.collapsed {
+    min-width: 44px;
+    max-width: 44px;
+    flex: 0 0 44px;
+  }
+
+  .column.collapsed .column-header {
+    writing-mode: vertical-lr;
+    text-orientation: mixed;
+    flex-direction: row;
+    padding: 14px 8px;
+    height: 100%;
+    gap: 8px;
+    border-bottom: none;
+  }
+
+  .column.collapsed .column-header-left {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .column.collapsed .column-header-right,
+  .column.collapsed .card-list,
+  .column.collapsed .add-task-btn {
+    display: none;
+  }
+
+  .column.collapsed .column-count {
+    writing-mode: horizontal-tb;
+  }
+
+  /* ================================================================
+     ANIMATIONS (subtle entry)
+     ================================================================ */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .task-card {
+    animation: fadeInUp 0.3s ease-out backwards;
+  }
+
+  .column:nth-child(1) .task-card:nth-child(1) { animation-delay: 0.05s; }
+  .column:nth-child(1) .task-card:nth-child(2) { animation-delay: 0.08s; }
+  .column:nth-child(1) .task-card:nth-child(3) { animation-delay: 0.11s; }
+  .column:nth-child(1) .task-card:nth-child(4) { animation-delay: 0.14s; }
+  .column:nth-child(1) .task-card:nth-child(5) { animation-delay: 0.17s; }
+
+  .column:nth-child(2) .task-card:nth-child(1) { animation-delay: 0.10s; }
+  .column:nth-child(2) .task-card:nth-child(2) { animation-delay: 0.13s; }
+  .column:nth-child(2) .task-card:nth-child(3) { animation-delay: 0.16s; }
+  .column:nth-child(2) .task-card:nth-child(4) { animation-delay: 0.19s; }
+
+  .column:nth-child(3) .task-card:nth-child(1) { animation-delay: 0.15s; }
+  .column:nth-child(3) .task-card:nth-child(2) { animation-delay: 0.18s; }
+  .column:nth-child(3) .task-card:nth-child(3) { animation-delay: 0.21s; }
+  .column:nth-child(3) .task-card:nth-child(4) { animation-delay: 0.24s; }
+  .column:nth-child(3) .task-card:nth-child(5) { animation-delay: 0.27s; }
+
+  .column:nth-child(4) .task-card:nth-child(1) { animation-delay: 0.20s; }
+  .column:nth-child(4) .task-card:nth-child(2) { animation-delay: 0.23s; }
+  .column:nth-child(4) .task-card:nth-child(3) { animation-delay: 0.26s; }
+
+  .column:nth-child(5) .task-card:nth-child(1) { animation-delay: 0.25s; }
+  .column:nth-child(5) .task-card:nth-child(2) { animation-delay: 0.28s; }
+  .column:nth-child(5) .task-card:nth-child(3) { animation-delay: 0.31s; }
+  .column:nth-child(5) .task-card:nth-child(4) { animation-delay: 0.34s; }
+
+  /* Column staggered entry */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .column {
+    animation: fadeIn 0.25s ease-out backwards;
+  }
+
+  .column:nth-child(1) { animation-delay: 0s; }
+  .column:nth-child(2) { animation-delay: 0.04s; }
+  .column:nth-child(3) { animation-delay: 0.08s; }
+  .column:nth-child(4) { animation-delay: 0.12s; }
+  .column:nth-child(5) { animation-delay: 0.16s; }
+
+  /* ================================================================
+     QUICK-ACTION BAR ON HOVER
+     ================================================================ */
+  .card-quick-actions {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    gap: 1px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hover);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-2px);
+    transition: all var(--transition-fast);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .task-card:hover .card-quick-actions {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .quick-action {
+    width: 24px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .quick-action:hover {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+
+  .quick-action svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* ================================================================
+     RESPONSIVE: keep it neat on viewport
+     ================================================================ */
+  @media (max-width: 1440px) {
+    .column {
+      min-width: 240px;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ====== HEADER ====== -->
+  <header class="header">
+    <div class="header-left">
+      <div class="project-icon">A</div>
+      <span class="project-name">AI Office</span>
+      <span class="breadcrumb-sep">/</span>
+      <span class="board-name">Sprint 3</span>
+
+      <div class="view-tabs">
+        <div class="view-tab active">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;margin-right:3px">
+            <rect x="1" y="1" width="5" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            <rect x="10" y="1" width="5" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          </svg>
+          Board
+        </div>
+        <div class="view-tab">List</div>
+        <div class="view-tab">Timeline</div>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="filter-pills">
+        <button class="filter-pill">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Filter
+        </button>
+        <button class="filter-pill">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h5M2 8h3M2 12h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12 4v8M10 10l2 2 2-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Sort
+        </button>
+      </div>
+
+      <div class="header-search">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Search tasks...</span>
+        <kbd>&#8984;K</kbd>
+      </div>
+
+      <div class="avatar-stack">
+        <div class="avatar sm av-1">JL</div>
+        <div class="avatar sm av-2">SK</div>
+        <div class="avatar sm av-3">MP</div>
+        <div class="avatar sm av-5">AY</div>
+      </div>
+
+      <button class="btn-new-task">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        New Task
+      </button>
+    </div>
+  </header>
+
+  <!-- ====== SUB-TOOLBAR ====== -->
+  <div class="sub-toolbar">
+    <div class="sub-toolbar-left">
+      <span class="task-count-label">21 tasks</span>
+      <div class="active-filters">
+        <div class="active-filter">
+          Sprint 3
+          <svg class="remove" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="sub-toolbar-right">
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M4 2v12M8 2v12M12 2v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Group: Status
+      </button>
+      <button class="toolbar-btn">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="4" r="1.5" fill="currentColor"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="8" cy="12" r="1.5" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ====== BOARD ====== -->
+  <div class="board">
+
+    <!-- ========== BACKLOG ========== -->
+    <div class="column">
+      <div class="column-header">
+        <div class="column-header-left">
+          <div class="status-dot backlog"></div>
+          <span class="column-title">Backlog</span>
+          <span class="column-count">5</span>
+        </div>
+        <div class="column-header-right">
+          <button class="col-action-btn" title="Add task">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <button class="col-action-btn" title="Options">
+            <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="4" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="12" r="1" fill="currentColor"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="card-list">
+
+        <!-- Card 1 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-42</span>
+            <div class="priority-bars low">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Add dark mode toggle to user preferences panel</div>
+          <div class="card-labels">
+            <span class="label frontend">Frontend</span>
+            <span class="label ux">UX</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="subtask-progress">
+                <div class="subtask-bar"><div class="subtask-bar-fill" style="width:33%"></div></div>
+                1/3
+              </div>
+            </div>
+            <div class="avatar sm av-2">SK</div>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-45</span>
+            <div class="priority-bars medium">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Research WebSocket reconnection strategies for Convex</div>
+          <div class="card-labels">
+            <span class="label backend">Backend</span>
+            <span class="label infra">Infra</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta"></div>
+            <div class="avatar sm av-4">MP</div>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-51</span>
+            <div class="priority-bars low">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Evaluate Mistral Codestral for inline code suggestions</div>
+          <div class="card-labels">
+            <span class="label agent">Agent</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta"></div>
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-53</span>
+            <div class="priority-bars medium">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Design pixel-art sprite sheet for agent characters</div>
+          <div class="card-labels">
+            <span class="label design">Design</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="due-date">
+                <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 7h12" stroke="currentColor" stroke-width="1.3"/><path d="M5 1v3M11 1v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                Mar 14
+              </div>
+            </div>
+            <div class="avatar sm av-5">AY</div>
+          </div>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-55</span>
+            <div class="priority-bars low">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Write integration tests for agent message bus</div>
+          <div class="card-labels">
+            <span class="label backend">Backend</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="subtask-progress">
+                <div class="subtask-bar"><div class="subtask-bar-fill" style="width:0%"></div></div>
+                0/5
+              </div>
+            </div>
+            <div class="avatar sm av-1">JL</div>
+          </div>
+        </div>
+
+      </div>
+      <button class="add-task-btn">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Add task
+      </button>
+    </div>
+
+    <!-- ========== TODO ========== -->
+    <div class="column">
+      <div class="column-header">
+        <div class="column-header-left">
+          <div class="status-dot todo"></div>
+          <span class="column-title">Todo</span>
+          <span class="column-count">4</span>
+        </div>
+        <div class="column-header-right">
+          <button class="col-action-btn" title="Add task">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <button class="col-action-btn" title="Options">
+            <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="4" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="12" r="1" fill="currentColor"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="card-list">
+
+        <!-- Card 1 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-38</span>
+            <div class="priority-bars urgent">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Fix authentication redirect loop on expired sessions</div>
+          <div class="card-labels">
+            <span class="label bug">Bug</span>
+            <span class="label backend">Backend</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="due-date overdue">
+                <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 7h12" stroke="currentColor" stroke-width="1.3"/><path d="M5 1v3M11 1v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                Feb 25
+              </div>
+            </div>
+            <div class="avatar sm av-1">JL</div>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-39</span>
+            <div class="priority-bars high">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Implement manager agent task delegation protocol</div>
+          <div class="card-labels">
+            <span class="label agent">Agent</span>
+            <span class="label feature">Feature</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="subtask-progress">
+                <div class="subtask-bar"><div class="subtask-bar-fill" style="width:25%"></div></div>
+                1/4
+              </div>
+            </div>
+            <div class="avatar sm av-3">MP</div>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-41</span>
+            <div class="priority-bars medium">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Create Convex schema for agent conversation history</div>
+          <div class="card-labels">
+            <span class="label backend">Backend</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="due-date today">
+                <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 7h12" stroke="currentColor" stroke-width="1.3"/><path d="M5 1v3M11 1v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                Today
+              </div>
+            </div>
+            <div class="avatar sm av-2">SK</div>
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-44</span>
+            <div class="priority-bars high">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Build sandbox file system viewer component</div>
+          <div class="card-labels">
+            <span class="label frontend">Frontend</span>
+            <span class="label feature">Feature</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="subtask-progress">
+                <div class="subtask-bar"><div class="subtask-bar-fill" style="width:50%"></div></div>
+                2/4
+              </div>
+            </div>
+            <div class="avatar sm av-4">MP</div>
+          </div>
+        </div>
+
+      </div>
+      <button class="add-task-btn">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Add task
+      </button>
+    </div>
+
+    <!-- ========== IN PROGRESS ========== -->
+    <div class="column">
+      <div class="column-header">
+        <div class="column-header-left">
+          <div class="status-dot in-progress"></div>
+          <span class="column-title">In Progress</span>
+          <span class="column-count">5</span>
+        </div>
+        <div class="column-header-right">
+          <button class="col-action-btn" title="Add task">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <button class="col-action-btn" title="Options">
+            <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="4" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="12" r="1" fill="currentColor"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="card-list">
+
+        <!-- Card 1 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-32</span>
+            <div class="priority-bars urgent">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Integrate Mistral Vibe headless for coding sub-agents</div>
+          <div class="card-labels">
+            <span class="label agent">Agent</span>
+            <span class="label backend">Backend</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="subtask-progress">
+                <div class="subtask-bar"><div class="subtask-bar-fill" style="width:60%"></div></div>
+                3/5
+              </div>
+              <div class="due-date">
+                <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 7h12" stroke="currentColor" stroke-width="1.3"/><path d="M5 1v3M11 1v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                Mar 3
+              </div>
+            </div>
+            <div class="avatar sm av-1">JL</div>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-34</span>
+            <div class="priority-bars high">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Build real-time kanban board with Convex subscriptions</div>
+          <div class="card-labels">
+            <span class="label frontend">Frontend</span>
+            <span class="label feature">Feature</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="subtask-progress">
+                <div class="subtask-bar"><div class="subtask-bar-fill" style="width:40%"></div></div>
+                2/5
+              </div>
+            </div>
+            <div class="avatar sm av-2">SK</div>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-36</span>
+            <div class="priority-bars medium">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Implement t3-env validation for all environment variables</div>
+          <div class="card-labels">
+            <span class="label infra">Infra</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="due-date">
+                <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 7h12" stroke="currentColor" stroke-width="1.3"/><path d="M5 1v3M11 1v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                Mar 7
+              </div>
+            </div>
+            <div class="avatar sm av-3">MP</div>
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-37</span>
+            <div class="priority-bars high">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Set up TanStack Router with file-based routing</div>
+          <div class="card-labels">
+            <span class="label frontend">Frontend</span>
+            <span class="label infra">Infra</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="subtask-progress">
+                <div class="subtask-bar"><div class="subtask-bar-fill done" style="width:80%"></div></div>
+                4/5
+              </div>
+            </div>
+            <div class="avatar sm av-5">AY</div>
+          </div>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-40</span>
+            <div class="priority-bars medium">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Design office floor plan canvas with pixel grid system</div>
+          <div class="card-labels">
+            <span class="label design">Design</span>
+            <span class="label frontend">Frontend</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta"></div>
+            <div class="avatar sm av-5">AY</div>
+          </div>
+        </div>
+
+      </div>
+      <button class="add-task-btn">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Add task
+      </button>
+    </div>
+
+    <!-- ========== REVIEW ========== -->
+    <div class="column">
+      <div class="column-header">
+        <div class="column-header-left">
+          <div class="status-dot review"></div>
+          <span class="column-title">Review</span>
+          <span class="column-count">3</span>
+        </div>
+        <div class="column-header-right">
+          <button class="col-action-btn" title="Add task">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <button class="col-action-btn" title="Options">
+            <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="4" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="12" r="1" fill="currentColor"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="card-list">
+
+        <!-- Card 1 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-28</span>
+            <div class="priority-bars high">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Convex auth setup with GitHub OAuth provider</div>
+          <div class="card-labels">
+            <span class="label backend">Backend</span>
+            <span class="label feature">Feature</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="subtask-progress">
+                <div class="subtask-bar"><div class="subtask-bar-fill done" style="width:100%"></div></div>
+                3/3
+              </div>
+            </div>
+            <div class="avatar sm av-1">JL</div>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-30</span>
+            <div class="priority-bars medium">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Add Storybook stories for all shared UI components</div>
+          <div class="card-labels">
+            <span class="label frontend">Frontend</span>
+            <span class="label design">Design</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="subtask-progress">
+                <div class="subtask-bar"><div class="subtask-bar-fill done" style="width:80%"></div></div>
+                4/5
+              </div>
+            </div>
+            <div class="avatar sm av-2">SK</div>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="task-card">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-33</span>
+            <div class="priority-bars urgent">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Implement Daytona sandbox provisioning API client</div>
+          <div class="card-labels">
+            <span class="label agent">Agent</span>
+            <span class="label infra">Infra</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="due-date">
+                <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 7h12" stroke="currentColor" stroke-width="1.3"/><path d="M5 1v3M11 1v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                Mar 1
+              </div>
+            </div>
+            <div class="avatar sm av-4">MP</div>
+          </div>
+        </div>
+
+      </div>
+      <button class="add-task-btn">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Add task
+      </button>
+    </div>
+
+    <!-- ========== DONE ========== -->
+    <div class="column">
+      <div class="column-header">
+        <div class="column-header-left">
+          <div class="status-dot done"></div>
+          <span class="column-title">Done</span>
+          <span class="column-count">4</span>
+        </div>
+        <div class="column-header-right">
+          <button class="col-action-btn" title="Add task">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <button class="col-action-btn" title="Options">
+            <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="4" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="12" r="1" fill="currentColor"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="card-list">
+
+        <!-- Card 1 -->
+        <div class="task-card" style="opacity: 0.7;">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-21</span>
+            <div class="priority-bars high">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Initialize monorepo with bun workspaces and TypeScript</div>
+          <div class="card-labels">
+            <span class="label infra">Infra</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="subtask-progress">
+                <div class="subtask-bar"><div class="subtask-bar-fill done" style="width:100%"></div></div>
+                5/5
+              </div>
+            </div>
+            <div class="avatar sm av-1">JL</div>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="task-card" style="opacity: 0.7;">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-22</span>
+            <div class="priority-bars high">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Set up Convex backend with schema and initial functions</div>
+          <div class="card-labels">
+            <span class="label backend">Backend</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta"></div>
+            <div class="avatar sm av-3">MP</div>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="task-card" style="opacity: 0.7;">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-24</span>
+            <div class="priority-bars medium">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Create Vite + React 19 app scaffold with hot reload</div>
+          <div class="card-labels">
+            <span class="label frontend">Frontend</span>
+            <span class="label infra">Infra</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta"></div>
+            <div class="avatar sm av-2">SK</div>
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="task-card" style="opacity: 0.7;">
+          <div class="card-quick-actions">
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="quick-action"><svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="card-top-row">
+            <span class="task-id">AIO-26</span>
+            <div class="priority-bars medium">
+              <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+          </div>
+          <div class="task-title">Configure shared ESLint and Prettier across all packages</div>
+          <div class="card-labels">
+            <span class="label infra">Infra</span>
+          </div>
+          <div class="card-bottom-row">
+            <div class="card-meta">
+              <div class="subtask-progress">
+                <div class="subtask-bar"><div class="subtask-bar-fill done" style="width:100%"></div></div>
+                3/3
+              </div>
+            </div>
+            <div class="avatar sm av-4">MP</div>
+          </div>
+        </div>
+
+      </div>
+      <button class="add-task-btn">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Add task
+      </button>
+    </div>
+
+  </div>
+
+</body>
+</html>

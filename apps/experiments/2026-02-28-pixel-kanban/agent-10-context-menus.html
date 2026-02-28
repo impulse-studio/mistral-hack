@@ -1,0 +1,2277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440, initial-scale=1">
+<title>Agent 10 — Context Menus & Command Palette — Game Menus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  /* Mistral Pixel Palette */
+  --bg-deep:      #0D0D11;
+  --bg-surface:   #14141A;
+  --bg-elevated:  #1C1C24;
+  --bg-hover:     #242430;
+  --bg-active:    #2A2A38;
+  --border:       #2E2E3A;
+  --border-hover: #3E3E4E;
+  --border-light: #4E4E5E;
+  --text-primary: #E8E8F0;
+  --text-secondary: #9898A8;
+  --text-muted:   #5E5E6E;
+  --pixel-white:  #F0F0FF;
+
+  --orange:       #FF7000;
+  --orange-dim:   rgba(255, 112, 0, 0.15);
+  --orange-glow:  rgba(255, 112, 0, 0.3);
+  --red:          #FD3F29;
+  --red-dim:      rgba(253, 63, 41, 0.12);
+  --yellow:       #FFCB00;
+  --yellow-dim:   rgba(255, 203, 0, 0.12);
+  --green:        #22C55E;
+  --green-dim:    rgba(34, 197, 94, 0.12);
+  --blue:         #3B82F6;
+  --blue-dim:     rgba(59, 130, 246, 0.12);
+  --purple:       #A855F7;
+  --purple-dim:   rgba(168, 85, 247, 0.12);
+
+  --font-pixel:   'Press Start 2P', monospace;
+  --font-ui:      'Inter', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+
+  --pixel-border: 3px solid var(--border);
+  --pixel-border-highlight: 3px solid var(--border-hover);
+}
+
+html {
+  font-size: 13px;
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  line-height: 1.5;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* ============================================================
+   SCANLINE OVERLAY
+   ============================================================ */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+}
+
+/* ============================================================
+   PAGE HEADER
+   ============================================================ */
+.page-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-surface);
+  border-bottom: var(--pixel-border);
+  padding: 16px 40px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.page-header h1 {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  color: var(--pixel-white);
+  letter-spacing: 1px;
+}
+
+.page-header h1 span {
+  color: var(--orange);
+}
+
+.page-header .subtitle {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   SECTIONS LAYOUT
+   ============================================================ */
+.sections {
+  padding: 32px 40px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-number {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--orange);
+  background: var(--orange-dim);
+  padding: 4px 10px;
+  border: 2px solid rgba(255, 112, 0, 0.3);
+}
+
+.section-title {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+}
+
+.section-desc {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: -8px;
+  max-width: 600px;
+}
+
+/* ============================================================
+   PIXEL WINDOW FRAME
+   ============================================================ */
+.pixel-window {
+  border: 3px solid var(--border-hover);
+  background: var(--bg-surface);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.05),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.3),
+    4px 4px 0 rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+.pixel-window-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--bg-elevated);
+  border-bottom: 3px solid var(--border);
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+}
+
+.pixel-window-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.pixel-window-controls span {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--border-hover);
+  display: inline-block;
+  font-family: var(--font-pixel);
+  font-size: 6px;
+  text-align: center;
+  line-height: 7px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.pixel-window-controls span:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.pixel-window-body {
+  padding: 8px;
+}
+
+/* ============================================================
+   DEMO STAGE (background for showcasing menus)
+   ============================================================ */
+.demo-stage {
+  background: var(--bg-deep);
+  border: 3px solid var(--border);
+  padding: 32px;
+  min-height: 200px;
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  position: relative;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.3);
+}
+
+.demo-stage.centered {
+  align-items: center;
+  justify-content: center;
+}
+
+.demo-stage.column {
+  flex-direction: column;
+}
+
+/* ============================================================
+   SECTION 1: CONTEXT MENU — PIXEL RPG MENU
+   ============================================================ */
+.context-menu {
+  width: 260px;
+  border: 3px solid var(--border-hover);
+  background: var(--bg-surface);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.06),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.3),
+    6px 6px 0 rgba(0, 0, 0, 0.5);
+}
+
+.context-menu-title {
+  padding: 6px 12px;
+  background: var(--bg-elevated);
+  border-bottom: 3px solid var(--border);
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--orange);
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.context-menu-title .icon {
+  font-size: 10px;
+}
+
+.context-menu-items {
+  padding: 6px 0;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.05s steps(1);
+  position: relative;
+}
+
+.context-menu-item:hover,
+.context-menu-item.active {
+  background: var(--bg-hover);
+}
+
+.context-menu-item .selector {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--orange);
+  width: 12px;
+  opacity: 0;
+  transition: opacity 0.05s steps(1);
+}
+
+.context-menu-item:hover .selector,
+.context-menu-item.active .selector {
+  opacity: 1;
+}
+
+.context-menu-item .item-icon {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+}
+
+.context-menu-item .item-label {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+  flex: 1;
+}
+
+.context-menu-item .item-shortcut {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 2px 6px;
+  border: 2px solid var(--border);
+  letter-spacing: 0.5px;
+}
+
+.context-menu-item:hover .item-label {
+  color: var(--pixel-white);
+}
+
+.context-menu-item:hover .item-shortcut {
+  border-color: var(--border-hover);
+  color: var(--text-secondary);
+}
+
+.context-menu-item.danger .item-label {
+  color: var(--red);
+}
+
+.context-menu-item.danger:hover {
+  background: var(--red-dim);
+}
+
+.context-menu-separator {
+  height: 0;
+  border-top: 2px dashed var(--border);
+  margin: 4px 12px;
+}
+
+/* Submenu indicator */
+.context-menu-item .submenu-arrow {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--text-muted);
+}
+
+.context-menu-item:hover .submenu-arrow {
+  color: var(--orange);
+}
+
+/* ============================================================
+   SECTION 2: QUICK ACTION BUTTONS
+   ============================================================ */
+.quick-action-card {
+  background: var(--bg-elevated);
+  border: 3px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  width: 360px;
+  cursor: pointer;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.03),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.quick-action-card:hover {
+  border-color: var(--border-hover);
+}
+
+.quick-action-card .card-icon {
+  font-size: 20px;
+  width: 28px;
+  text-align: center;
+}
+
+.quick-action-card .card-info {
+  flex: 1;
+}
+
+.quick-action-card .card-title {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+}
+
+.quick-action-card .card-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.quick-actions-bar {
+  display: flex;
+  gap: 0;
+  opacity: 0;
+  transition: opacity 0.1s steps(1);
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.quick-action-card:hover .quick-actions-bar {
+  opacity: 1;
+}
+
+.quick-action-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.05s steps(1);
+  margin-left: -2px;
+}
+
+.quick-action-btn:first-child {
+  margin-left: 0;
+}
+
+.quick-action-btn:hover {
+  background: var(--orange-dim);
+  border-color: var(--orange);
+  z-index: 1;
+}
+
+.quick-action-btn.danger:hover {
+  background: var(--red-dim);
+  border-color: var(--red);
+}
+
+.quick-action-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-surface);
+  border: 2px solid var(--border-hover);
+  padding: 3px 8px;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.5px;
+}
+
+.quick-action-btn:hover .quick-action-tooltip {
+  opacity: 1;
+}
+
+/* ============================================================
+   SECTION 3: COLUMN MENU
+   ============================================================ */
+.column-header-demo {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.column-pixel {
+  width: 240px;
+}
+
+.column-pixel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-elevated);
+  border: 3px solid var(--border);
+  padding: 8px 12px;
+}
+
+.column-pixel-header .col-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+}
+
+.column-pixel-header .col-count {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  background: var(--orange-dim);
+  color: var(--orange);
+  padding: 2px 6px;
+  border: 2px solid rgba(255, 112, 0, 0.3);
+}
+
+.column-pixel-header .col-menu-btn {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid transparent;
+}
+
+.column-pixel-header .col-menu-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+  background: var(--bg-hover);
+}
+
+.column-dropdown {
+  width: 220px;
+  border: 3px solid var(--border-hover);
+  background: var(--bg-surface);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.06),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.3),
+    6px 6px 0 rgba(0, 0, 0, 0.5);
+  margin-top: -3px;
+  margin-left: 20px;
+}
+
+.column-dropdown .dropdown-header {
+  padding: 6px 10px;
+  background: var(--bg-elevated);
+  border-bottom: 3px solid var(--border);
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.column-dropdown-items {
+  padding: 4px 0;
+}
+
+.column-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: background 0.05s steps(1);
+}
+
+.column-dropdown-item:hover {
+  background: var(--bg-hover);
+}
+
+.column-dropdown-item .dd-selector {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--orange);
+  width: 12px;
+  opacity: 0;
+}
+
+.column-dropdown-item:hover .dd-selector {
+  opacity: 1;
+}
+
+.column-dropdown-item .dd-icon {
+  font-size: 12px;
+  width: 18px;
+  text-align: center;
+}
+
+.column-dropdown-item .dd-label {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+  flex: 1;
+}
+
+.column-dropdown-item:hover .dd-label {
+  color: var(--pixel-white);
+}
+
+.column-dropdown-item.danger .dd-label { color: var(--red); }
+.column-dropdown-item.danger:hover { background: var(--red-dim); }
+
+.column-dropdown-sep {
+  height: 0;
+  border-top: 2px dashed var(--border);
+  margin: 3px 10px;
+}
+
+/* ============================================================
+   SECTION 4: BULK ACTION BAR
+   ============================================================ */
+.bulk-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--bg-surface);
+  border: 3px solid var(--orange);
+  box-shadow:
+    0 0 12px var(--orange-glow),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.06),
+    4px 4px 0 rgba(0, 0, 0, 0.4);
+  padding: 0;
+  width: fit-content;
+}
+
+.bulk-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--orange-dim);
+  border-right: 3px solid var(--orange);
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--orange);
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.bulk-count .count-badge {
+  background: var(--orange);
+  color: var(--bg-deep);
+  padding: 2px 8px;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  font-weight: bold;
+  min-width: 20px;
+  text-align: center;
+}
+
+.bulk-actions {
+  display: flex;
+  gap: 0;
+}
+
+.bulk-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: none;
+  border-right: 2px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  transition: all 0.05s steps(1);
+  white-space: nowrap;
+}
+
+.bulk-action-btn:last-child {
+  border-right: none;
+}
+
+.bulk-action-btn:hover {
+  background: var(--bg-hover);
+  color: var(--pixel-white);
+}
+
+.bulk-action-btn .btn-icon {
+  font-size: 12px;
+}
+
+.bulk-action-btn.danger {
+  color: var(--red);
+}
+
+.bulk-action-btn.danger:hover {
+  background: var(--red-dim);
+}
+
+.bulk-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 100%;
+  align-self: stretch;
+  border: none;
+  border-left: 2px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: all 0.05s steps(1);
+  padding: 8px 0;
+}
+
+.bulk-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* ============================================================
+   SECTION 5: COMMAND PALETTE — GAME COMMAND CONSOLE
+   ============================================================ */
+.command-palette-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 520px;
+}
+
+.command-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 13, 17, 0.85);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 40px;
+}
+
+.command-palette {
+  width: 600px;
+  border: 3px solid var(--orange);
+  background: var(--bg-surface);
+  box-shadow:
+    0 0 30px var(--orange-glow),
+    0 0 80px rgba(255, 112, 0, 0.1),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.06),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.3),
+    8px 8px 0 rgba(0, 0, 0, 0.5);
+}
+
+.command-palette-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: linear-gradient(180deg, #2A1A10 0%, var(--bg-elevated) 100%);
+  border-bottom: 3px solid var(--orange);
+}
+
+.command-palette-title .title-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: var(--orange);
+  letter-spacing: 1px;
+}
+
+.command-palette-title .title-left .star { animation: star-pulse 1s steps(2) infinite; }
+
+@keyframes star-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.command-palette-title .esc-hint {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  padding: 2px 8px;
+  border: 2px solid var(--border);
+}
+
+/* Command input */
+.command-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 3px solid var(--border);
+  background: var(--bg-deep);
+}
+
+.command-prompt {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: var(--orange);
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.command-input-text {
+  flex: 1;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: var(--pixel-white);
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+}
+
+.command-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 12px;
+  background: var(--orange);
+  margin-left: 2px;
+  animation: blink-cursor 0.6s steps(1) infinite;
+}
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Category tabs */
+.command-categories {
+  display: flex;
+  gap: 0;
+  padding: 0;
+  border-bottom: 3px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.command-category-tab {
+  padding: 7px 14px;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  cursor: pointer;
+  border-right: 2px solid var(--border);
+  transition: all 0.05s steps(1);
+  position: relative;
+}
+
+.command-category-tab:hover {
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+}
+
+.command-category-tab.active {
+  color: var(--orange);
+  background: var(--bg-surface);
+}
+
+.command-category-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--orange);
+}
+
+.command-category-tab .tab-bracket {
+  color: var(--text-muted);
+}
+
+.command-category-tab.active .tab-bracket {
+  color: var(--orange);
+}
+
+/* Results list */
+.command-results {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.command-result-group {
+  padding: 4px 0;
+}
+
+.command-result-group-title {
+  padding: 4px 14px;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.command-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 0.05s steps(1);
+}
+
+.command-result:hover,
+.command-result.selected {
+  background: var(--bg-hover);
+}
+
+.command-result .result-selector {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--orange);
+  width: 12px;
+  opacity: 0;
+}
+
+.command-result:hover .result-selector,
+.command-result.selected .result-selector {
+  opacity: 1;
+}
+
+.command-result .result-icon {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+}
+
+.command-result .result-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.command-result .result-title {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+}
+
+.command-result .result-meta {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.command-result:hover .result-title,
+.command-result.selected .result-title {
+  color: var(--pixel-white);
+}
+
+.command-result .result-type {
+  font-family: var(--font-pixel);
+  font-size: 6px;
+  padding: 2px 6px;
+  border: 2px solid var(--border);
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.command-result .result-type.quest { color: var(--yellow); border-color: rgba(255, 203, 0, 0.3); }
+.command-result .result-type.agent { color: var(--blue); border-color: rgba(59, 130, 246, 0.3); }
+.command-result .result-type.action { color: var(--green); border-color: rgba(34, 197, 94, 0.3); }
+
+/* Command footer */
+.command-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-top: 3px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.command-footer-hints {
+  display: flex;
+  gap: 16px;
+}
+
+.command-footer-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-pixel);
+  font-size: 6px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.command-footer-hint .hint-key {
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
+  padding: 1px 5px;
+  font-family: var(--font-pixel);
+  font-size: 6px;
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   SECTION 6: KEYBOARD REFERENCE
+   ============================================================ */
+.keyboard-ref {
+  width: 520px;
+}
+
+.keyboard-ref .pixel-window-body {
+  padding: 12px 16px;
+}
+
+.shortcut-group {
+  margin-bottom: 12px;
+}
+
+.shortcut-group:last-child {
+  margin-bottom: 0;
+}
+
+.shortcut-group-title {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--orange);
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 2px dashed var(--border);
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 0;
+}
+
+.shortcut-row .shortcut-desc {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+}
+
+.shortcut-keys {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.key-cap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 6px;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border-hover);
+  border-bottom: 4px solid var(--border);
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+}
+
+.key-plus {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   SECTION 7 (BONUS): CONFIRMATION DIALOG — RPG DIALOG BOX
+   ============================================================ */
+.confirm-dialog-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 400px;
+}
+
+.confirm-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 13, 17, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirm-dialog {
+  width: 480px;
+  border: 4px solid var(--yellow);
+  background: var(--bg-surface);
+  box-shadow:
+    0 0 20px rgba(255, 203, 0, 0.15),
+    0 0 50px rgba(255, 203, 0, 0.05),
+    inset 2px 2px 0 rgba(255, 255, 255, 0.06),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.3),
+    8px 8px 0 rgba(0, 0, 0, 0.5);
+  position: relative;
+  animation: border-blink 2s steps(1) infinite;
+}
+
+.confirm-dialog::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 2px solid rgba(255, 203, 0, 0.2);
+  pointer-events: none;
+}
+
+.confirm-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  background: linear-gradient(180deg, #2A2210 0%, var(--bg-elevated) 100%);
+  border-bottom: 4px solid var(--yellow);
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: var(--yellow);
+  letter-spacing: 2px;
+}
+
+.confirm-dialog-body {
+  display: flex;
+  gap: 20px;
+  padding: 20px 24px;
+  align-items: flex-start;
+}
+
+.confirm-portrait {
+  width: 64px;
+  height: 64px;
+  border: 3px solid var(--border-hover);
+  background: var(--bg-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  flex-shrink: 0;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.05),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Pixel art character using CSS box-shadow pixel art */
+.confirm-portrait .portrait-sprite {
+  width: 4px;
+  height: 4px;
+  position: relative;
+  image-rendering: pixelated;
+  margin-left: 4px;
+  margin-top: 2px;
+  /* 12x14 pixel sprite at 4px scale using box-shadow technique */
+  background: transparent;
+  box-shadow:
+    /* Hair row 1 */
+    8px 0 0 var(--orange), 12px 0 0 var(--orange), 16px 0 0 var(--orange), 20px 0 0 var(--orange), 24px 0 0 var(--orange),
+    /* Hair row 2 */
+    4px 4px 0 var(--orange), 8px 4px 0 var(--orange), 12px 4px 0 var(--orange), 16px 4px 0 var(--orange), 20px 4px 0 var(--orange), 24px 4px 0 var(--orange), 28px 4px 0 var(--orange),
+    /* Hair row 3 */
+    4px 8px 0 var(--orange), 8px 8px 0 #CC5800, 12px 8px 0 var(--orange), 16px 8px 0 var(--orange), 20px 8px 0 var(--orange), 24px 8px 0 #CC5800, 28px 8px 0 var(--orange),
+    /* Face row 1 */
+    4px 12px 0 #F4C99E, 8px 12px 0 #F4C99E, 12px 12px 0 #F4C99E, 16px 12px 0 #F4C99E, 20px 12px 0 #F4C99E, 24px 12px 0 #F4C99E, 28px 12px 0 #F4C99E,
+    /* Face row 2 (eyes) */
+    4px 16px 0 #F4C99E, 8px 16px 0 var(--bg-deep), 12px 16px 0 #4488FF, 16px 16px 0 #F4C99E, 20px 16px 0 #4488FF, 24px 16px 0 var(--bg-deep), 28px 16px 0 #F4C99E,
+    /* Face row 3 */
+    4px 20px 0 #F4C99E, 8px 20px 0 #F4C99E, 12px 20px 0 #F4C99E, 16px 20px 0 #E8B090, 20px 20px 0 #F4C99E, 24px 20px 0 #F4C99E, 28px 20px 0 #F4C99E,
+    /* Face row 4 (mouth) */
+    8px 24px 0 #F4C99E, 12px 24px 0 #F4C99E, 16px 24px 0 #D4856E, 20px 24px 0 #D4856E, 24px 24px 0 #F4C99E,
+    /* Neck */
+    12px 28px 0 #F4C99E, 16px 28px 0 #F4C99E, 20px 28px 0 #F4C99E,
+    /* Shirt row 1 */
+    4px 32px 0 var(--blue), 8px 32px 0 var(--blue), 12px 32px 0 var(--blue), 16px 32px 0 #5599FF, 20px 32px 0 var(--blue), 24px 32px 0 var(--blue), 28px 32px 0 var(--blue),
+    /* Shirt row 2 */
+    0px 36px 0 var(--blue), 4px 36px 0 var(--blue), 8px 36px 0 var(--blue), 12px 36px 0 var(--blue), 16px 36px 0 var(--blue), 20px 36px 0 var(--blue), 24px 36px 0 var(--blue), 28px 36px 0 var(--blue), 32px 36px 0 var(--blue),
+    /* Shirt row 3 */
+    0px 40px 0 #2563EB, 4px 40px 0 var(--blue), 8px 40px 0 var(--blue), 12px 40px 0 var(--blue), 16px 40px 0 var(--blue), 20px 40px 0 var(--blue), 24px 40px 0 var(--blue), 28px 40px 0 var(--blue), 32px 40px 0 #2563EB;
+}
+
+.confirm-dialog-text {
+  flex: 1;
+}
+
+.confirm-message {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  color: var(--text-primary);
+  line-height: 2;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.confirm-submessage {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--text-muted);
+  line-height: 1.8;
+  letter-spacing: 0.5px;
+}
+
+.confirm-quest-name {
+  color: var(--yellow);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+  padding: 0 24px 20px;
+  justify-content: flex-end;
+}
+
+.confirm-btn {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  padding: 8px 20px;
+  border: 3px solid var(--border-hover);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all 0.05s steps(1);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.06),
+    3px 3px 0 rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+.confirm-btn:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+  transform: translate(1px, 1px);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.06),
+    2px 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+.confirm-btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+
+.confirm-btn.confirm-yes {
+  border-color: var(--red);
+  color: var(--red);
+  background: var(--red-dim);
+}
+
+.confirm-btn.confirm-yes:hover {
+  background: rgba(253, 63, 41, 0.2);
+  color: #FF6B5A;
+  border-color: #FF6B5A;
+}
+
+.confirm-btn .btn-selector {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--orange);
+  margin-right: 6px;
+  opacity: 0;
+}
+
+.confirm-btn:hover .btn-selector {
+  opacity: 1;
+}
+
+/* ============================================================
+   DECORATIVE PIXEL ELEMENTS
+   ============================================================ */
+.pixel-deco-corner {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--border-hover);
+}
+
+.pixel-deco-corner.tl { top: -4px; left: -4px; border-right: none; border-bottom: none; }
+.pixel-deco-corner.tr { top: -4px; right: -4px; border-left: none; border-bottom: none; }
+.pixel-deco-corner.bl { bottom: -4px; left: -4px; border-right: none; border-top: none; }
+.pixel-deco-corner.br { bottom: -4px; right: -4px; border-left: none; border-top: none; }
+
+/* Pixel scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+  border-left: 2px solid var(--border);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border: 2px solid var(--border);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes menu-appear {
+  0% { opacity: 0; transform: translateY(-4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hover-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 12px var(--orange-glow); }
+  50% { box-shadow: 0 0 20px var(--orange-glow), 0 0 40px rgba(255, 112, 0, 0.1); }
+}
+
+@keyframes text-type {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes pixel-sparkle {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+@keyframes confirm-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-2px); }
+  40% { transform: translateX(2px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+
+@keyframes border-blink {
+  0%, 100% { border-color: var(--yellow); }
+  50% { border-color: rgba(255, 203, 0, 0.4); }
+}
+
+/* Context menu with decorative arrow showing where right-click happened */
+.right-click-indicator {
+  position: absolute;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.5px;
+}
+
+.right-click-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--orange);
+  animation: blink-cursor 1s steps(1) infinite;
+}
+
+/* Demo labels inside stage */
+.demo-label {
+  position: absolute;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  opacity: 0.5;
+}
+
+/* Interactive state indicators */
+.state-dot {
+  width: 6px;
+  height: 6px;
+  display: inline-block;
+}
+.state-dot.active { background: var(--green); }
+.state-dot.warning { background: var(--yellow); }
+.state-dot.error { background: var(--red); }
+
+/* ============================================================
+   MULTI-LAYOUT HELPERS
+   ============================================================ */
+.flex-row { display: flex; gap: 24px; flex-wrap: wrap; }
+.flex-col { display: flex; flex-direction: column; gap: 12px; }
+
+/* Pixel inset panel */
+.pixel-inset {
+  background: var(--bg-deep);
+  border: 2px solid var(--border);
+  box-shadow:
+    inset 1px 1px 0 rgba(0, 0, 0, 0.3),
+    inset -1px -1px 0 rgba(255, 255, 255, 0.02);
+  padding: 8px;
+}
+
+/* ============================================================
+   ADDITIONAL PIXEL ART DECORATIONS
+   ============================================================ */
+.pixel-divider {
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--border) 0px,
+    var(--border) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  margin: 8px 0;
+}
+
+.pixel-dots-bg {
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 8px 8px;
+}
+
+/* Tooltip for keyboard hints */
+.kb-hint {
+  font-family: var(--font-pixel);
+  font-size: 6px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: 0.5px;
+}
+
+.kb-hint .key {
+  background: var(--bg-elevated);
+  border: 2px solid var(--border-hover);
+  border-bottom: 3px solid var(--border);
+  padding: 1px 5px;
+  font-family: var(--font-pixel);
+  font-size: 6px;
+  color: var(--text-secondary);
+}
+
+/* Right-click context area ghost */
+.ghost-card {
+  width: 280px;
+  border: 3px dashed var(--border);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  opacity: 0.4;
+}
+
+.ghost-card .ghost-title {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+}
+
+.ghost-card .ghost-sub {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.ghost-card .ghost-labels {
+  display: flex;
+  gap: 4px;
+}
+
+.ghost-label {
+  font-family: var(--font-pixel);
+  font-size: 6px;
+  padding: 2px 6px;
+  border: 2px solid var(--border);
+  color: var(--text-muted);
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     PAGE HEADER
+     ============================================================ -->
+<div class="page-header">
+  <h1><span>10</span> Context Menus & Command Palette</h1>
+  <span class="subtitle">RPG Game Menus</span>
+  <div style="flex: 1;"></div>
+  <div class="kb-hint">
+    <span class="key">CTRL</span>
+    <span>+</span>
+    <span class="key">K</span>
+    <span>COMMAND PALETTE</span>
+  </div>
+</div>
+
+<div class="sections">
+
+  <!-- ============================================================
+       SECTION 1: CONTEXT MENU
+       ============================================================ -->
+  <div class="section">
+    <div class="section-label">
+      <span class="section-number">01</span>
+      <span class="section-title">CONTEXT MENU</span>
+    </div>
+    <p class="section-desc">Right-click context menu styled as pixel RPG action menu with arrow selector and keyboard hints.</p>
+
+    <div class="demo-stage" style="min-height: 360px; align-items: flex-start; padding-top: 48px;">
+      <!-- Ghost card to show what was right-clicked -->
+      <div style="position: relative;">
+        <div class="ghost-card">
+          <div class="ghost-title">Fix auth token refresh</div>
+          <div class="ghost-sub">#QST-247 &middot; Agent-2 (Coder)</div>
+          <div class="ghost-labels">
+            <span class="ghost-label">BUG</span>
+            <span class="ghost-label">URGENT</span>
+          </div>
+        </div>
+        <div class="right-click-indicator" style="bottom: -20px; right: 0;">
+          <span class="right-click-dot"></span>
+          <span>RIGHT CLICK</span>
+        </div>
+      </div>
+
+      <!-- Context Menu -->
+      <div class="context-menu" style="margin-top: 20px;">
+        <div class="context-menu-title">
+          <span class="icon">&#9776;</span>
+          <span>QUEST ACTIONS</span>
+        </div>
+        <div class="context-menu-items">
+          <div class="context-menu-item active">
+            <span class="selector">&#9654;</span>
+            <span class="item-icon">&#128065;</span>
+            <span class="item-label">OPEN QUEST</span>
+            <span class="item-shortcut">ENTER</span>
+          </div>
+          <div class="context-menu-item">
+            <span class="selector">&#9654;</span>
+            <span class="item-icon">&#9998;</span>
+            <span class="item-label">EDIT QUEST</span>
+            <span class="item-shortcut">E</span>
+          </div>
+          <div class="context-menu-item">
+            <span class="selector">&#9654;</span>
+            <span class="item-icon">&#128100;</span>
+            <span class="item-label">ASSIGN AGENT</span>
+            <span class="item-shortcut">A</span>
+          </div>
+          <div class="context-menu-item">
+            <span class="selector">&#9654;</span>
+            <span class="item-icon">&#9733;</span>
+            <span class="item-label">SET PRIORITY</span>
+            <span class="submenu-arrow">&#9654;</span>
+          </div>
+          <div class="context-menu-separator"></div>
+          <div class="context-menu-item">
+            <span class="selector">&#9654;</span>
+            <span class="item-icon">&#128196;</span>
+            <span class="item-label">COPY LINK</span>
+            <span class="item-shortcut">CTRL+C</span>
+          </div>
+          <div class="context-menu-item">
+            <span class="selector">&#9654;</span>
+            <span class="item-icon">&#128197;</span>
+            <span class="item-label">DUPLICATE</span>
+            <span class="item-shortcut">CTRL+D</span>
+          </div>
+          <div class="context-menu-item">
+            <span class="selector">&#9654;</span>
+            <span class="item-icon">&#128230;</span>
+            <span class="item-label">MOVE TO...</span>
+            <span class="submenu-arrow">&#9654;</span>
+          </div>
+          <div class="context-menu-separator"></div>
+          <div class="context-menu-item danger">
+            <span class="selector">&#9654;</span>
+            <span class="item-icon">&#128128;</span>
+            <span class="item-label">ABANDON QUEST</span>
+            <span class="item-shortcut">DEL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Second context menu variant (smaller / status sub-menu) -->
+      <div class="context-menu" style="width: 200px; margin-top: 60px;">
+        <div class="context-menu-title">
+          <span class="icon">&#9733;</span>
+          <span>SET PRIORITY</span>
+        </div>
+        <div class="context-menu-items">
+          <div class="context-menu-item">
+            <span class="selector">&#9654;</span>
+            <span class="item-icon">&#128128;</span>
+            <span class="item-label" style="color: var(--red);">URGENT</span>
+          </div>
+          <div class="context-menu-item active">
+            <span class="selector">&#9654;</span>
+            <span class="item-icon">&#9650;&#9650;</span>
+            <span class="item-label" style="color: var(--orange);">HIGH</span>
+          </div>
+          <div class="context-menu-item">
+            <span class="selector">&#9654;</span>
+            <span class="item-icon">&#9650;</span>
+            <span class="item-label" style="color: var(--yellow);">MEDIUM</span>
+          </div>
+          <div class="context-menu-item">
+            <span class="selector">&#9654;</span>
+            <span class="item-icon">&#10094;</span>
+            <span class="item-label" style="color: var(--text-secondary);">LOW</span>
+          </div>
+          <div class="context-menu-item">
+            <span class="selector">&#9654;</span>
+            <span class="item-icon">&#8212;</span>
+            <span class="item-label" style="color: var(--text-muted);">NONE</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo-label" style="bottom: 12px; right: 16px;">&#9650;&#9660; NAVIGATE &middot; ENTER SELECT &middot; ESC CLOSE</div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SECTION 2: QUICK ACTIONS
+       ============================================================ -->
+  <div class="section">
+    <div class="section-label">
+      <span class="section-number">02</span>
+      <span class="section-title">QUICK ACTIONS</span>
+    </div>
+    <p class="section-desc">Pixel icon buttons that appear on hover, like game item shortcuts on the HUD.</p>
+
+    <div class="demo-stage column" style="gap: 16px;">
+      <!-- Card with quick actions visible (hover state) -->
+      <div class="quick-action-card" style="border-color: var(--border-hover);">
+        <span class="card-icon">&#9876;</span>
+        <div class="card-info">
+          <div class="card-title">Implement OAuth2 flow</div>
+          <div class="card-sub">#QST-189 &middot; <span style="color: var(--orange);">IN PROGRESS</span> &middot; Agent-1</div>
+        </div>
+        <div class="quick-actions-bar" style="opacity: 1;">
+          <div class="quick-action-btn" style="position: relative; background: var(--orange-dim); border-color: var(--orange); z-index: 1;">
+            &#9998;
+            <div class="quick-action-tooltip" style="opacity: 1;">EDIT</div>
+          </div>
+          <div class="quick-action-btn" style="position: relative;">
+            &#128100;
+            <div class="quick-action-tooltip">ASSIGN</div>
+          </div>
+          <div class="quick-action-btn" style="position: relative;">
+            &#128230;
+            <div class="quick-action-tooltip">MOVE</div>
+          </div>
+          <div class="quick-action-btn danger" style="position: relative;">
+            &#128465;
+            <div class="quick-action-tooltip">DELETE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card without hover (default state) -->
+      <div class="quick-action-card">
+        <span class="card-icon">&#128270;</span>
+        <div class="card-info">
+          <div class="card-title">Review API documentation</div>
+          <div class="card-sub">#QST-201 &middot; <span style="color: var(--yellow);">REVIEW</span> &middot; Agent-3</div>
+        </div>
+        <div class="quick-actions-bar">
+          <div class="quick-action-btn">&#9998;</div>
+          <div class="quick-action-btn">&#128100;</div>
+          <div class="quick-action-btn">&#128230;</div>
+          <div class="quick-action-btn danger">&#128465;</div>
+        </div>
+      </div>
+
+      <!-- Card without hover (default state) -->
+      <div class="quick-action-card">
+        <span class="card-icon">&#128295;</span>
+        <div class="card-info">
+          <div class="card-title">Fix database migrations</div>
+          <div class="card-sub">#QST-215 &middot; <span style="color: var(--text-primary);">TODO</span> &middot; Agent-4</div>
+        </div>
+        <div class="quick-actions-bar">
+          <div class="quick-action-btn">&#9998;</div>
+          <div class="quick-action-btn">&#128100;</div>
+          <div class="quick-action-btn">&#128230;</div>
+          <div class="quick-action-btn danger">&#128465;</div>
+        </div>
+      </div>
+
+      <div class="demo-label" style="bottom: 12px; right: 16px;">HOVER CARD TO REVEAL ACTIONS</div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SECTION 3: COLUMN MENU
+       ============================================================ -->
+  <div class="section">
+    <div class="section-label">
+      <span class="section-number">03</span>
+      <span class="section-title">COLUMN MENU</span>
+    </div>
+    <p class="section-desc">Pixel dropdown from column header with management actions and separator lines.</p>
+
+    <div class="demo-stage" style="gap: 40px;">
+      <!-- Column with closed menu -->
+      <div class="column-pixel">
+        <div class="column-pixel-header">
+          <div class="col-title">
+            <span>&#128293;</span>
+            <span>IN PROGRESS</span>
+            <span class="col-count">5</span>
+          </div>
+          <div class="col-menu-btn">&#8942;</div>
+        </div>
+      </div>
+
+      <!-- Column with open menu -->
+      <div class="column-pixel" style="position: relative;">
+        <div class="column-pixel-header" style="border-color: var(--border-hover);">
+          <div class="col-title">
+            <span>&#9733;</span>
+            <span>DONE</span>
+            <span class="col-count">12</span>
+          </div>
+          <div class="col-menu-btn" style="border-color: var(--border-hover); color: var(--text-primary); background: var(--bg-hover);">&#8942;</div>
+        </div>
+
+        <!-- Dropdown -->
+        <div class="column-dropdown">
+          <div class="dropdown-header">COLUMN ACTIONS</div>
+          <div class="column-dropdown-items">
+            <div class="column-dropdown-item">
+              <span class="dd-selector">&#9654;</span>
+              <span class="dd-icon">&#9998;</span>
+              <span class="dd-label">RENAME COLUMN</span>
+            </div>
+            <div class="column-dropdown-item">
+              <span class="dd-selector">&#9654;</span>
+              <span class="dd-icon">&#127912;</span>
+              <span class="dd-label">SET COLOR</span>
+            </div>
+            <div class="column-dropdown-item">
+              <span class="dd-selector">&#9654;</span>
+              <span class="dd-icon">&#128274;</span>
+              <span class="dd-label">SET WIP LIMIT</span>
+            </div>
+            <div class="column-dropdown-sep"></div>
+            <div class="column-dropdown-item">
+              <span class="dd-selector">&#9654;</span>
+              <span class="dd-icon">&#9650;</span>
+              <span class="dd-label">SORT BY PRIORITY</span>
+            </div>
+            <div class="column-dropdown-item">
+              <span class="dd-selector">&#9654;</span>
+              <span class="dd-icon">&#8986;</span>
+              <span class="dd-label">SORT BY DATE</span>
+            </div>
+            <div class="column-dropdown-item">
+              <span class="dd-selector">&#9654;</span>
+              <span class="dd-icon">&#128100;</span>
+              <span class="dd-label">SORT BY AGENT</span>
+            </div>
+            <div class="column-dropdown-sep"></div>
+            <div class="column-dropdown-item">
+              <span class="dd-selector">&#9654;</span>
+              <span class="dd-icon">&#128194;</span>
+              <span class="dd-label">ARCHIVE ALL</span>
+            </div>
+            <div class="column-dropdown-item danger">
+              <span class="dd-selector">&#9654;</span>
+              <span class="dd-icon">&#128128;</span>
+              <span class="dd-label">DELETE COLUMN</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo-label" style="bottom: 12px; right: 16px;">CLICK &#8942; TO OPEN COLUMN MENU</div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SECTION 4: BULK ACTION BAR
+       ============================================================ -->
+  <div class="section">
+    <div class="section-label">
+      <span class="section-number">04</span>
+      <span class="section-title">BULK ACTION BAR</span>
+    </div>
+    <p class="section-desc">Pixel toolbar appearing when multiple quests are selected, with count badge and action buttons.</p>
+
+    <div class="demo-stage column" style="gap: 24px; align-items: center;">
+      <!-- Bulk bar variant 1: standard -->
+      <div class="bulk-action-bar">
+        <div class="bulk-count">
+          <span class="count-badge">3</span>
+          <span>QUESTS SELECTED</span>
+        </div>
+        <div class="bulk-actions">
+          <button class="bulk-action-btn">
+            <span class="btn-icon">&#128230;</span>
+            MOVE TO
+          </button>
+          <button class="bulk-action-btn">
+            <span class="btn-icon">&#128100;</span>
+            ASSIGN
+          </button>
+          <button class="bulk-action-btn">
+            <span class="btn-icon">&#9733;</span>
+            PRIORITY
+          </button>
+          <button class="bulk-action-btn">
+            <span class="btn-icon">&#127991;</span>
+            LABELS
+          </button>
+          <button class="bulk-action-btn danger">
+            <span class="btn-icon">&#128128;</span>
+            DELETE
+          </button>
+        </div>
+        <button class="bulk-close">X</button>
+      </div>
+
+      <!-- Bulk bar variant 2: many selected -->
+      <div class="bulk-action-bar" style="border-color: var(--yellow); box-shadow: 0 0 12px rgba(255, 203, 0, 0.15), inset 1px 1px 0 rgba(255,255,255,0.06), 4px 4px 0 rgba(0,0,0,0.4);">
+        <div class="bulk-count" style="background: var(--yellow-dim); border-color: var(--yellow); color: var(--yellow);">
+          <span class="count-badge" style="background: var(--yellow); color: var(--bg-deep);">12</span>
+          <span>QUESTS SELECTED</span>
+        </div>
+        <div class="bulk-actions">
+          <button class="bulk-action-btn">
+            <span class="btn-icon">&#128230;</span>
+            MOVE TO
+          </button>
+          <button class="bulk-action-btn">
+            <span class="btn-icon">&#128100;</span>
+            ASSIGN
+          </button>
+          <button class="bulk-action-btn">
+            <span class="btn-icon">&#9733;</span>
+            PRIORITY
+          </button>
+          <button class="bulk-action-btn">
+            <span class="btn-icon">&#127991;</span>
+            LABELS
+          </button>
+          <button class="bulk-action-btn danger">
+            <span class="btn-icon">&#128128;</span>
+            DELETE
+          </button>
+        </div>
+        <button class="bulk-close">X</button>
+      </div>
+
+      <div class="demo-label" style="bottom: 12px; right: 16px;">SELECT MULTIPLE QUESTS TO ACTIVATE BAR</div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SECTION 5: COMMAND PALETTE — GAME COMMAND CONSOLE
+       ============================================================ -->
+  <div class="section">
+    <div class="section-label">
+      <span class="section-number">05</span>
+      <span class="section-title">COMMAND PALETTE</span>
+    </div>
+    <p class="section-desc">Full-screen overlay styled as a game command console with categories and blinking pixel cursor.</p>
+
+    <div class="command-palette-wrapper">
+      <div class="demo-stage" style="min-height: 520px; padding: 0;">
+        <!-- Background content (dimmed) -->
+        <div style="padding: 32px; width: 100%; opacity: 0.2;">
+          <div style="display: flex; gap: 16px;">
+            <div style="flex: 1; background: var(--bg-surface); border: 2px solid var(--border); height: 400px; padding: 12px;">
+              <div style="font-family: var(--font-pixel); font-size: 8px; color: var(--text-muted); margin-bottom: 8px;">BACKLOG</div>
+              <div style="background: var(--bg-elevated); border: 2px solid var(--border); height: 40px; margin-bottom: 6px;"></div>
+              <div style="background: var(--bg-elevated); border: 2px solid var(--border); height: 40px; margin-bottom: 6px;"></div>
+              <div style="background: var(--bg-elevated); border: 2px solid var(--border); height: 40px;"></div>
+            </div>
+            <div style="flex: 1; background: var(--bg-surface); border: 2px solid var(--border); height: 400px; padding: 12px;">
+              <div style="font-family: var(--font-pixel); font-size: 8px; color: var(--text-muted); margin-bottom: 8px;">IN PROGRESS</div>
+              <div style="background: var(--bg-elevated); border: 2px solid var(--border); height: 40px; margin-bottom: 6px;"></div>
+              <div style="background: var(--bg-elevated); border: 2px solid var(--border); height: 40px;"></div>
+            </div>
+            <div style="flex: 1; background: var(--bg-surface); border: 2px solid var(--border); height: 400px; padding: 12px;">
+              <div style="font-family: var(--font-pixel); font-size: 8px; color: var(--text-muted); margin-bottom: 8px;">DONE</div>
+              <div style="background: var(--bg-elevated); border: 2px solid var(--border); height: 40px; margin-bottom: 6px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Overlay -->
+        <div class="command-overlay">
+          <div class="command-palette">
+            <div class="command-palette-title">
+              <div class="title-left">
+                <span class="star">&#9733;</span>
+                <span>COMMAND CONSOLE</span>
+              </div>
+              <span class="esc-hint">ESC</span>
+            </div>
+
+            <!-- Input -->
+            <div class="command-input-row">
+              <span class="command-prompt">COMMAND:</span>
+              <div class="command-input-text">
+                <span>fix auth</span>
+                <span class="command-cursor"></span>
+              </div>
+            </div>
+
+            <!-- Category tabs -->
+            <div class="command-categories">
+              <div class="command-category-tab active">
+                <span class="tab-bracket">[</span>ALL<span class="tab-bracket">]</span>
+              </div>
+              <div class="command-category-tab">
+                <span class="tab-bracket">[</span>QUESTS<span class="tab-bracket">]</span>
+              </div>
+              <div class="command-category-tab">
+                <span class="tab-bracket">[</span>AGENTS<span class="tab-bracket">]</span>
+              </div>
+              <div class="command-category-tab">
+                <span class="tab-bracket">[</span>ACTIONS<span class="tab-bracket">]</span>
+              </div>
+            </div>
+
+            <!-- Results -->
+            <div class="command-results">
+              <!-- Quest results -->
+              <div class="command-result-group">
+                <div class="command-result-group-title">&#9876; QUESTS</div>
+                <div class="command-result selected">
+                  <span class="result-selector">&#9654;</span>
+                  <span class="result-icon">&#128293;</span>
+                  <div class="result-info">
+                    <span class="result-title">Fix auth token refresh</span>
+                    <span class="result-meta">#QST-247 &middot; IN PROGRESS &middot; Agent-2</span>
+                  </div>
+                  <span class="result-type quest">QUEST</span>
+                </div>
+                <div class="command-result">
+                  <span class="result-selector">&#9654;</span>
+                  <span class="result-icon">&#9876;</span>
+                  <div class="result-info">
+                    <span class="result-title">Fix auth middleware error</span>
+                    <span class="result-meta">#QST-198 &middot; TODO &middot; Unassigned</span>
+                  </div>
+                  <span class="result-type quest">QUEST</span>
+                </div>
+                <div class="command-result">
+                  <span class="result-selector">&#9654;</span>
+                  <span class="result-icon">&#9733;</span>
+                  <div class="result-info">
+                    <span class="result-title">Fix auth session persistence</span>
+                    <span class="result-meta">#QST-156 &middot; DONE &middot; Agent-1</span>
+                  </div>
+                  <span class="result-type quest">QUEST</span>
+                </div>
+              </div>
+
+              <!-- Action results -->
+              <div class="command-result-group">
+                <div class="command-result-group-title">&#9889; ACTIONS</div>
+                <div class="command-result">
+                  <span class="result-selector">&#9654;</span>
+                  <span class="result-icon">&#10010;</span>
+                  <div class="result-info">
+                    <span class="result-title">Create new quest</span>
+                    <span class="result-meta">Add a new quest to the board</span>
+                  </div>
+                  <span class="result-type action">ACTION</span>
+                </div>
+                <div class="command-result">
+                  <span class="result-selector">&#9654;</span>
+                  <span class="result-icon">&#128269;</span>
+                  <div class="result-info">
+                    <span class="result-title">Filter by status</span>
+                    <span class="result-meta">Show quests by status</span>
+                  </div>
+                  <span class="result-type action">ACTION</span>
+                </div>
+              </div>
+
+              <!-- Agent results -->
+              <div class="command-result-group">
+                <div class="command-result-group-title">&#128100; AGENTS</div>
+                <div class="command-result">
+                  <span class="result-selector">&#9654;</span>
+                  <span class="result-icon">&#129302;</span>
+                  <div class="result-info">
+                    <span class="result-title">Agent-2 (Coder)</span>
+                    <span class="result-meta">LV.7 &middot; 5 active quests &middot; AUTH specialist</span>
+                  </div>
+                  <span class="result-type agent">AGENT</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="command-footer">
+              <div class="command-footer-hints">
+                <div class="command-footer-hint">
+                  <span class="hint-key">&#9650;&#9660;</span>
+                  <span>NAVIGATE</span>
+                </div>
+                <div class="command-footer-hint">
+                  <span class="hint-key">ENTER</span>
+                  <span>SELECT</span>
+                </div>
+                <div class="command-footer-hint">
+                  <span class="hint-key">TAB</span>
+                  <span>CATEGORY</span>
+                </div>
+                <div class="command-footer-hint">
+                  <span class="hint-key">ESC</span>
+                  <span>CLOSE</span>
+                </div>
+              </div>
+              <div class="kb-hint">
+                <span class="key">CTRL</span>
+                <span>+</span>
+                <span class="key">K</span>
+                <span>TO OPEN</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SECTION 6: KEYBOARD REFERENCE
+       ============================================================ -->
+  <div class="section">
+    <div class="section-label">
+      <span class="section-number">06</span>
+      <span class="section-title">KEYBOARD REFERENCE</span>
+    </div>
+    <p class="section-desc">Pixel window showing all keyboard shortcuts in Press Start 2P with chunky key caps.</p>
+
+    <div class="demo-stage" style="justify-content: center; padding: 40px;">
+      <div class="pixel-window keyboard-ref">
+        <div class="pixel-window-title">
+          <span>&#9000; KEYBOARD SHORTCUTS</span>
+          <div class="pixel-window-controls">
+            <span>&#8212;</span>
+            <span>&#9633;</span>
+            <span>X</span>
+          </div>
+        </div>
+        <div class="pixel-window-body">
+          <!-- Navigation -->
+          <div class="shortcut-group">
+            <div class="shortcut-group-title">&#9654; NAVIGATION</div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">OPEN COMMAND</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">CTRL</span>
+                <span class="key-plus">+</span>
+                <span class="key-cap">K</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">SEARCH QUESTS</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">/</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">NEXT COLUMN</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">&#9654;</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">PREV COLUMN</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">&#9664;</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quest Actions -->
+          <div class="shortcut-group">
+            <div class="shortcut-group-title">&#9876; QUEST ACTIONS</div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">NEW QUEST</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">N</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">EDIT QUEST</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">E</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">ASSIGN AGENT</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">A</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">DELETE QUEST</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">DEL</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">COMPLETE QUEST</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">CTRL</span>
+                <span class="key-plus">+</span>
+                <span class="key-cap">ENTER</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Selection -->
+          <div class="shortcut-group">
+            <div class="shortcut-group-title">&#128736; SELECTION</div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">SELECT QUEST</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">SPACE</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">SELECT ALL</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">CTRL</span>
+                <span class="key-plus">+</span>
+                <span class="key-cap">A</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">DESELECT ALL</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">ESC</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Views -->
+          <div class="shortcut-group">
+            <div class="shortcut-group-title">&#128065; VIEWS</div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">BOARD VIEW</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">1</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">LIST VIEW</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">2</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">MAP VIEW</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">3</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">HELP</span>
+              <div class="shortcut-keys">
+                <span class="key-cap">?</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SECTION 7 (BONUS): CONFIRMATION DIALOG — RPG DIALOG BOX
+       ============================================================ -->
+  <div class="section">
+    <div class="section-label">
+      <span class="section-number">BONUS</span>
+      <span class="section-title">CONFIRMATION DIALOG</span>
+    </div>
+    <p class="section-desc">RPG-style "Are you sure?" dialog box with character portrait and YES/NO pixel buttons.</p>
+
+    <div class="confirm-dialog-wrapper">
+      <div class="demo-stage" style="min-height: 400px; padding: 0;">
+        <!-- Background (dimmed board) -->
+        <div style="padding: 32px; width: 100%; opacity: 0.15;">
+          <div style="display: flex; gap: 16px;">
+            <div style="flex: 1; background: var(--bg-surface); border: 2px solid var(--border); height: 300px; padding: 12px;">
+              <div style="font-family: var(--font-pixel); font-size: 8px; color: var(--text-muted); margin-bottom: 8px;">TODO</div>
+              <div style="background: var(--bg-elevated); border: 2px solid var(--border); height: 40px; margin-bottom: 6px;"></div>
+              <div style="background: var(--bg-elevated); border: 2px solid var(--border); height: 40px; margin-bottom: 6px;"></div>
+            </div>
+            <div style="flex: 1; background: var(--bg-surface); border: 2px solid var(--border); height: 300px; padding: 12px;">
+              <div style="font-family: var(--font-pixel); font-size: 8px; color: var(--text-muted); margin-bottom: 8px;">IN PROGRESS</div>
+              <div style="background: var(--bg-elevated); border: 2px solid var(--border); height: 40px; margin-bottom: 6px;"></div>
+            </div>
+            <div style="flex: 1; background: var(--bg-surface); border: 2px solid var(--border); height: 300px; padding: 12px;">
+              <div style="font-family: var(--font-pixel); font-size: 8px; color: var(--text-muted); margin-bottom: 8px;">DONE</div>
+              <div style="background: var(--bg-elevated); border: 2px solid var(--border); height: 40px; margin-bottom: 6px;"></div>
+              <div style="background: var(--bg-elevated); border: 2px solid var(--border); height: 40px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Overlay -->
+        <div class="confirm-overlay">
+          <div class="confirm-dialog">
+            <div class="confirm-dialog-header">
+              &#9888; ABANDON QUEST? &#9888;
+            </div>
+            <div class="confirm-dialog-body">
+              <!-- Character portrait -->
+              <div class="confirm-portrait">
+                <div class="portrait-sprite"></div>
+              </div>
+              <div class="confirm-dialog-text">
+                <div class="confirm-message">
+                  Are you sure you want to<br>
+                  abandon <span class="confirm-quest-name">"Fix auth token refresh"</span>?
+                </div>
+                <div class="confirm-submessage">
+                  This action cannot be undone.<br>
+                  Quest XP will be lost. Agent-2<br>
+                  will be unassigned.
+                </div>
+              </div>
+            </div>
+            <div class="confirm-actions">
+              <button class="confirm-btn">
+                <span class="btn-selector">&#9654;</span>
+                NO, KEEP IT
+              </button>
+              <button class="confirm-btn confirm-yes">
+                <span class="btn-selector">&#9654;</span>
+                YES, ABANDON
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     BOTTOM DECORATION BAR
+     ============================================================ -->
+<div style="
+  padding: 16px 40px;
+  border-top: 3px solid var(--border);
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+">
+  <span>AGENT 10 &middot; CONTEXT MENUS & COMMAND PALETTE</span>
+  <span>AI OFFICE &middot; PIXEL KANBAN &middot; 2026</span>
+</div>
+
+</body>
+</html>

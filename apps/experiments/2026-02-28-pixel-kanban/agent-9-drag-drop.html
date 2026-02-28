@@ -1,0 +1,2062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>Agent 9: Drag & Drop — Pixel Interaction States</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Mistral Pixel Palette */
+  --bg-deep: #0D0D11;
+  --bg-surface: #14141A;
+  --bg-elevated: #1C1C24;
+  --border: #2E2E3A;
+  --border-hover: #3E3E4E;
+  --text-primary: #E8E8F0;
+  --text-secondary: #9898A8;
+  --text-muted: #5E5E6E;
+  --orange: #FF7000;
+  --red: #FD3F29;
+  --yellow: #FFCB00;
+  --green: #22C55E;
+  --blue: #3B82F6;
+  --purple: #A855F7;
+  --white: #F0F0FF;
+
+  /* Pixel sizing */
+  --px: 2px;
+}
+
+html {
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  font-smooth: never;
+  image-rendering: pixelated;
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   SCANLINE OVERLAY
+   ============================================================ */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.page-wrapper {
+  width: 1440px;
+  margin: 0 auto;
+  padding: 20px 24px;
+}
+
+/* ============================================================
+   PAGE TITLE HUD
+   ============================================================ */
+.page-title-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--bg-surface);
+  border: 3px solid var(--border);
+  box-shadow:
+    inset 2px 2px 0 rgba(240,240,255,0.04),
+    inset -2px -2px 0 rgba(0,0,0,0.3),
+    4px 4px 0 rgba(0,0,0,0.5);
+}
+
+.page-title-bar h1 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: var(--orange);
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.6);
+}
+
+.page-title-bar .subtitle {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-secondary);
+}
+
+.page-title-bar .agent-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--bg-deep);
+  background: var(--orange);
+  padding: 4px 8px;
+  margin-left: auto;
+}
+
+/* ============================================================
+   DEMO SECTIONS GRID
+   ============================================================ */
+.demos-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.demo-full-width {
+  grid-column: 1 / -1;
+}
+
+/* ============================================================
+   PIXEL WINDOW FRAME
+   ============================================================ */
+.pixel-window {
+  background: var(--bg-surface);
+  border: 3px solid var(--border);
+  box-shadow:
+    inset 2px 2px 0 rgba(240,240,255,0.04),
+    inset -2px -2px 0 rgba(0,0,0,0.3),
+    4px 4px 0 rgba(0,0,0,0.5);
+}
+
+.pixel-window .window-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border-bottom: 2px solid var(--border);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-secondary);
+}
+
+.pixel-window .window-title .title-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pixel-window .window-title .title-icon {
+  color: var(--orange);
+}
+
+.pixel-window .window-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.pixel-window .window-controls span {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--border-hover);
+  font-size: 6px;
+  line-height: 6px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.pixel-window .window-body {
+  padding: 16px;
+}
+
+/* ============================================================
+   PIXEL QUEST CARD (BASE)
+   ============================================================ */
+.quest-card {
+  position: relative;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  padding: 10px 12px;
+  cursor: grab;
+  transition: none;
+  user-select: none;
+}
+
+.quest-card .card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.quest-card .card-priority {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.quest-card .card-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.quest-card .card-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.quest-card .card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.quest-card .card-agent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quest-card .agent-sprite {
+  width: 16px;
+  height: 16px;
+  background: var(--purple);
+  image-rendering: pixelated;
+  border: 1px solid var(--border-hover);
+}
+
+.quest-card .agent-sprite.blue { background: var(--blue); }
+.quest-card .agent-sprite.green { background: var(--green); }
+.quest-card .agent-sprite.orange { background: var(--orange); }
+.quest-card .agent-sprite.red { background: var(--red); }
+
+.quest-card .agent-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.quest-card .card-xp {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--yellow);
+}
+
+.quest-card .card-labels {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.quest-card .label-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  padding: 2px 6px;
+  border: 1px solid;
+}
+
+.label-pill.frontend { color: var(--blue); border-color: var(--blue); background: rgba(59,130,246,0.1); }
+.label-pill.bug { color: var(--red); border-color: var(--red); background: rgba(253,63,41,0.1); }
+.label-pill.design { color: var(--purple); border-color: var(--purple); background: rgba(168,85,247,0.1); }
+.label-pill.feature { color: var(--green); border-color: var(--green); background: rgba(34,197,94,0.1); }
+.label-pill.urgent { color: var(--yellow); border-color: var(--yellow); background: rgba(255,203,0,0.1); }
+
+/* ============================================================
+   STATE 1: PICKED UP CARD
+   Hard 4px pixel drop-shadow, scale 1.05
+   ============================================================ */
+.quest-card.picked-up {
+  cursor: grabbing;
+  transform: scale(1.05);
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.7);
+  border-color: var(--orange);
+  z-index: 100;
+  /* No transition - pixel snap! */
+}
+
+.quest-card.picked-up .card-title {
+  color: var(--white);
+}
+
+/* Glow border pulse - stepped */
+@keyframes pickup-border-pulse {
+  0%, 49% { border-color: var(--orange); }
+  50%, 100% { border-color: #FF9033; }
+}
+
+.quest-card.picked-up {
+  animation: pickup-border-pulse 0.6s steps(1) infinite;
+}
+
+/* ============================================================
+   STATE 2: SOURCE GAP
+   Blinking pixel dashed outline (alternating pattern)
+   ============================================================ */
+.source-gap {
+  position: relative;
+  height: 72px;
+  margin: 4px 0;
+  background: transparent;
+}
+
+/* Pixel dashed border using box-shadow pattern */
+.source-gap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px dashed var(--text-muted);
+  opacity: 0.5;
+  animation: gap-blink 0.8s steps(1) infinite;
+}
+
+@keyframes gap-blink {
+  0%, 39% { opacity: 0.5; border-color: var(--text-muted); }
+  40%, 79% { opacity: 0.3; border-color: var(--border-hover); }
+  80%, 100% { opacity: 0.15; border-color: var(--border); }
+}
+
+/* Alternating dash pattern animation */
+.source-gap::after {
+  content: '~ ~ ~ ~';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  opacity: 0.4;
+  letter-spacing: 4px;
+  animation: gap-text-blink 1s steps(1) infinite;
+}
+
+@keyframes gap-text-blink {
+  0%, 49% { opacity: 0.4; }
+  50%, 100% { opacity: 0.15; }
+}
+
+/* ============================================================
+   STATE 3: TARGET INDICATOR
+   4px solid orange pixel line between cards
+   ============================================================ */
+.target-indicator {
+  height: 4px;
+  background: var(--orange);
+  margin: 2px 0;
+  animation: target-glow 0.5s steps(1) infinite;
+  box-shadow: 0 0 0 1px rgba(255,112,0,0.3);
+}
+
+@keyframes target-glow {
+  0%, 49% { background: var(--orange); }
+  50%, 100% { background: #FF9033; }
+}
+
+/* Extended indicator with arrows */
+.target-indicator-fancy {
+  position: relative;
+  height: 4px;
+  background: var(--orange);
+  margin: 6px 0;
+  animation: target-glow 0.5s steps(1) infinite;
+}
+
+.target-indicator-fancy::before,
+.target-indicator-fancy::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--orange);
+}
+
+.target-indicator-fancy::before { left: 8px; }
+.target-indicator-fancy::after { right: 8px; }
+
+/* ============================================================
+   STATE 4: CARDS SPREADING
+   translate in 2px increments (pixel-snapped)
+   ============================================================ */
+@keyframes spread-down {
+  0% { transform: translateY(0); }
+  25% { transform: translateY(2px); }
+  50% { transform: translateY(4px); }
+  75% { transform: translateY(6px); }
+  100% { transform: translateY(8px); }
+}
+
+@keyframes spread-up {
+  0% { transform: translateY(0); }
+  25% { transform: translateY(-2px); }
+  50% { transform: translateY(-4px); }
+  75% { transform: translateY(-6px); }
+  100% { transform: translateY(-8px); }
+}
+
+.quest-card.spread-down {
+  animation: spread-down 0.2s steps(4) forwards;
+}
+
+.quest-card.spread-up {
+  animation: spread-up 0.2s steps(4) forwards;
+}
+
+/* ============================================================
+   STATE 5: EMPTY COLUMN DROP — SPARKLE BURST
+   ============================================================ */
+@keyframes sparkle-1 {
+  0%    { transform: translate(0,0) scale(1); opacity: 1; }
+  25%   { transform: translate(-8px,-12px) scale(1.2); opacity: 1; }
+  50%   { transform: translate(-14px,-20px) scale(0.8); opacity: 0.7; }
+  75%   { transform: translate(-18px,-24px) scale(0.4); opacity: 0.3; }
+  100%  { transform: translate(-20px,-26px) scale(0); opacity: 0; }
+}
+
+@keyframes sparkle-2 {
+  0%    { transform: translate(0,0) scale(1); opacity: 1; }
+  25%   { transform: translate(10px,-14px) scale(1.2); opacity: 1; }
+  50%   { transform: translate(16px,-22px) scale(0.8); opacity: 0.7; }
+  75%   { transform: translate(20px,-26px) scale(0.4); opacity: 0.3; }
+  100%  { transform: translate(22px,-28px) scale(0); opacity: 0; }
+}
+
+@keyframes sparkle-3 {
+  0%    { transform: translate(0,0) scale(1); opacity: 1; }
+  25%   { transform: translate(-4px,8px) scale(1.2); opacity: 1; }
+  50%   { transform: translate(-8px,12px) scale(0.8); opacity: 0.7; }
+  75%   { transform: translate(-10px,14px) scale(0.4); opacity: 0.3; }
+  100%  { transform: translate(-12px,16px) scale(0); opacity: 0; }
+}
+
+@keyframes sparkle-4 {
+  0%    { transform: translate(0,0) scale(1); opacity: 1; }
+  25%   { transform: translate(12px,6px) scale(1.2); opacity: 1; }
+  50%   { transform: translate(18px,10px) scale(0.8); opacity: 0.7; }
+  75%   { transform: translate(22px,12px) scale(0.4); opacity: 0.3; }
+  100%  { transform: translate(24px,14px) scale(0); opacity: 0; }
+}
+
+@keyframes sparkle-5 {
+  0%    { transform: translate(0,0) scale(1); opacity: 1; }
+  25%   { transform: translate(0,-16px) scale(1.4); opacity: 1; }
+  50%   { transform: translate(0,-26px) scale(1); opacity: 0.6; }
+  75%   { transform: translate(0,-32px) scale(0.4); opacity: 0.2; }
+  100%  { transform: translate(0,-36px) scale(0); opacity: 0; }
+}
+
+@keyframes sparkle-6 {
+  0%    { transform: translate(0,0) scale(1); opacity: 1; }
+  25%   { transform: translate(6px,-10px) scale(1.2); opacity: 1; }
+  50%   { transform: translate(10px,-18px) scale(0.8); opacity: 0.6; }
+  75%   { transform: translate(12px,-22px) scale(0.4); opacity: 0.2; }
+  100%  { transform: translate(14px,-24px) scale(0); opacity: 0; }
+}
+
+.sparkle-container {
+  position: relative;
+  display: inline-block;
+}
+
+.sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  pointer-events: none;
+}
+
+.sparkle.star {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  width: auto;
+  height: auto;
+  line-height: 1;
+}
+
+.sparkle.s1 { color: var(--yellow); top: 50%; left: 50%; animation: sparkle-1 0.6s steps(4) infinite; }
+.sparkle.s2 { color: var(--orange); top: 50%; left: 50%; animation: sparkle-2 0.6s steps(4) 0.1s infinite; }
+.sparkle.s3 { color: var(--white); top: 50%; left: 50%; animation: sparkle-3 0.6s steps(4) 0.15s infinite; }
+.sparkle.s4 { color: var(--yellow); top: 50%; left: 50%; animation: sparkle-4 0.6s steps(4) 0.05s infinite; }
+.sparkle.s5 { color: var(--orange); top: 50%; left: 50%; animation: sparkle-5 0.6s steps(4) 0.2s infinite; }
+.sparkle.s6 { color: var(--white); top: 50%; left: 50%; animation: sparkle-6 0.6s steps(4) 0.08s infinite; }
+
+/* ============================================================
+   STATE 6: INVALID DROP
+   Red pixel X flash, 2px left-right shake
+   ============================================================ */
+@keyframes shake-invalid {
+  0%   { transform: translateX(0); }
+  12%  { transform: translateX(-2px); }
+  25%  { transform: translateX(2px); }
+  37%  { transform: translateX(-2px); }
+  50%  { transform: translateX(2px); }
+  62%  { transform: translateX(-2px); }
+  75%  { transform: translateX(2px); }
+  87%  { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes flash-red {
+  0%, 32% { border-color: var(--red); background: rgba(253,63,41,0.15); }
+  33%, 65% { border-color: var(--border); background: var(--bg-elevated); }
+  66%, 100% { border-color: var(--red); background: rgba(253,63,41,0.1); }
+}
+
+.quest-card.invalid-drop {
+  animation: shake-invalid 0.4s steps(8), flash-red 0.6s steps(2);
+  border-color: var(--red);
+}
+
+/* Red X overlay */
+.invalid-x-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 24px;
+  color: var(--red);
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.8);
+  pointer-events: none;
+  animation: x-flash 0.5s steps(1) infinite;
+}
+
+@keyframes x-flash {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.3; }
+}
+
+/* ============================================================
+   STATE 7: MULTI-SELECT
+   Stacked with 2px pixel offsets, count badge
+   ============================================================ */
+.multi-stack {
+  position: relative;
+  display: inline-block;
+}
+
+.multi-stack .quest-card {
+  position: relative;
+}
+
+.multi-stack .stack-shadow-1 {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: -2px;
+  bottom: -2px;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  z-index: -1;
+  opacity: 0.8;
+}
+
+.multi-stack .stack-shadow-2 {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: -4px;
+  bottom: -4px;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  z-index: -2;
+  opacity: 0.5;
+}
+
+.count-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--bg-deep);
+  background: var(--orange);
+  border: 2px solid var(--bg-deep);
+  padding: 0 4px;
+  z-index: 10;
+  animation: badge-pulse 1s steps(1) infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 69% { background: var(--orange); }
+  70%, 100% { background: #FF9033; }
+}
+
+/* ============================================================
+   BONUS: "QUEST ACCEPTED!" FLASH
+   ============================================================ */
+@keyframes quest-accepted-appear {
+  0%   { transform: translateY(0) scale(1); opacity: 1; }
+  20%  { transform: translateY(-4px) scale(1.1); opacity: 1; }
+  40%  { transform: translateY(-8px) scale(1.15); opacity: 1; }
+  60%  { transform: translateY(-14px) scale(1.1); opacity: 0.9; }
+  80%  { transform: translateY(-20px) scale(1); opacity: 0.5; }
+  100% { transform: translateY(-28px) scale(0.9); opacity: 0; }
+}
+
+@keyframes quest-accepted-flash-bg {
+  0%, 24% { text-shadow: 2px 2px 0 rgba(0,0,0,0.8), 0 0 0 transparent; }
+  25%, 49% { text-shadow: 2px 2px 0 rgba(0,0,0,0.8), 0 0 2px var(--yellow); }
+  50%, 74% { text-shadow: 2px 2px 0 rgba(0,0,0,0.8), 0 0 0 transparent; }
+  75%, 100% { text-shadow: 2px 2px 0 rgba(0,0,0,0.8), 0 0 2px var(--orange); }
+}
+
+.quest-accepted-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: var(--yellow);
+  animation:
+    quest-accepted-appear 1.2s steps(5) infinite,
+    quest-accepted-flash-bg 0.5s steps(1) infinite;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   INTERACTIVE DEMO: FULL KANBAN BOARD
+   ============================================================ */
+.kanban-demo {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.kanban-column {
+  background: var(--bg-deep);
+  border: 2px solid var(--border);
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+}
+
+.kanban-column.drag-over {
+  border-color: var(--orange);
+  background: rgba(255,112,0,0.03);
+}
+
+.kanban-column.invalid-target {
+  border-color: var(--red);
+  background: rgba(253,63,41,0.03);
+}
+
+.column-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 2px solid var(--border);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+}
+
+.column-header .col-icon { font-size: 10px; }
+.column-header .col-count {
+  margin-left: auto;
+  font-size: 8px;
+  color: var(--text-muted);
+}
+
+.column-cards {
+  flex: 1;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 120px;
+}
+
+.column-cards.empty-drop-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-col-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* ============================================================
+   SHOWCASE SECTIONS
+   ============================================================ */
+.showcase-row {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.showcase-row:last-child {
+  margin-bottom: 0;
+}
+
+.showcase-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.showcase-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 4px 8px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+}
+
+.showcase-card-wrap {
+  width: 220px;
+}
+
+/* Section labels */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.section-divider::before,
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--border) 0px,
+    var(--border) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.section-divider span {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--orange);
+  white-space: nowrap;
+}
+
+/* ============================================================
+   EMPTY COLUMN SPARKLE ZONE
+   ============================================================ */
+.empty-sparkle-zone {
+  position: relative;
+  width: 100%;
+  min-height: 140px;
+  border: 2px dashed var(--border-hover);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(255,112,0,0.02);
+}
+
+.empty-sparkle-zone .drop-here-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  animation: drop-blink 1s steps(1) infinite;
+}
+
+@keyframes drop-blink {
+  0%, 59% { opacity: 0.8; }
+  60%, 100% { opacity: 0.3; }
+}
+
+/* ============================================================
+   INTERACTIVE DEMO STATE TOGGLING
+   ============================================================ */
+.state-controls {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.state-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  padding: 6px 10px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: none;
+}
+
+.state-btn:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.state-btn.active {
+  background: var(--orange);
+  color: var(--bg-deep);
+  border-color: var(--orange);
+}
+
+/* ============================================================
+   CARD TRANSITION DEMO (side-by-side)
+   ============================================================ */
+.transition-demo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.transition-arrow {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: var(--orange);
+  animation: arrow-pulse 0.8s steps(1) infinite;
+}
+
+@keyframes arrow-pulse {
+  0%, 59% { opacity: 1; }
+  60%, 100% { opacity: 0.4; }
+}
+
+/* ============================================================
+   PIXEL PROGRESS INDICATOR
+   ============================================================ */
+.pixel-progress {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.pixel-progress .block {
+  width: 8px;
+  height: 8px;
+  background: var(--border);
+}
+
+.pixel-progress .block.filled {
+  background: var(--orange);
+}
+
+.pixel-progress .block.filled.green { background: var(--green); }
+
+/* ============================================================
+   CARD DROP ANIMATION
+   ============================================================ */
+@keyframes card-drop-settle {
+  0%   { transform: scale(1.05) translateY(-4px); box-shadow: 4px 4px 0 rgba(0,0,0,0.7); }
+  33%  { transform: scale(1.02) translateY(-2px); box-shadow: 2px 2px 0 rgba(0,0,0,0.5); }
+  66%  { transform: scale(1) translateY(0); box-shadow: 1px 1px 0 rgba(0,0,0,0.3); }
+  100% { transform: scale(1) translateY(0); box-shadow: none; }
+}
+
+.quest-card.settling {
+  animation: card-drop-settle 0.3s steps(3) forwards;
+  border-color: var(--green);
+}
+
+/* ============================================================
+   SECTION: Column Spread Simulation
+   ============================================================ */
+.spread-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 220px;
+}
+
+.spread-column .quest-card.above-target {
+  animation: spread-up 0.2s steps(4) forwards;
+}
+
+.spread-column .quest-card.below-target {
+  animation: spread-down 0.2s steps(4) forwards;
+}
+
+/* ============================================================
+   INTERACTIVE DRAG & DROP BOARD
+   ============================================================ */
+.interactive-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  min-height: 340px;
+}
+
+.interactive-board .kanban-column {
+  min-height: 300px;
+}
+
+.interactive-board .quest-card {
+  touch-action: none;
+}
+
+.interactive-board .quest-card.dragging {
+  opacity: 0;
+}
+
+.drag-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+  transform: scale(1.05);
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.7);
+  border: 2px solid var(--orange);
+  background: var(--bg-elevated);
+  animation: pickup-border-pulse 0.6s steps(1) infinite;
+}
+
+.drop-indicator {
+  height: 4px;
+  background: var(--orange);
+  animation: target-glow 0.5s steps(1) infinite;
+  margin: 2px 0;
+  display: none;
+}
+
+.drop-indicator.visible {
+  display: block;
+}
+
+/* Quest accepted popup */
+.quest-accepted-popup {
+  position: fixed;
+  pointer-events: none;
+  z-index: 2000;
+  animation: quest-accepted-appear 1.2s steps(5) forwards;
+}
+
+.quest-accepted-popup .text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--yellow);
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.9);
+  white-space: nowrap;
+}
+
+/* Multi-select checkbox */
+.card-select-check {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-hover);
+  background: var(--bg-deep);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  z-index: 5;
+}
+
+.card-select-check.checked {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: var(--bg-deep);
+}
+
+/* ============================================================
+   FOOTER INFO
+   ============================================================ */
+.footer-info {
+  margin-top: 16px;
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.footer-info .stat {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.footer-info .stat span {
+  color: var(--orange);
+}
+
+.footer-info .hint {
+  margin-left: auto;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-muted);
+  animation: hint-blink 2s steps(1) infinite;
+}
+
+@keyframes hint-blink {
+  0%, 69% { opacity: 0.7; }
+  70%, 100% { opacity: 0.3; }
+}
+
+/* ============================================================
+   PIXEL DECORATIONS
+   ============================================================ */
+.pixel-diamond {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--orange);
+  transform: rotate(45deg);
+  margin: 0 4px;
+}
+
+.pixel-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.pixel-dots .dot {
+  width: 4px;
+  height: 4px;
+  background: var(--text-muted);
+}
+
+/* CRT corner vignette */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 60%,
+    rgba(0,0,0,0.3) 100%
+  );
+}
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+  <!-- ========== PAGE TITLE ========== -->
+  <div class="page-title-bar">
+    <h1>DRAG & DROP</h1>
+    <span class="subtitle">PIXEL INTERACTION STATES</span>
+    <span class="agent-badge">AGENT 9</span>
+  </div>
+
+  <div class="demos-grid">
+
+    <!-- ========== SECTION 1: PICK UP & SOURCE GAP ========== -->
+    <div class="pixel-window">
+      <div class="window-title">
+        <span class="title-text"><span class="title-icon">1</span> CARD PICKUP + SOURCE GAP</span>
+        <span class="window-controls"><span>-</span><span>o</span><span>x</span></span>
+      </div>
+      <div class="window-body">
+        <div class="showcase-row">
+          <!-- Default state -->
+          <div class="showcase-item">
+            <div class="showcase-label">DEFAULT</div>
+            <div class="showcase-card-wrap">
+              <div class="quest-card">
+                <div class="card-header">
+                  <span class="card-priority" title="Medium">&#9876;</span>
+                  <span class="card-id">#QST-142</span>
+                </div>
+                <div class="card-title">Setup auth flow for agents</div>
+                <div class="card-labels">
+                  <span class="label-pill frontend">FRONTEND</span>
+                </div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite blue"></div>
+                    <span class="agent-name">Agent-2</span>
+                  </div>
+                  <span class="card-xp">+25 XP</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Picked up state -->
+          <div class="showcase-item">
+            <div class="showcase-label">PICKED UP</div>
+            <div class="showcase-card-wrap">
+              <div class="quest-card picked-up">
+                <div class="card-header">
+                  <span class="card-priority" title="Medium">&#9876;</span>
+                  <span class="card-id">#QST-142</span>
+                </div>
+                <div class="card-title">Setup auth flow for agents</div>
+                <div class="card-labels">
+                  <span class="label-pill frontend">FRONTEND</span>
+                </div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite blue"></div>
+                    <span class="agent-name">Agent-2</span>
+                  </div>
+                  <span class="card-xp">+25 XP</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Source gap -->
+          <div class="showcase-item">
+            <div class="showcase-label">SOURCE GAP</div>
+            <div class="showcase-card-wrap">
+              <div class="source-gap"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== SECTION 2: TARGET INDICATOR ========== -->
+    <div class="pixel-window">
+      <div class="window-title">
+        <span class="title-text"><span class="title-icon">2</span> TARGET INDICATOR</span>
+        <span class="window-controls"><span>-</span><span>o</span><span>x</span></span>
+      </div>
+      <div class="window-body">
+        <div style="display:flex; gap:24px;">
+          <!-- Simple line -->
+          <div style="flex:1;">
+            <div class="showcase-label" style="margin-bottom:10px;">BETWEEN CARDS</div>
+            <div style="width:220px;">
+              <div class="quest-card" style="margin-bottom:0;">
+                <div class="card-header">
+                  <span class="card-priority">&#128293;</span>
+                  <span class="card-id">#QST-088</span>
+                </div>
+                <div class="card-title">Deploy staging env</div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite green"></div>
+                    <span class="agent-name">Agent-4</span>
+                  </div>
+                  <span class="card-xp">+40 XP</span>
+                </div>
+              </div>
+              <div class="target-indicator-fancy"></div>
+              <div class="quest-card" style="animation: spread-down 0.2s steps(4) forwards;">
+                <div class="card-header">
+                  <span class="card-priority">&#9876;</span>
+                  <span class="card-id">#QST-102</span>
+                </div>
+                <div class="card-title">Write API docs</div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite"></div>
+                    <span class="agent-name">Agent-1</span>
+                  </div>
+                  <span class="card-xp">+15 XP</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- With spread -->
+          <div style="flex:1;">
+            <div class="showcase-label" style="margin-bottom:10px;">CARDS SPREADING</div>
+            <div style="width:220px; display:flex; flex-direction:column; gap:6px;">
+              <div class="quest-card spread-up">
+                <div class="card-header">
+                  <span class="card-priority">&#128128;</span>
+                  <span class="card-id">#QST-003</span>
+                </div>
+                <div class="card-title">Fix critical auth bug</div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite red"></div>
+                    <span class="agent-name">Agent-7</span>
+                  </div>
+                  <span class="card-xp">+80 XP</span>
+                </div>
+              </div>
+              <div class="target-indicator"></div>
+              <div class="quest-card spread-down">
+                <div class="card-header">
+                  <span class="card-priority">&#9876;</span>
+                  <span class="card-id">#QST-044</span>
+                </div>
+                <div class="card-title">Update color theme</div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite orange"></div>
+                    <span class="agent-name">Agent-3</span>
+                  </div>
+                  <span class="card-xp">+20 XP</span>
+                </div>
+              </div>
+              <div class="quest-card spread-down">
+                <div class="card-header">
+                  <span class="card-priority">&#129526;</span>
+                  <span class="card-id">#QST-051</span>
+                </div>
+                <div class="card-title">Add tooltip hints</div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite blue"></div>
+                    <span class="agent-name">Agent-5</span>
+                  </div>
+                  <span class="card-xp">+10 XP</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== SECTION 3: INVALID DROP ========== -->
+    <div class="pixel-window">
+      <div class="window-title">
+        <span class="title-text"><span class="title-icon">3</span> INVALID DROP + SHAKE</span>
+        <span class="window-controls"><span>-</span><span>o</span><span>x</span></span>
+      </div>
+      <div class="window-body">
+        <div class="showcase-row">
+          <div class="showcase-item">
+            <div class="showcase-label">RED X FLASH</div>
+            <div class="showcase-card-wrap">
+              <div class="quest-card invalid-drop" style="position:relative;">
+                <div class="invalid-x-overlay">X</div>
+                <div class="card-header">
+                  <span class="card-priority">&#128293;</span>
+                  <span class="card-id">#QST-088</span>
+                </div>
+                <div class="card-title">Deploy staging env</div>
+                <div class="card-labels">
+                  <span class="label-pill bug">BUG</span>
+                  <span class="label-pill urgent">URGENT</span>
+                </div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite green"></div>
+                    <span class="agent-name">Agent-4</span>
+                  </div>
+                  <span class="card-xp">+40 XP</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="showcase-item">
+            <div class="showcase-label">SHAKE ANIM</div>
+            <div class="showcase-card-wrap" id="shake-demo-wrap">
+              <div class="quest-card" id="shake-demo-card">
+                <div class="card-header">
+                  <span class="card-priority">&#9876;</span>
+                  <span class="card-id">#QST-221</span>
+                </div>
+                <div class="card-title">Refactor DB schema</div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite"></div>
+                    <span class="agent-name">Agent-6</span>
+                  </div>
+                  <span class="card-xp">+30 XP</span>
+                </div>
+              </div>
+              <div style="margin-top:8px; text-align:center;">
+                <button class="state-btn" onclick="triggerShake()">TRIGGER SHAKE</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== SECTION 4: EMPTY COLUMN DROP + SPARKLE ========== -->
+    <div class="pixel-window">
+      <div class="window-title">
+        <span class="title-text"><span class="title-icon">4</span> EMPTY COL DROP + SPARKLE</span>
+        <span class="window-controls"><span>-</span><span>o</span><span>x</span></span>
+      </div>
+      <div class="window-body">
+        <div class="showcase-row">
+          <div class="showcase-item">
+            <div class="showcase-label">SPARKLE BURST</div>
+            <div class="empty-sparkle-zone">
+              <div class="sparkle-container" style="position:relative; width:40px; height:40px;">
+                <span class="sparkle star s1">*</span>
+                <span class="sparkle star s2">+</span>
+                <span class="sparkle star s3">*</span>
+                <span class="sparkle star s4">+</span>
+                <span class="sparkle star s5">*</span>
+                <span class="sparkle star s6">+</span>
+              </div>
+              <span class="drop-here-text">DROP HERE</span>
+            </div>
+          </div>
+
+          <div class="showcase-item">
+            <div class="showcase-label">QUEST ACCEPTED!</div>
+            <div style="position:relative; height:80px; display:flex; align-items:center; justify-content:center;">
+              <div class="quest-accepted-text">QUEST ACCEPTED!</div>
+            </div>
+            <div class="showcase-label" style="margin-top: 4px;">CARD SETTLED</div>
+            <div class="showcase-card-wrap">
+              <div class="quest-card settling" style="border-color: var(--green);">
+                <div class="card-header">
+                  <span class="card-priority">&#9876;</span>
+                  <span class="card-id">#QST-310</span>
+                </div>
+                <div class="card-title">New quest just dropped!</div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite orange"></div>
+                    <span class="agent-name">Agent-9</span>
+                  </div>
+                  <span class="card-xp">+50 XP</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== SECTION 5: MULTI-SELECT ========== -->
+    <div class="pixel-window demo-full-width">
+      <div class="window-title">
+        <span class="title-text"><span class="title-icon">5</span> MULTI-SELECT DRAG</span>
+        <span class="window-controls"><span>-</span><span>o</span><span>x</span></span>
+      </div>
+      <div class="window-body">
+        <div class="showcase-row">
+          <!-- Individual selected cards -->
+          <div class="showcase-item" style="flex:0.7;">
+            <div class="showcase-label">SELECTED CARDS</div>
+            <div style="display:flex; flex-direction:column; gap:6px; width:220px;">
+              <div class="quest-card" style="border-color: var(--orange); box-shadow: inset 0 0 0 1px rgba(255,112,0,0.2);">
+                <div class="card-select-check checked">&#10003;</div>
+                <div class="card-header" style="padding-left:16px;">
+                  <span class="card-priority">&#128293;</span>
+                  <span class="card-id">#QST-005</span>
+                </div>
+                <div class="card-title" style="padding-left:16px;">Implement WebSocket layer</div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite blue"></div>
+                    <span class="agent-name">Agent-2</span>
+                  </div>
+                  <span class="card-xp">+60 XP</span>
+                </div>
+              </div>
+              <div class="quest-card" style="border-color: var(--orange); box-shadow: inset 0 0 0 1px rgba(255,112,0,0.2);">
+                <div class="card-select-check checked">&#10003;</div>
+                <div class="card-header" style="padding-left:16px;">
+                  <span class="card-priority">&#9876;</span>
+                  <span class="card-id">#QST-018</span>
+                </div>
+                <div class="card-title" style="padding-left:16px;">Add rate limiter</div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite green"></div>
+                    <span class="agent-name">Agent-4</span>
+                  </div>
+                  <span class="card-xp">+35 XP</span>
+                </div>
+              </div>
+              <div class="quest-card" style="border-color: var(--orange); box-shadow: inset 0 0 0 1px rgba(255,112,0,0.2);">
+                <div class="card-select-check checked">&#10003;</div>
+                <div class="card-header" style="padding-left:16px;">
+                  <span class="card-priority">&#129526;</span>
+                  <span class="card-id">#QST-027</span>
+                </div>
+                <div class="card-title" style="padding-left:16px;">Update tooltip styles</div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite"></div>
+                    <span class="agent-name">Agent-1</span>
+                  </div>
+                  <span class="card-xp">+15 XP</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stacked being dragged -->
+          <div class="showcase-item" style="flex:0.6;">
+            <div class="showcase-label">MULTI-DRAG STACK</div>
+            <div style="padding: 20px 0 20px 10px;">
+              <div class="multi-stack">
+                <div class="stack-shadow-2"></div>
+                <div class="stack-shadow-1"></div>
+                <div class="quest-card picked-up" style="width:220px; position:relative;">
+                  <div class="card-header">
+                    <span class="card-priority">&#128293;</span>
+                    <span class="card-id">#QST-005</span>
+                  </div>
+                  <div class="card-title">Implement WebSocket layer</div>
+                  <div class="card-footer">
+                    <div class="card-agent">
+                      <div class="agent-sprite blue"></div>
+                      <span class="agent-name">Agent-2</span>
+                    </div>
+                    <span class="card-xp">+60 XP</span>
+                  </div>
+                </div>
+                <div class="count-badge">3</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Source gaps for multi -->
+          <div class="showcase-item" style="flex:0.6;">
+            <div class="showcase-label">SOURCE GAPS</div>
+            <div style="display:flex; flex-direction:column; gap:6px; width:220px;">
+              <div class="source-gap" style="height: 56px;"></div>
+              <div class="quest-card">
+                <div class="card-header">
+                  <span class="card-priority">&#128128;</span>
+                  <span class="card-id">#QST-011</span>
+                </div>
+                <div class="card-title">Fix memory leak in worker</div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite red"></div>
+                    <span class="agent-name">Agent-7</span>
+                  </div>
+                  <span class="card-xp">+75 XP</span>
+                </div>
+              </div>
+              <div class="source-gap" style="height: 56px;"></div>
+              <div class="source-gap" style="height: 56px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== SECTION 6: INTERACTIVE DRAG & DROP DEMO ========== -->
+    <div class="pixel-window demo-full-width">
+      <div class="window-title">
+        <span class="title-text"><span class="title-icon">&#9733;</span> INTERACTIVE DEMO — TRY DRAGGING!</span>
+        <span class="window-controls"><span>-</span><span>o</span><span>x</span></span>
+      </div>
+      <div class="window-body">
+        <div class="state-controls">
+          <button class="state-btn" onclick="resetBoard()">RESET</button>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
+            <span class="pixel-diamond"></span>
+            Drag cards between columns. Drop on "DONE" to see sparkle + "QUEST ACCEPTED!" animation.
+          </span>
+        </div>
+        <div class="interactive-board" id="interactive-board">
+          <!-- Column: TODO -->
+          <div class="kanban-column" data-column="todo">
+            <div class="column-header">
+              <span class="col-icon">&#9876;</span>
+              <span>TODO</span>
+              <span class="col-count" data-count>3</span>
+            </div>
+            <div class="column-cards" data-cards>
+              <div class="quest-card" draggable="true" data-card-id="c1">
+                <div class="card-header">
+                  <span class="card-priority">&#128128;</span>
+                  <span class="card-id">#QST-301</span>
+                </div>
+                <div class="card-title">Slay the API dragon</div>
+                <div class="card-labels">
+                  <span class="label-pill bug">BUG</span>
+                </div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite red"></div>
+                    <span class="agent-name">Agent-7</span>
+                  </div>
+                  <span class="card-xp">+80 XP</span>
+                </div>
+              </div>
+              <div class="quest-card" draggable="true" data-card-id="c2">
+                <div class="card-header">
+                  <span class="card-priority">&#9876;</span>
+                  <span class="card-id">#QST-302</span>
+                </div>
+                <div class="card-title">Craft pixel sprite sheet</div>
+                <div class="card-labels">
+                  <span class="label-pill design">DESIGN</span>
+                </div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite"></div>
+                    <span class="agent-name">Agent-3</span>
+                  </div>
+                  <span class="card-xp">+45 XP</span>
+                </div>
+              </div>
+              <div class="quest-card" draggable="true" data-card-id="c3">
+                <div class="card-header">
+                  <span class="card-priority">&#129526;</span>
+                  <span class="card-id">#QST-303</span>
+                </div>
+                <div class="card-title">Write tavern NPC dialog</div>
+                <div class="card-labels">
+                  <span class="label-pill feature">FEATURE</span>
+                </div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite blue"></div>
+                    <span class="agent-name">Agent-1</span>
+                  </div>
+                  <span class="card-xp">+20 XP</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column: IN PROGRESS -->
+          <div class="kanban-column" data-column="progress">
+            <div class="column-header">
+              <span class="col-icon">&#128293;</span>
+              <span>IN PROGRESS</span>
+              <span class="col-count" data-count>1</span>
+            </div>
+            <div class="column-cards" data-cards>
+              <div class="quest-card" draggable="true" data-card-id="c4">
+                <div class="card-header">
+                  <span class="card-priority">&#128293;</span>
+                  <span class="card-id">#QST-304</span>
+                </div>
+                <div class="card-title">Forge the auth token ring</div>
+                <div class="card-labels">
+                  <span class="label-pill frontend">FRONTEND</span>
+                  <span class="label-pill urgent">URGENT</span>
+                </div>
+                <div class="card-footer">
+                  <div class="card-agent">
+                    <div class="agent-sprite orange"></div>
+                    <span class="agent-name">Agent-9</span>
+                  </div>
+                  <span class="card-xp">+65 XP</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column: DONE -->
+          <div class="kanban-column" data-column="done">
+            <div class="column-header">
+              <span class="col-icon">&#9733;</span>
+              <span>DONE</span>
+              <span class="col-count" data-count>0</span>
+            </div>
+            <div class="column-cards" data-cards>
+              <div class="empty-col-text">No quests completed...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== SECTION 7: STATE TRANSITION FLOW ========== -->
+    <div class="pixel-window demo-full-width">
+      <div class="window-title">
+        <span class="title-text"><span class="title-icon">&#9654;</span> STATE TRANSITION FLOW</span>
+        <span class="window-controls"><span>-</span><span>o</span><span>x</span></span>
+      </div>
+      <div class="window-body">
+        <div style="display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:nowrap; overflow-x:auto; padding: 8px 0;">
+          <!-- Step 1: Idle -->
+          <div style="text-align:center;">
+            <div class="showcase-label" style="margin-bottom:8px;">1. IDLE</div>
+            <div style="width:140px;">
+              <div class="quest-card" style="font-size:0;">
+                <div class="card-header">
+                  <span class="card-priority" style="font-size:10px;">&#9876;</span>
+                  <span class="card-id">#142</span>
+                </div>
+                <div class="card-title">Auth flow</div>
+              </div>
+            </div>
+          </div>
+
+          <span class="transition-arrow">&#9654;</span>
+
+          <!-- Step 2: Grabbed -->
+          <div style="text-align:center;">
+            <div class="showcase-label" style="margin-bottom:8px;">2. GRABBED</div>
+            <div style="width:140px;">
+              <div class="quest-card picked-up" style="font-size:0;">
+                <div class="card-header">
+                  <span class="card-priority" style="font-size:10px;">&#9876;</span>
+                  <span class="card-id">#142</span>
+                </div>
+                <div class="card-title">Auth flow</div>
+              </div>
+            </div>
+          </div>
+
+          <span class="transition-arrow">&#9654;</span>
+
+          <!-- Step 3: Over target -->
+          <div style="text-align:center;">
+            <div class="showcase-label" style="margin-bottom:8px;">3. OVER TARGET</div>
+            <div style="width:140px;">
+              <div style="border:2px solid var(--orange);background:rgba(255,112,0,0.03);padding:4px;">
+                <div style="height:4px;background:var(--orange);margin-bottom:4px;animation:target-glow 0.5s steps(1) infinite;"></div>
+                <div class="quest-card" style="font-size:0; opacity:0.5;">
+                  <div class="card-header">
+                    <span class="card-priority" style="font-size:10px;">&#128293;</span>
+                    <span class="card-id">#088</span>
+                  </div>
+                  <div class="card-title">Deploy</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <span class="transition-arrow">&#9654;</span>
+
+          <!-- Step 4: Dropped -->
+          <div style="text-align:center;">
+            <div class="showcase-label" style="margin-bottom:8px;">4. DROPPED</div>
+            <div style="width:140px;">
+              <div class="quest-card settling" style="font-size:0; border-color:var(--green);">
+                <div class="card-header">
+                  <span class="card-priority" style="font-size:10px;">&#9876;</span>
+                  <span class="card-id">#142</span>
+                </div>
+                <div class="card-title">Auth flow</div>
+              </div>
+            </div>
+          </div>
+
+          <span class="transition-arrow">&#9654;</span>
+
+          <!-- Step 5: Settled -->
+          <div style="text-align:center;">
+            <div class="showcase-label" style="margin-bottom:8px;">5. SETTLED</div>
+            <div style="width:140px;">
+              <div class="quest-card" style="font-size:0;">
+                <div class="card-header">
+                  <span class="card-priority" style="font-size:10px;">&#9876;</span>
+                  <span class="card-id">#142</span>
+                </div>
+                <div class="card-title">Auth flow</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-divider"><span>INVALID PATH</span></div>
+
+        <div style="display:flex; align-items:center; justify-content:center; gap:12px; padding: 4px 0;">
+          <div style="text-align:center;">
+            <div class="showcase-label" style="margin-bottom:8px;">GRABBED</div>
+            <div style="width:140px;">
+              <div class="quest-card picked-up" style="font-size:0;">
+                <div class="card-header">
+                  <span class="card-priority" style="font-size:10px;">&#9876;</span>
+                  <span class="card-id">#142</span>
+                </div>
+                <div class="card-title">Auth flow</div>
+              </div>
+            </div>
+          </div>
+
+          <span class="transition-arrow">&#9654;</span>
+
+          <div style="text-align:center;">
+            <div class="showcase-label" style="margin-bottom:8px;">INVALID TARGET</div>
+            <div style="width:140px; border:2px solid var(--red); background:rgba(253,63,41,0.05); padding:4px;">
+              <div style="font-family:'Press Start 2P',monospace; font-size:8px; color:var(--red); text-align:center; padding:8px 0; animation: x-flash 0.5s steps(1) infinite;">&#10007; BLOCKED</div>
+            </div>
+          </div>
+
+          <span class="transition-arrow">&#9654;</span>
+
+          <div style="text-align:center;">
+            <div class="showcase-label" style="margin-bottom:8px;">SHAKE + RETURN</div>
+            <div style="width:140px;">
+              <div class="quest-card invalid-drop" style="font-size:0; position:relative;">
+                <div class="invalid-x-overlay" style="font-size:16px;">X</div>
+                <div class="card-header">
+                  <span class="card-priority" style="font-size:10px;">&#9876;</span>
+                  <span class="card-id">#142</span>
+                </div>
+                <div class="card-title">Auth flow</div>
+              </div>
+            </div>
+          </div>
+
+          <span class="transition-arrow">&#9654;</span>
+
+          <div style="text-align:center;">
+            <div class="showcase-label" style="margin-bottom:8px;">BACK TO IDLE</div>
+            <div style="width:140px;">
+              <div class="quest-card" style="font-size:0;">
+                <div class="card-header">
+                  <span class="card-priority" style="font-size:10px;">&#9876;</span>
+                  <span class="card-id">#142</span>
+                </div>
+                <div class="card-title">Auth flow</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /demos-grid -->
+
+  <!-- ========== FOOTER ========== -->
+  <div class="footer-info">
+    <span class="stat">States: <span>7</span></span>
+    <span class="stat">Animations: <span>12</span></span>
+    <span class="stat">Timing: <span>steps(N)</span></span>
+    <span class="stat">Shadow: <span>4px hard</span></span>
+    <span class="stat">Snap: <span>2px grid</span></span>
+    <span class="hint">&#9654; ALL ANIMATIONS USE STEPPED TIMING</span>
+  </div>
+</div><!-- /page-wrapper -->
+
+<script>
+// ================================================================
+// SHAKE DEMO
+// ================================================================
+function triggerShake() {
+  const card = document.getElementById('shake-demo-card');
+  card.classList.remove('invalid-drop');
+  // Force reflow
+  void card.offsetWidth;
+  card.classList.add('invalid-drop');
+  card.style.position = 'relative';
+
+  // Add X overlay
+  let overlay = card.querySelector('.invalid-x-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.className = 'invalid-x-overlay';
+    overlay.textContent = 'X';
+    card.appendChild(overlay);
+  }
+  overlay.style.display = 'flex';
+
+  setTimeout(() => {
+    card.classList.remove('invalid-drop');
+    if (overlay) overlay.style.display = 'none';
+  }, 800);
+}
+
+// ================================================================
+// INTERACTIVE DRAG & DROP
+// ================================================================
+(function() {
+  const board = document.getElementById('interactive-board');
+  if (!board) return;
+
+  let draggedCard = null;
+  let dragGhost = null;
+  let sourceColumn = null;
+  let sourceGap = null;
+  let dropIndicator = null;
+
+  // Get all draggable cards
+  function getCards() {
+    return board.querySelectorAll('.quest-card[draggable="true"]');
+  }
+
+  function updateCounts() {
+    board.querySelectorAll('.kanban-column').forEach(col => {
+      const cards = col.querySelectorAll('.quest-card[draggable="true"]');
+      const countEl = col.querySelector('[data-count]');
+      if (countEl) countEl.textContent = cards.length;
+
+      // Handle empty state
+      const cardsContainer = col.querySelector('[data-cards]');
+      const emptyText = cardsContainer.querySelector('.empty-col-text');
+      if (cards.length === 0 && !emptyText) {
+        const et = document.createElement('div');
+        et.className = 'empty-col-text';
+        et.textContent = 'Drop quest here...';
+        cardsContainer.appendChild(et);
+      } else if (cards.length > 0 && emptyText) {
+        emptyText.remove();
+      }
+    });
+  }
+
+  function createSourceGap(card) {
+    const gap = document.createElement('div');
+    gap.className = 'source-gap';
+    gap.style.height = card.offsetHeight + 'px';
+    return gap;
+  }
+
+  function createDropIndicator() {
+    const ind = document.createElement('div');
+    ind.className = 'drop-indicator visible';
+    return ind;
+  }
+
+  function removeDropIndicator() {
+    if (dropIndicator && dropIndicator.parentNode) {
+      dropIndicator.parentNode.removeChild(dropIndicator);
+    }
+    dropIndicator = null;
+  }
+
+  function showQuestAccepted(x, y) {
+    const popup = document.createElement('div');
+    popup.className = 'quest-accepted-popup';
+    popup.style.left = (x - 70) + 'px';
+    popup.style.top = (y - 10) + 'px';
+    popup.innerHTML = '<span class="text">QUEST ACCEPTED!</span>';
+    document.body.appendChild(popup);
+    setTimeout(() => popup.remove(), 1200);
+  }
+
+  function showSparkles(container) {
+    const sparkleBox = document.createElement('div');
+    sparkleBox.className = 'sparkle-container';
+    sparkleBox.style.position = 'absolute';
+    sparkleBox.style.top = '50%';
+    sparkleBox.style.left = '50%';
+    sparkleBox.style.width = '40px';
+    sparkleBox.style.height = '40px';
+    sparkleBox.style.transform = 'translate(-50%, -50%)';
+    sparkleBox.style.pointerEvents = 'none';
+    sparkleBox.style.zIndex = '100';
+
+    const chars = ['*', '+', '*', '+', '*', '+'];
+    const classes = ['s1','s2','s3','s4','s5','s6'];
+    for (let i = 0; i < 6; i++) {
+      const s = document.createElement('span');
+      s.className = `sparkle star ${classes[i]}`;
+      s.textContent = chars[i];
+      sparkleBox.appendChild(s);
+    }
+
+    container.style.position = 'relative';
+    container.appendChild(sparkleBox);
+    setTimeout(() => sparkleBox.remove(), 800);
+  }
+
+  // --- Drag Start ---
+  board.addEventListener('dragstart', (e) => {
+    const card = e.target.closest('.quest-card[draggable="true"]');
+    if (!card) return;
+
+    draggedCard = card;
+    sourceColumn = card.closest('.kanban-column');
+
+    // Create source gap
+    sourceGap = createSourceGap(card);
+
+    // Use setTimeout to allow the drag image to be captured first
+    setTimeout(() => {
+      card.classList.add('dragging');
+      card.parentNode.insertBefore(sourceGap, card);
+    }, 0);
+
+    // Set drag data
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', card.dataset.cardId);
+
+    // Create custom drag ghost
+    dragGhost = card.cloneNode(true);
+    dragGhost.classList.remove('dragging');
+    dragGhost.classList.add('drag-ghost');
+    dragGhost.style.width = card.offsetWidth + 'px';
+    document.body.appendChild(dragGhost);
+    e.dataTransfer.setDragImage(dragGhost, card.offsetWidth / 2, 20);
+  });
+
+  // --- Drag Over ---
+  board.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+
+    const column = e.target.closest('.kanban-column');
+    if (!column) return;
+
+    // Highlight column
+    board.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('drag-over'));
+    column.classList.add('drag-over');
+
+    const cardsContainer = column.querySelector('[data-cards]');
+    const cards = [...cardsContainer.querySelectorAll('.quest-card[draggable="true"]:not(.dragging)')];
+
+    // Remove old indicator
+    removeDropIndicator();
+
+    if (cards.length === 0) {
+      // Empty column - indicator at top
+      dropIndicator = createDropIndicator();
+      cardsContainer.insertBefore(dropIndicator, cardsContainer.firstChild);
+      return;
+    }
+
+    // Find insertion point
+    const mouseY = e.clientY;
+    let insertBefore = null;
+
+    for (const c of cards) {
+      const rect = c.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      if (mouseY < mid) {
+        insertBefore = c;
+        break;
+      }
+    }
+
+    dropIndicator = createDropIndicator();
+    if (insertBefore) {
+      cardsContainer.insertBefore(dropIndicator, insertBefore);
+    } else {
+      cardsContainer.appendChild(dropIndicator);
+    }
+  });
+
+  // --- Drag Leave ---
+  board.addEventListener('dragleave', (e) => {
+    const column = e.target.closest('.kanban-column');
+    if (column && !column.contains(e.relatedTarget)) {
+      column.classList.remove('drag-over');
+    }
+  });
+
+  // --- Drop ---
+  board.addEventListener('drop', (e) => {
+    e.preventDefault();
+
+    const column = e.target.closest('.kanban-column');
+    if (!column || !draggedCard) return;
+
+    const cardsContainer = column.querySelector('[data-cards]');
+    const isDoneColumn = column.dataset.column === 'done';
+    const wasEmptyColumn = cardsContainer.querySelectorAll('.quest-card[draggable="true"]').length === 0;
+
+    // Remove source gap
+    if (sourceGap && sourceGap.parentNode) {
+      sourceGap.parentNode.removeChild(sourceGap);
+      sourceGap = null;
+    }
+
+    // Remove empty text
+    const emptyText = cardsContainer.querySelector('.empty-col-text');
+    if (emptyText) emptyText.remove();
+
+    // Insert card at indicator position
+    draggedCard.classList.remove('dragging');
+
+    if (dropIndicator && dropIndicator.parentNode === cardsContainer) {
+      cardsContainer.insertBefore(draggedCard, dropIndicator);
+    } else {
+      cardsContainer.appendChild(draggedCard);
+    }
+
+    removeDropIndicator();
+
+    // Settle animation
+    draggedCard.classList.add('settling');
+    setTimeout(() => {
+      draggedCard.classList.remove('settling');
+      draggedCard.style.borderColor = '';
+    }, 400);
+
+    // Sparkle + Quest Accepted for DONE column
+    if (isDoneColumn) {
+      showSparkles(cardsContainer);
+      const rect = draggedCard.getBoundingClientRect();
+      showQuestAccepted(rect.left + rect.width / 2, rect.top);
+    }
+
+    // Clean up
+    board.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('drag-over'));
+    updateCounts();
+
+    draggedCard = null;
+    sourceColumn = null;
+  });
+
+  // --- Drag End ---
+  board.addEventListener('dragend', (e) => {
+    // Clean up if drop didn't happen (invalid drop)
+    if (draggedCard) {
+      draggedCard.classList.remove('dragging');
+
+      // Shake animation for cancelled drag
+      if (sourceGap && sourceGap.parentNode) {
+        sourceGap.parentNode.insertBefore(draggedCard, sourceGap);
+        sourceGap.parentNode.removeChild(sourceGap);
+        sourceGap = null;
+      }
+
+      // Show invalid shake
+      draggedCard.classList.add('invalid-drop');
+      draggedCard.style.position = 'relative';
+      const overlay = document.createElement('div');
+      overlay.className = 'invalid-x-overlay';
+      overlay.textContent = 'X';
+      draggedCard.appendChild(overlay);
+
+      setTimeout(() => {
+        draggedCard.classList.remove('invalid-drop');
+        overlay.remove();
+        draggedCard = null;
+      }, 600);
+    }
+
+    // Remove ghost
+    if (dragGhost) {
+      dragGhost.remove();
+      dragGhost = null;
+    }
+
+    removeDropIndicator();
+    board.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('drag-over'));
+    sourceColumn = null;
+  });
+
+  // Initial count
+  updateCounts();
+})();
+
+// ================================================================
+// RESET BOARD
+// ================================================================
+function resetBoard() {
+  location.reload();
+}
+</script>
+
+</body>
+</html>

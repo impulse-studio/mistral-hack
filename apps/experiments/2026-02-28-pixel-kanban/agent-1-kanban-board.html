@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>Quest Board — AI Office</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Mistral Pixel Palette */
+  --bg-deep:       #0D0D11;
+  --bg-surface:    #14141A;
+  --bg-elevated:   #1C1C24;
+  --border:        #2E2E3A;
+  --border-hover:  #3E3E4E;
+  --text-primary:  #E8E8F0;
+  --text-secondary:#9898A8;
+  --text-muted:    #5E5E6E;
+  --orange:        #FF7000;
+  --red:           #FD3F29;
+  --yellow:        #FFCB00;
+  --green:         #22C55E;
+  --blue:          #3B82F6;
+  --purple:        #A855F7;
+  --pixel-white:   #F0F0FF;
+
+  /* Pixel sizing */
+  --px: 2px;
+  --border-w: 3px;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  font-smooth: never;
+  image-rendering: pixelated;
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Inter', 'JetBrains Mono', monospace;
+  min-height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ============================================================
+   SCANLINE OVERLAY
+   ============================================================ */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+}
+
+/* ============================================================
+   PIXEL FONT CLASSES
+   ============================================================ */
+.pixel-font {
+  font-family: 'Press Start 2P', monospace;
+  letter-spacing: 1px;
+}
+
+.mono-font {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ============================================================
+   PIXEL BORDER MIXIN (via box-shadow)
+   ============================================================ */
+.pixel-border {
+  border: var(--border-w) solid var(--border);
+  box-shadow:
+    inset 1px 1px 0 rgba(240,240,255,0.05),
+    inset -1px -1px 0 rgba(0,0,0,0.3),
+    3px 3px 0 rgba(0,0,0,0.5);
+}
+
+.pixel-border-highlight {
+  border: var(--border-w) solid var(--border-hover);
+  box-shadow:
+    inset 1px 1px 0 rgba(240,240,255,0.08),
+    inset -1px -1px 0 rgba(0,0,0,0.4),
+    4px 4px 0 rgba(0,0,0,0.6);
+}
+
+/* ============================================================
+   BOARD TITLE BAR
+   ============================================================ */
+.board-title-bar {
+  background: var(--bg-surface);
+  border-bottom: var(--border-w) solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.4);
+}
+
+.board-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.board-title h1 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: var(--orange);
+  text-shadow:
+    2px 2px 0 rgba(0,0,0,0.6),
+    0 0 20px rgba(255,112,0,0.3);
+  letter-spacing: 2px;
+}
+
+.board-title .sword-icon {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  position: relative;
+}
+
+/* Pixel art sword via CSS */
+.sword-icon::before {
+  content: '';
+  position: absolute;
+  width: 4px; height: 4px;
+  background: var(--pixel-white);
+  box-shadow:
+    /* blade */
+    4px -4px 0 var(--pixel-white),
+    8px -8px 0 var(--pixel-white),
+    12px -12px 0 var(--text-secondary),
+    16px -16px 0 var(--text-secondary),
+    /* hilt */
+    -4px 4px 0 var(--yellow),
+    0px 4px 0 var(--yellow),
+    4px 4px 0 var(--yellow),
+    /* grip */
+    -4px 8px 0 #8B4513,
+    -4px 12px 0 #8B4513;
+  top: 8px; left: 4px;
+  image-rendering: pixelated;
+}
+
+.board-title .pixel-decoration {
+  color: var(--text-muted);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  letter-spacing: 4px;
+}
+
+/* Window controls */
+.window-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.win-btn {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: var(--bg-elevated);
+  transition: none;
+}
+.win-btn:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+  background: var(--border);
+}
+
+/* ============================================================
+   BOARD CONTAINER
+   ============================================================ */
+.board-container {
+  display: flex;
+  gap: 16px;
+  padding: 16px 20px;
+  height: calc(100vh - 56px - 48px); /* minus title bar and stats bar */
+  overflow-x: auto;
+  overflow-y: hidden;
+  align-items: flex-start;
+}
+
+/* Pixel scrollbar */
+.board-container::-webkit-scrollbar {
+  height: 10px;
+}
+.board-container::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+  border-top: 2px solid var(--border);
+}
+.board-container::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border: 2px solid var(--border);
+  image-rendering: pixelated;
+}
+.board-container::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ============================================================
+   COLUMNS
+   ============================================================ */
+.column {
+  min-width: 268px;
+  max-width: 268px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border: var(--border-w) solid var(--border);
+  box-shadow:
+    inset 1px 1px 0 rgba(240,240,255,0.04),
+    inset -1px -1px 0 rgba(0,0,0,0.3),
+    4px 4px 0 rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  position: relative;
+}
+
+/* Column pixel patterns via pseudo */
+.column::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  opacity: 0.03;
+  z-index: 0;
+}
+
+.column.col-backlog::before {
+  background-image: radial-gradient(circle, var(--text-muted) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+.column.col-todo::before {
+  background-image:
+    linear-gradient(45deg, var(--pixel-white) 1px, transparent 1px),
+    linear-gradient(-45deg, var(--pixel-white) 1px, transparent 1px);
+  background-size: 8px 8px;
+}
+.column.col-progress::before {
+  background-image:
+    linear-gradient(0deg, var(--orange) 1px, transparent 1px),
+    linear-gradient(90deg, var(--orange) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+.column.col-review::before {
+  background-image: radial-gradient(circle, var(--yellow) 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+.column.col-done::before {
+  background-image:
+    linear-gradient(45deg, var(--green) 1px, transparent 1px);
+  background-size: 6px 6px;
+}
+
+/* Column header */
+.column-header {
+  padding: 12px 12px 10px;
+  border-bottom: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(28,28,36,0.8) 0%, transparent 100%);
+}
+
+.column-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.col-icon {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+  image-rendering: pixelated;
+}
+
+.col-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+
+.col-count {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  background: var(--bg-deep);
+  border: 2px solid var(--border);
+  padding: 2px 6px;
+  min-width: 24px;
+  text-align: center;
+}
+
+/* Column-specific title colors */
+.col-backlog .col-title { color: var(--text-secondary); }
+.col-todo .col-title { color: var(--pixel-white); }
+.col-progress .col-title { color: var(--orange); }
+.col-review .col-title { color: var(--yellow); }
+.col-done .col-title { color: var(--green); }
+
+/* Column body */
+.column-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Pixel scrollbar for columns */
+.column-body::-webkit-scrollbar {
+  width: 8px;
+}
+.column-body::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+  border-left: 2px solid var(--border);
+}
+.column-body::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border: 2px solid var(--border);
+}
+.column-body::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Add Quest button */
+.add-quest-btn {
+  padding: 8px 12px;
+  border-top: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-muted);
+  background: transparent;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  position: relative;
+  z-index: 1;
+  transition: none;
+  letter-spacing: 1px;
+}
+
+.add-quest-btn:hover {
+  color: var(--orange);
+  background: rgba(255,112,0,0.06);
+}
+
+.add-quest-btn .plus-icon {
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* ============================================================
+   QUEST CARDS
+   ============================================================ */
+.quest-card {
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  padding: 10px;
+  cursor: pointer;
+  position: relative;
+  box-shadow:
+    inset 1px 1px 0 rgba(240,240,255,0.04),
+    2px 2px 0 rgba(0,0,0,0.4);
+  transition: none;
+}
+
+.quest-card:hover {
+  border-color: var(--border-hover);
+  box-shadow:
+    inset 1px 1px 0 rgba(240,240,255,0.06),
+    3px 3px 0 rgba(0,0,0,0.5);
+  transform: translate(-1px, -1px);
+}
+
+/* Priority stripe on left */
+.quest-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+.quest-card.priority-urgent::before { background: var(--red); }
+.quest-card.priority-high::before { background: var(--orange); }
+.quest-card.priority-medium::before { background: var(--yellow); }
+.quest-card.priority-low::before { background: var(--text-muted); }
+.quest-card.priority-none::before { background: var(--border); }
+
+/* Urgent card pulsing glow */
+.quest-card.priority-urgent {
+  animation: urgentPulse 2s steps(4) infinite;
+}
+
+@keyframes urgentPulse {
+  0%, 100% { box-shadow: inset 1px 1px 0 rgba(240,240,255,0.04), 2px 2px 0 rgba(0,0,0,0.4), 0 0 0 0 rgba(253,63,41,0); }
+  50% { box-shadow: inset 1px 1px 0 rgba(240,240,255,0.04), 2px 2px 0 rgba(0,0,0,0.4), 0 0 0 2px rgba(253,63,41,0.25); }
+}
+
+/* Card header row */
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.card-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.card-xp {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--yellow);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.card-xp .star {
+  color: var(--yellow);
+  font-size: 10px;
+}
+
+/* Priority icon */
+.priority-icon {
+  font-size: 10px;
+  margin-right: 4px;
+}
+
+/* Card title */
+.card-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+/* Labels */
+.card-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.label-pill {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5px;
+  padding: 2px 6px;
+  border: 2px solid;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.label-pill.label-frontend { color: var(--blue); border-color: var(--blue); background: rgba(59,130,246,0.1); }
+.label-pill.label-backend { color: var(--purple); border-color: var(--purple); background: rgba(168,85,247,0.1); }
+.label-pill.label-bug { color: var(--red); border-color: var(--red); background: rgba(253,63,41,0.1); }
+.label-pill.label-feature { color: var(--green); border-color: var(--green); background: rgba(34,197,94,0.1); }
+.label-pill.label-design { color: var(--yellow); border-color: var(--yellow); background: rgba(255,203,0,0.1); }
+.label-pill.label-ai { color: var(--orange); border-color: var(--orange); background: rgba(255,112,0,0.1); }
+.label-pill.label-devops { color: #06B6D4; border-color: #06B6D4; background: rgba(6,182,212,0.1); }
+.label-pill.label-docs { color: var(--text-secondary); border-color: var(--text-secondary); background: rgba(152,152,168,0.1); }
+
+/* Card footer */
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Agent avatar (pixel sprite) */
+.agent-avatar {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  image-rendering: pixelated;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-deep);
+}
+
+/* CSS pixel art agent sprites */
+.agent-avatar .sprite {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+}
+
+/* Agent 1 - Coder (blue) */
+.agent-coder {
+  background: var(--bg-deep);
+}
+.agent-coder::after {
+  content: '';
+  position: absolute;
+  width: 2px; height: 2px;
+  top: 2px; left: 6px;
+  background: var(--blue);
+  box-shadow:
+    /* head */
+    2px 0 0 var(--blue),
+    4px 0 0 var(--blue),
+    0px 2px 0 var(--blue),
+    2px 2px 0 #D4A574,
+    4px 2px 0 #D4A574,
+    6px 2px 0 var(--blue),
+    0px 4px 0 #D4A574,
+    2px 4px 0 #D4A574,
+    4px 4px 0 #D4A574,
+    6px 4px 0 #D4A574,
+    2px 6px 0 var(--blue),
+    4px 6px 0 var(--blue),
+    0px 6px 0 #D4A574,
+    6px 6px 0 #D4A574,
+    /* body */
+    2px 8px 0 var(--blue),
+    4px 8px 0 var(--blue),
+    0px 8px 0 var(--blue),
+    6px 8px 0 var(--blue),
+    2px 10px 0 var(--blue),
+    4px 10px 0 var(--blue),
+    /* legs */
+    2px 12px 0 #4A4A5E,
+    4px 12px 0 #4A4A5E,
+    2px 14px 0 #3A3A4E,
+    4px 14px 0 #3A3A4E;
+  image-rendering: pixelated;
+}
+
+/* Agent 2 - Researcher (purple) */
+.agent-researcher {
+  background: var(--bg-deep);
+}
+.agent-researcher::after {
+  content: '';
+  position: absolute;
+  width: 2px; height: 2px;
+  top: 2px; left: 6px;
+  background: var(--purple);
+  box-shadow:
+    2px 0 0 var(--purple),
+    4px 0 0 var(--purple),
+    0px 2px 0 var(--purple),
+    2px 2px 0 #C49A6C,
+    4px 2px 0 #C49A6C,
+    6px 2px 0 var(--purple),
+    0px 4px 0 #C49A6C,
+    2px 4px 0 #C49A6C,
+    4px 4px 0 #C49A6C,
+    6px 4px 0 #C49A6C,
+    2px 6px 0 var(--purple),
+    4px 6px 0 var(--purple),
+    0px 6px 0 #C49A6C,
+    6px 6px 0 #C49A6C,
+    2px 8px 0 var(--purple),
+    4px 8px 0 var(--purple),
+    0px 8px 0 var(--purple),
+    6px 8px 0 var(--purple),
+    2px 10px 0 var(--purple),
+    4px 10px 0 var(--purple),
+    2px 12px 0 #4A4A5E,
+    4px 12px 0 #4A4A5E,
+    2px 14px 0 #3A3A4E,
+    4px 14px 0 #3A3A4E;
+  image-rendering: pixelated;
+}
+
+/* Agent 3 - Designer (yellow) */
+.agent-designer {
+  background: var(--bg-deep);
+}
+.agent-designer::after {
+  content: '';
+  position: absolute;
+  width: 2px; height: 2px;
+  top: 2px; left: 6px;
+  background: var(--yellow);
+  box-shadow:
+    2px 0 0 var(--yellow),
+    4px 0 0 var(--yellow),
+    0px 2px 0 var(--yellow),
+    2px 2px 0 #E8B88A,
+    4px 2px 0 #E8B88A,
+    6px 2px 0 var(--yellow),
+    0px 4px 0 #E8B88A,
+    2px 4px 0 #E8B88A,
+    4px 4px 0 #E8B88A,
+    6px 4px 0 #E8B88A,
+    2px 6px 0 var(--yellow),
+    4px 6px 0 var(--yellow),
+    0px 6px 0 #E8B88A,
+    6px 6px 0 #E8B88A,
+    2px 8px 0 var(--yellow),
+    4px 8px 0 var(--yellow),
+    0px 8px 0 var(--yellow),
+    6px 8px 0 var(--yellow),
+    2px 10px 0 var(--yellow),
+    4px 10px 0 var(--yellow),
+    2px 12px 0 #4A4A5E,
+    4px 12px 0 #4A4A5E,
+    2px 14px 0 #3A3A4E,
+    4px 14px 0 #3A3A4E;
+  image-rendering: pixelated;
+}
+
+/* Agent 4 - DevOps (cyan) */
+.agent-devops {
+  background: var(--bg-deep);
+}
+.agent-devops::after {
+  content: '';
+  position: absolute;
+  width: 2px; height: 2px;
+  top: 2px; left: 6px;
+  background: #06B6D4;
+  box-shadow:
+    2px 0 0 #06B6D4,
+    4px 0 0 #06B6D4,
+    0px 2px 0 #06B6D4,
+    2px 2px 0 #B8956A,
+    4px 2px 0 #B8956A,
+    6px 2px 0 #06B6D4,
+    0px 4px 0 #B8956A,
+    2px 4px 0 #B8956A,
+    4px 4px 0 #B8956A,
+    6px 4px 0 #B8956A,
+    2px 6px 0 #06B6D4,
+    4px 6px 0 #06B6D4,
+    0px 6px 0 #B8956A,
+    6px 6px 0 #B8956A,
+    2px 8px 0 #06B6D4,
+    4px 8px 0 #06B6D4,
+    0px 8px 0 #06B6D4,
+    6px 8px 0 #06B6D4,
+    2px 10px 0 #06B6D4,
+    4px 10px 0 #06B6D4,
+    2px 12px 0 #4A4A5E,
+    4px 12px 0 #4A4A5E,
+    2px 14px 0 #3A3A4E,
+    4px 14px 0 #3A3A4E;
+  image-rendering: pixelated;
+}
+
+.card-agent-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agent-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--text-secondary);
+}
+
+/* Subtask progress bar (HP-bar style) */
+.subtask-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-deep);
+  border: 2px solid var(--border);
+  margin-top: 6px;
+  display: flex;
+  overflow: hidden;
+}
+
+.subtask-bar .filled {
+  height: 100%;
+  display: flex;
+}
+
+.subtask-bar .segment {
+  width: 6px;
+  height: 100%;
+  margin-right: 1px;
+}
+
+.subtask-bar .segment.active {
+  background: var(--green);
+}
+.subtask-bar .segment.empty {
+  background: transparent;
+}
+
+.subtask-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  text-align: right;
+}
+
+/* Due date */
+.card-due {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.card-due.overdue {
+  color: var(--red);
+}
+.card-due.soon {
+  color: var(--yellow);
+}
+
+/* Epic quest card golden variant */
+.quest-card.epic-quest {
+  border-color: var(--yellow);
+  box-shadow:
+    inset 1px 1px 0 rgba(255,203,0,0.1),
+    2px 2px 0 rgba(0,0,0,0.4),
+    0 0 8px rgba(255,203,0,0.1);
+  position: relative;
+}
+
+.quest-card.epic-quest::after {
+  content: '';
+  position: absolute;
+  top: -2px; right: -2px;
+  width: 16px; height: 16px;
+  background: var(--yellow);
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  animation: sparkle 1.5s steps(3) infinite;
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* ============================================================
+   BOTTOM STATS BAR
+   ============================================================ */
+.stats-bar {
+  background: var(--bg-surface);
+  border-top: var(--border-w) solid var(--border);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  box-shadow: inset 0 1px 0 rgba(240,240,255,0.03);
+}
+
+.stats-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  letter-spacing: 1px;
+}
+
+.stat-label {
+  color: var(--text-muted);
+}
+.stat-value {
+  color: var(--text-primary);
+}
+.stat-value.orange { color: var(--orange); }
+.stat-value.green { color: var(--green); }
+.stat-value.blue { color: var(--blue); }
+.stat-value.yellow { color: var(--yellow); }
+
+.stat-divider {
+  width: 2px;
+  height: 12px;
+  background: var(--border);
+}
+
+/* XP bar in stats */
+.xp-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.xp-bar {
+  width: 120px;
+  height: 10px;
+  background: var(--bg-deep);
+  border: 2px solid var(--border);
+  display: flex;
+  overflow: hidden;
+}
+
+.xp-bar .xp-segment {
+  width: 4px;
+  height: 100%;
+  margin-right: 1px;
+  background: var(--orange);
+}
+.xp-bar .xp-segment.empty {
+  background: transparent;
+}
+
+.xp-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--orange);
+}
+
+/* Stats bar right — pixel separator decoration */
+.stats-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stats-right .pixel-dots {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--text-muted);
+  letter-spacing: 4px;
+}
+
+/* ============================================================
+   STATUS ICONS (CSS pixel art)
+   ============================================================ */
+.status-icon {
+  width: 14px;
+  height: 14px;
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Scroll icon for backlog */
+.icon-scroll::after {
+  content: '';
+  position: absolute;
+  width: 2px; height: 2px;
+  top: 2px; left: 3px;
+  background: var(--text-secondary);
+  box-shadow:
+    2px 0 0 var(--text-secondary),
+    4px 0 0 var(--text-secondary),
+    6px 0 0 var(--text-secondary),
+    -2px 2px 0 var(--text-secondary),
+    0px 2px 0 var(--text-secondary),
+    2px 2px 0 var(--text-secondary),
+    4px 2px 0 var(--text-secondary),
+    6px 2px 0 var(--text-secondary),
+    8px 2px 0 var(--text-secondary),
+    0px 4px 0 var(--text-secondary),
+    2px 4px 0 var(--text-muted),
+    4px 4px 0 var(--text-muted),
+    6px 4px 0 var(--text-secondary),
+    0px 6px 0 var(--text-secondary),
+    2px 6px 0 var(--text-muted),
+    4px 6px 0 var(--text-muted),
+    6px 6px 0 var(--text-secondary),
+    0px 8px 0 var(--text-secondary),
+    2px 8px 0 var(--text-secondary),
+    4px 8px 0 var(--text-secondary),
+    6px 8px 0 var(--text-secondary);
+  image-rendering: pixelated;
+}
+
+/* Sword icon for todo */
+.icon-sword::after {
+  content: '';
+  position: absolute;
+  width: 2px; height: 2px;
+  top: 1px; left: 5px;
+  background: var(--pixel-white);
+  box-shadow:
+    2px 2px 0 var(--pixel-white),
+    0px 2px 0 var(--text-secondary),
+    4px 4px 0 var(--pixel-white),
+    2px 4px 0 var(--text-secondary),
+    4px 6px 0 var(--yellow),
+    2px 6px 0 var(--yellow),
+    6px 6px 0 var(--yellow),
+    4px 8px 0 #8B4513,
+    4px 10px 0 #8B4513;
+  image-rendering: pixelated;
+}
+
+/* Fire icon for in-progress */
+.icon-fire::after {
+  content: '';
+  position: absolute;
+  width: 2px; height: 2px;
+  top: 0; left: 5px;
+  background: var(--red);
+  box-shadow:
+    0px 2px 0 var(--orange),
+    -2px 2px 0 var(--red),
+    2px 2px 0 var(--red),
+    -2px 4px 0 var(--orange),
+    0px 4px 0 var(--yellow),
+    2px 4px 0 var(--orange),
+    -4px 6px 0 var(--orange),
+    -2px 6px 0 var(--yellow),
+    0px 6px 0 var(--yellow),
+    2px 6px 0 var(--yellow),
+    4px 6px 0 var(--orange),
+    -4px 8px 0 var(--red),
+    -2px 8px 0 var(--orange),
+    0px 8px 0 var(--yellow),
+    2px 8px 0 var(--orange),
+    4px 8px 0 var(--red),
+    -2px 10px 0 var(--red),
+    0px 10px 0 var(--orange),
+    2px 10px 0 var(--red);
+  image-rendering: pixelated;
+  animation: flicker 0.6s steps(2) infinite;
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+/* Eye icon for review */
+.icon-eye::after {
+  content: '';
+  position: absolute;
+  width: 2px; height: 2px;
+  top: 3px; left: 2px;
+  background: var(--yellow);
+  box-shadow:
+    2px 0 0 var(--yellow),
+    4px 0 0 var(--yellow),
+    6px 0 0 var(--yellow),
+    8px 0 0 var(--yellow),
+    -2px 2px 0 var(--yellow),
+    0px 2px 0 var(--pixel-white),
+    2px 2px 0 var(--pixel-white),
+    4px 2px 0 var(--bg-deep),
+    6px 2px 0 var(--pixel-white),
+    8px 2px 0 var(--pixel-white),
+    10px 2px 0 var(--yellow),
+    -2px 4px 0 var(--yellow),
+    0px 4px 0 var(--pixel-white),
+    2px 4px 0 var(--bg-deep),
+    4px 4px 0 var(--pixel-white),
+    6px 4px 0 var(--pixel-white),
+    8px 4px 0 var(--pixel-white),
+    10px 4px 0 var(--yellow),
+    0px 6px 0 var(--yellow),
+    2px 6px 0 var(--yellow),
+    4px 6px 0 var(--yellow),
+    6px 6px 0 var(--yellow),
+    8px 6px 0 var(--yellow);
+  image-rendering: pixelated;
+}
+
+/* Star/trophy icon for done */
+.icon-star::after {
+  content: '';
+  position: absolute;
+  width: 2px; height: 2px;
+  top: 1px; left: 5px;
+  background: var(--green);
+  box-shadow:
+    0px 2px 0 var(--green),
+    -2px 4px 0 var(--green),
+    -4px 4px 0 var(--green),
+    2px 4px 0 var(--green),
+    4px 4px 0 var(--green),
+    -2px 6px 0 var(--green),
+    0px 6px 0 var(--green),
+    2px 6px 0 var(--green),
+    -4px 8px 0 var(--green),
+    -2px 8px 0 var(--green),
+    2px 8px 0 var(--green),
+    4px 8px 0 var(--green),
+    -2px 10px 0 var(--green),
+    2px 10px 0 var(--green);
+  image-rendering: pixelated;
+}
+
+/* ============================================================
+   PRIORITY ICONS
+   ============================================================ */
+.priority-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5px;
+  letter-spacing: 0.5px;
+}
+
+.priority-badge.p-urgent { color: var(--red); }
+.priority-badge.p-high { color: var(--orange); }
+.priority-badge.p-medium { color: var(--yellow); }
+.priority-badge.p-low { color: var(--text-muted); }
+
+/* ============================================================
+   CORNER ORNAMENTS
+   ============================================================ */
+.corner-ornament {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+}
+.corner-ornament.tl { top: -1px; left: -1px; border-top: 2px solid var(--border-hover); border-left: 2px solid var(--border-hover); }
+.corner-ornament.tr { top: -1px; right: -1px; border-top: 2px solid var(--border-hover); border-right: 2px solid var(--border-hover); }
+.corner-ornament.bl { bottom: -1px; left: -1px; border-bottom: 2px solid var(--border-hover); border-left: 2px solid var(--border-hover); }
+.corner-ornament.br { bottom: -1px; right: -1px; border-bottom: 2px solid var(--border-hover); border-right: 2px solid var(--border-hover); }
+
+/* ============================================================
+   ANIMATIONS — STEPPED FEEL
+   ============================================================ */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.blink {
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes bouncePixel {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+/* Gear spin for in-progress header */
+.gear-spin {
+  display: inline-block;
+  animation: gearRotate 2s steps(8) infinite;
+}
+
+@keyframes gearRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   RESPONSIVE — target 1440x900
+   ============================================================ */
+@media (max-width: 1400px) {
+  .column {
+    min-width: 240px;
+    max-width: 240px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     BOARD TITLE BAR
+     ============================================================ -->
+<div class="board-title-bar">
+  <div class="board-title">
+    <span class="pixel-decoration pixel-font" style="color: var(--text-muted);">-*-</span>
+    <div class="sword-icon"></div>
+    <h1>QUEST BOARD</h1>
+    <div class="sword-icon" style="transform: scaleX(-1);"></div>
+    <span class="pixel-decoration pixel-font" style="color: var(--text-muted);">-*-</span>
+  </div>
+  <div class="window-controls">
+    <span class="pixel-font" style="font-size: 7px; color: var(--text-muted); margin-right: 12px;">LVL 12</span>
+    <div class="win-btn">-</div>
+    <div class="win-btn">+</div>
+    <div class="win-btn" style="border-color: var(--red); color: var(--red);">X</div>
+  </div>
+</div>
+
+<!-- ============================================================
+     BOARD COLUMNS
+     ============================================================ -->
+<div class="board-container">
+
+  <!-- ==================== BACKLOG ==================== -->
+  <div class="column col-backlog">
+    <div class="column-header">
+      <div class="column-header-left">
+        <div class="status-icon icon-scroll"></div>
+        <span class="col-title">BACKLOG</span>
+      </div>
+      <span class="col-count">5</span>
+    </div>
+    <div class="column-body">
+
+      <div class="quest-card priority-low">
+        <div class="card-header">
+          <span class="card-id">#QST-201</span>
+          <span class="card-xp"><span class="star">*</span>15 XP</span>
+        </div>
+        <div class="card-title">Update sprite sheet for idle animations</div>
+        <div class="card-labels">
+          <span class="label-pill label-design">DESIGN</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-designer"></div>
+            <span class="agent-name">Pixel-3</span>
+          </div>
+          <span class="priority-badge p-low">~ SIDE</span>
+        </div>
+      </div>
+
+      <div class="quest-card priority-medium">
+        <div class="card-header">
+          <span class="card-id">#QST-202</span>
+          <span class="card-xp"><span class="star">*</span>30 XP</span>
+        </div>
+        <div class="card-title">Implement dark mode toggle persistence</div>
+        <div class="card-labels">
+          <span class="label-pill label-frontend">FRONTEND</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-coder"></div>
+            <span class="agent-name">Code-1</span>
+          </div>
+          <span class="priority-badge p-medium">^ STD</span>
+        </div>
+      </div>
+
+      <div class="quest-card priority-none">
+        <div class="card-header">
+          <span class="card-id">#QST-203</span>
+          <span class="card-xp"><span class="star">*</span>10 XP</span>
+        </div>
+        <div class="card-title">Add tooltips to navigation icons</div>
+        <div class="card-labels">
+          <span class="label-pill label-docs">DOCS</span>
+          <span class="label-pill label-frontend">FRONTEND</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-coder"></div>
+            <span class="agent-name">Code-1</span>
+          </div>
+          <span class="priority-badge p-low">-- MISC</span>
+        </div>
+      </div>
+
+      <div class="quest-card priority-medium">
+        <div class="card-header">
+          <span class="card-id">#QST-204</span>
+          <span class="card-xp"><span class="star">*</span>25 XP</span>
+        </div>
+        <div class="card-title">Research WebSocket reconnection strategies</div>
+        <div class="card-labels">
+          <span class="label-pill label-backend">BACKEND</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-researcher"></div>
+            <span class="agent-name">Sage-2</span>
+          </div>
+          <span class="priority-badge p-medium">^ STD</span>
+        </div>
+      </div>
+
+      <div class="quest-card priority-low">
+        <div class="card-header">
+          <span class="card-id">#QST-205</span>
+          <span class="card-xp"><span class="star">*</span>20 XP</span>
+        </div>
+        <div class="card-title">Write unit tests for auth module</div>
+        <div class="card-labels">
+          <span class="label-pill label-backend">BACKEND</span>
+          <span class="label-pill label-docs">DOCS</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-devops"></div>
+            <span class="agent-name">Ops-4</span>
+          </div>
+          <span class="priority-badge p-low">~ SIDE</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="add-quest-btn">
+      <span class="plus-icon">+</span>
+      ADD QUEST
+    </button>
+  </div>
+
+  <!-- ==================== TODO ==================== -->
+  <div class="column col-todo">
+    <div class="column-header">
+      <div class="column-header-left">
+        <div class="status-icon icon-sword"></div>
+        <span class="col-title">TODO</span>
+      </div>
+      <span class="col-count">4</span>
+    </div>
+    <div class="column-body">
+
+      <div class="quest-card priority-high">
+        <div class="card-header">
+          <span class="card-id">#QST-210</span>
+          <span class="card-xp"><span class="star">*</span>50 XP</span>
+        </div>
+        <div class="card-title">Build agent communication protocol</div>
+        <div class="card-labels">
+          <span class="label-pill label-backend">BACKEND</span>
+          <span class="label-pill label-ai">AI</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-coder"></div>
+            <span class="agent-name">Code-1</span>
+          </div>
+          <span class="priority-badge p-high">^^ ELITE</span>
+        </div>
+        <div class="subtask-bar">
+          <div class="filled">
+            <div class="segment active"></div>
+            <div class="segment active"></div>
+            <div class="segment empty"></div>
+            <div class="segment empty"></div>
+            <div class="segment empty"></div>
+          </div>
+        </div>
+        <div class="subtask-label">2/5</div>
+      </div>
+
+      <div class="quest-card priority-urgent epic-quest">
+        <div class="card-header">
+          <span class="card-id">#QST-211</span>
+          <span class="card-xp"><span class="star">*</span>100 XP</span>
+        </div>
+        <div class="card-title">Integrate Mistral Vibe for code generation</div>
+        <div class="card-labels">
+          <span class="label-pill label-ai">AI</span>
+          <span class="label-pill label-feature">FEATURE</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-researcher"></div>
+            <span class="agent-name">Sage-2</span>
+          </div>
+          <span class="priority-badge p-urgent">!! BOSS</span>
+        </div>
+        <div class="card-due soon">&#9719; 2 DAYS LEFT</div>
+      </div>
+
+      <div class="quest-card priority-medium">
+        <div class="card-header">
+          <span class="card-id">#QST-212</span>
+          <span class="card-xp"><span class="star">*</span>35 XP</span>
+        </div>
+        <div class="card-title">Design pixel art status indicators</div>
+        <div class="card-labels">
+          <span class="label-pill label-design">DESIGN</span>
+          <span class="label-pill label-frontend">FRONTEND</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-designer"></div>
+            <span class="agent-name">Pixel-3</span>
+          </div>
+          <span class="priority-badge p-medium">^ STD</span>
+        </div>
+      </div>
+
+      <div class="quest-card priority-high">
+        <div class="card-header">
+          <span class="card-id">#QST-213</span>
+          <span class="card-xp"><span class="star">*</span>45 XP</span>
+        </div>
+        <div class="card-title">Set up CI/CD pipeline with Convex deploy</div>
+        <div class="card-labels">
+          <span class="label-pill label-devops">DEVOPS</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-devops"></div>
+            <span class="agent-name">Ops-4</span>
+          </div>
+          <span class="priority-badge p-high">^^ ELITE</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="add-quest-btn">
+      <span class="plus-icon">+</span>
+      ADD QUEST
+    </button>
+  </div>
+
+  <!-- ==================== IN PROGRESS ==================== -->
+  <div class="column col-progress">
+    <div class="column-header">
+      <div class="column-header-left">
+        <div class="status-icon icon-fire"></div>
+        <span class="col-title">IN PROGRESS</span>
+      </div>
+      <span class="col-count">4</span>
+    </div>
+    <div class="column-body">
+
+      <div class="quest-card priority-urgent">
+        <div class="card-header">
+          <span class="card-id">#QST-220</span>
+          <span class="card-xp"><span class="star">*</span>80 XP</span>
+        </div>
+        <div class="card-title">Fix real-time sync race condition</div>
+        <div class="card-labels">
+          <span class="label-pill label-bug">BUG</span>
+          <span class="label-pill label-backend">BACKEND</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-coder"></div>
+            <span class="agent-name">Code-1</span>
+          </div>
+          <span class="priority-badge p-urgent">!! BOSS</span>
+        </div>
+        <div class="subtask-bar">
+          <div class="filled">
+            <div class="segment active"></div>
+            <div class="segment active"></div>
+            <div class="segment active"></div>
+            <div class="segment empty"></div>
+          </div>
+        </div>
+        <div class="subtask-label">3/4</div>
+      </div>
+
+      <div class="quest-card priority-high">
+        <div class="card-header">
+          <span class="card-id">#QST-221</span>
+          <span class="card-xp"><span class="star">*</span>60 XP</span>
+        </div>
+        <div class="card-title">Implement pixel-art canvas rendering engine</div>
+        <div class="card-labels">
+          <span class="label-pill label-frontend">FRONTEND</span>
+          <span class="label-pill label-feature">FEATURE</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-designer"></div>
+            <span class="agent-name">Pixel-3</span>
+          </div>
+          <span class="priority-badge p-high">^^ ELITE</span>
+        </div>
+        <div class="card-due">&#9719; 5 DAYS LEFT</div>
+      </div>
+
+      <div class="quest-card priority-medium">
+        <div class="card-header">
+          <span class="card-id">#QST-222</span>
+          <span class="card-xp"><span class="star">*</span>40 XP</span>
+        </div>
+        <div class="card-title">Build Convex schema for agent state management</div>
+        <div class="card-labels">
+          <span class="label-pill label-backend">BACKEND</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-researcher"></div>
+            <span class="agent-name">Sage-2</span>
+          </div>
+          <span class="priority-badge p-medium">^ STD</span>
+        </div>
+        <div class="subtask-bar">
+          <div class="filled">
+            <div class="segment active"></div>
+            <div class="segment active"></div>
+            <div class="segment active"></div>
+            <div class="segment active"></div>
+            <div class="segment empty"></div>
+            <div class="segment empty"></div>
+          </div>
+        </div>
+        <div class="subtask-label">4/6</div>
+      </div>
+
+      <div class="quest-card priority-medium">
+        <div class="card-header">
+          <span class="card-id">#QST-223</span>
+          <span class="card-xp"><span class="star">*</span>30 XP</span>
+        </div>
+        <div class="card-title">Configure Docker containers for sandbox env</div>
+        <div class="card-labels">
+          <span class="label-pill label-devops">DEVOPS</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-devops"></div>
+            <span class="agent-name">Ops-4</span>
+          </div>
+          <span class="priority-badge p-medium">^ STD</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="add-quest-btn">
+      <span class="plus-icon">+</span>
+      ADD QUEST
+    </button>
+  </div>
+
+  <!-- ==================== REVIEW ==================== -->
+  <div class="column col-review">
+    <div class="column-header">
+      <div class="column-header-left">
+        <div class="status-icon icon-eye"></div>
+        <span class="col-title">REVIEW</span>
+      </div>
+      <span class="col-count">3</span>
+    </div>
+    <div class="column-body">
+
+      <div class="quest-card priority-high">
+        <div class="card-header">
+          <span class="card-id">#QST-230</span>
+          <span class="card-xp"><span class="star">*</span>55 XP</span>
+        </div>
+        <div class="card-title">Agent orchestration API review</div>
+        <div class="card-labels">
+          <span class="label-pill label-backend">BACKEND</span>
+          <span class="label-pill label-ai">AI</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-researcher"></div>
+            <span class="agent-name">Sage-2</span>
+          </div>
+          <span class="priority-badge p-high">^^ ELITE</span>
+        </div>
+        <div class="subtask-bar">
+          <div class="filled">
+            <div class="segment active"></div>
+            <div class="segment active"></div>
+            <div class="segment active"></div>
+            <div class="segment active"></div>
+            <div class="segment active"></div>
+            <div class="segment empty"></div>
+          </div>
+        </div>
+        <div class="subtask-label">5/6</div>
+      </div>
+
+      <div class="quest-card priority-medium">
+        <div class="card-header">
+          <span class="card-id">#QST-231</span>
+          <span class="card-xp"><span class="star">*</span>25 XP</span>
+        </div>
+        <div class="card-title">Pixel art asset pack — office furniture sprites</div>
+        <div class="card-labels">
+          <span class="label-pill label-design">DESIGN</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-designer"></div>
+            <span class="agent-name">Pixel-3</span>
+          </div>
+          <span class="priority-badge p-medium">^ STD</span>
+        </div>
+      </div>
+
+      <div class="quest-card priority-low">
+        <div class="card-header">
+          <span class="card-id">#QST-232</span>
+          <span class="card-xp"><span class="star">*</span>20 XP</span>
+        </div>
+        <div class="card-title">Update README with setup instructions</div>
+        <div class="card-labels">
+          <span class="label-pill label-docs">DOCS</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-coder"></div>
+            <span class="agent-name">Code-1</span>
+          </div>
+          <span class="priority-badge p-low">~ SIDE</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="add-quest-btn">
+      <span class="plus-icon">+</span>
+      ADD QUEST
+    </button>
+  </div>
+
+  <!-- ==================== DONE ==================== -->
+  <div class="column col-done">
+    <div class="column-header">
+      <div class="column-header-left">
+        <div class="status-icon icon-star"></div>
+        <span class="col-title">DONE</span>
+      </div>
+      <span class="col-count">5</span>
+    </div>
+    <div class="column-body">
+
+      <div class="quest-card priority-high" style="opacity: 0.75;">
+        <div class="card-header">
+          <span class="card-id">#QST-240</span>
+          <span class="card-xp"><span class="star">*</span>50 XP</span>
+        </div>
+        <div class="card-title">Set up monorepo with Turborepo + Bun</div>
+        <div class="card-labels">
+          <span class="label-pill label-devops">DEVOPS</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-devops"></div>
+            <span class="agent-name">Ops-4</span>
+          </div>
+          <span class="priority-badge p-high" style="text-decoration: line-through;">^^ DONE</span>
+        </div>
+      </div>
+
+      <div class="quest-card priority-medium" style="opacity: 0.75;">
+        <div class="card-header">
+          <span class="card-id">#QST-241</span>
+          <span class="card-xp"><span class="star">*</span>35 XP</span>
+        </div>
+        <div class="card-title">Design initial color palette and type system</div>
+        <div class="card-labels">
+          <span class="label-pill label-design">DESIGN</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-designer"></div>
+            <span class="agent-name">Pixel-3</span>
+          </div>
+          <span class="priority-badge p-medium" style="text-decoration: line-through;">^ DONE</span>
+        </div>
+      </div>
+
+      <div class="quest-card priority-urgent" style="opacity: 0.75;">
+        <div class="card-header">
+          <span class="card-id">#QST-242</span>
+          <span class="card-xp"><span class="star">*</span>75 XP</span>
+        </div>
+        <div class="card-title">Convex backend initial schema + auth</div>
+        <div class="card-labels">
+          <span class="label-pill label-backend">BACKEND</span>
+          <span class="label-pill label-feature">FEATURE</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-coder"></div>
+            <span class="agent-name">Code-1</span>
+          </div>
+          <span class="priority-badge p-urgent" style="text-decoration: line-through;">!! DONE</span>
+        </div>
+      </div>
+
+      <div class="quest-card priority-medium" style="opacity: 0.75;">
+        <div class="card-header">
+          <span class="card-id">#QST-243</span>
+          <span class="card-xp"><span class="star">*</span>30 XP</span>
+        </div>
+        <div class="card-title">Research Mistral API rate limits + quotas</div>
+        <div class="card-labels">
+          <span class="label-pill label-ai">AI</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-researcher"></div>
+            <span class="agent-name">Sage-2</span>
+          </div>
+          <span class="priority-badge p-medium" style="text-decoration: line-through;">^ DONE</span>
+        </div>
+      </div>
+
+      <div class="quest-card priority-high epic-quest" style="opacity: 0.75;">
+        <div class="card-header">
+          <span class="card-id">#QST-244</span>
+          <span class="card-xp"><span class="star">*</span>150 XP</span>
+        </div>
+        <div class="card-title">Implement Vite + React 19 + TanStack Router scaffold</div>
+        <div class="card-labels">
+          <span class="label-pill label-frontend">FRONTEND</span>
+          <span class="label-pill label-feature">FEATURE</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-agent-info">
+            <div class="agent-avatar agent-coder"></div>
+            <span class="agent-name">Code-1</span>
+          </div>
+          <span class="priority-badge p-high" style="text-decoration: line-through;">^^ DONE</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="add-quest-btn">
+      <span class="plus-icon">+</span>
+      ADD QUEST
+    </button>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     BOTTOM STATS BAR
+     ============================================================ -->
+<div class="stats-bar">
+  <div class="stats-left">
+    <div class="stat-item">
+      <span class="stat-label">TOTAL QUESTS:</span>
+      <span class="stat-value">21</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-label">ACTIVE AGENTS:</span>
+      <span class="stat-value blue">4</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-label">XP TODAY:</span>
+      <span class="stat-value orange">+340</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-label">COMPLETED:</span>
+      <span class="stat-value green">5</span>
+    </div>
+  </div>
+  <div class="stats-right">
+    <span class="pixel-dots">. . .</span>
+    <div class="xp-bar-container">
+      <span class="xp-label">LVL 12</span>
+      <div class="xp-bar">
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment"></div>
+        <div class="xp-segment empty"></div>
+        <div class="xp-segment empty"></div>
+        <div class="xp-segment empty"></div>
+        <div class="xp-segment empty"></div>
+        <div class="xp-segment empty"></div>
+        <div class="xp-segment empty"></div>
+      </div>
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-muted);">2,340/3,000</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440, initial-scale=1.0">
+<title>Agent 5 — Task Properties & Metadata Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset ─────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── Palette tokens ────────────────────────────────────── */
+  :root {
+    --bg-base:     #0A0A0B;
+    --bg-surface:  #111113;
+    --bg-elevated: #1A1A1D;
+    --bg-hover:    #212125;
+    --border:      #2A2A2E;
+    --border-hover:#3A3A3E;
+    --text-1:      #FAFAFA;
+    --text-2:      #A0A0A8;
+    --text-3:      #6B6B73;
+    --orange:      #FF7000;
+    --red:         #FD3F29;
+    --yellow:      #FFCB00;
+    --green:       #22C55E;
+    --blue:        #3B82F6;
+    --purple:      #A855F7;
+    --pink:        #EC4899;
+    --cyan:        #06B6D4;
+    --radius-sm:   4px;
+    --radius-md:   6px;
+    --radius-lg:   8px;
+    --transition:  150ms ease;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-base);
+    color: var(--text-1);
+    min-height: 100vh;
+    padding: 40px 48px 60px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ── Page title ────────────────────────────────────────── */
+  .page-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+  }
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--text-3);
+    margin-bottom: 28px;
+    line-height: 1.5;
+  }
+  .design-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, var(--orange), #FF9F40);
+    color: var(--bg-base);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 32px;
+  }
+
+  /* ── Showcase grid ─────────────────────────────────────── */
+  .showcase {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .showcase-item {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .showcase-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-3);
+  }
+
+  /* ── Modal frame wrapper ───────────────────────────────── */
+  .modal-frame {
+    display: flex;
+    gap: 0;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: 0 0 0 1px var(--border), 0 16px 48px rgba(0,0,0,0.4);
+  }
+
+  /* Left "content" placeholder — just to show context */
+  .content-placeholder {
+    width: 480px;
+    background: var(--bg-surface);
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-height: 780px;
+    border-right: 1px solid var(--border);
+  }
+  .content-placeholder .cp-breadcrumb {
+    font-size: 11px;
+    color: var(--text-3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.02em;
+  }
+  .content-placeholder .cp-breadcrumb span { color: var(--text-2); }
+  .content-placeholder .cp-breadcrumb .sep { color: var(--text-3); opacity: 0.5; }
+  .content-placeholder .cp-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-1);
+    line-height: 1.35;
+  }
+  .content-placeholder .cp-desc {
+    font-size: 13px;
+    color: var(--text-2);
+    line-height: 1.7;
+  }
+  .content-placeholder .cp-desc code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    background: var(--bg-elevated);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--orange);
+    border: 1px solid var(--border);
+  }
+  .content-placeholder .cp-body {
+    font-size: 13px;
+    color: var(--text-3);
+    line-height: 1.7;
+    flex: 1;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── Properties panel ──────────────────────────────────── */
+  .properties-panel {
+    width: 260px;
+    min-width: 260px;
+    background: var(--bg-surface);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Panel header ──────────────────────────────────────── */
+  .panel-header {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-header h3 {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-3);
+  }
+  .panel-header .task-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-3);
+    background: var(--bg-elevated);
+    padding: 2px 7px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .panel-header .task-id:hover {
+    color: var(--text-2);
+    border-color: var(--border-hover);
+  }
+
+  /* ── Panel body (scrollable) ───────────────────────────── */
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 2px;
+  }
+
+  /* ── Property row ──────────────────────────────────────── */
+  .prop-row {
+    display: flex;
+    align-items: flex-start;
+    padding: 7px 16px;
+    gap: 0;
+    transition: background var(--transition);
+    cursor: default;
+    min-height: 34px;
+  }
+  .prop-row:hover {
+    background: var(--bg-elevated);
+  }
+  .prop-label {
+    width: 76px;
+    min-width: 76px;
+    font-size: 11px;
+    color: var(--text-3);
+    padding-top: 4px;
+    line-height: 1.4;
+    flex-shrink: 0;
+  }
+  .prop-value {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* ── Divider ───────────────────────────────────────────── */
+  .prop-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 6px 16px;
+  }
+
+  /* ── Section title ─────────────────────────────────────── */
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-3);
+    padding: 10px 16px 4px;
+  }
+
+  /* ── Status badge ──────────────────────────────────────── */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 3px 10px 3px 7px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--transition);
+    background: transparent;
+    border: 1px solid transparent;
+  }
+  .status-badge:hover {
+    background: var(--bg-hover);
+    border-color: var(--border);
+  }
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .status-dot.backlog    { background: var(--text-3); }
+  .status-dot.todo       { background: transparent; border: 2px solid var(--text-1); }
+  .status-dot.in-progress {
+    background: conic-gradient(var(--orange) 0deg, var(--orange) 180deg, transparent 180deg, transparent 360deg);
+    border: none;
+  }
+  .status-dot.review     { background: var(--yellow); }
+  .status-dot.done       { background: var(--green); }
+  .status-dot.done::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    width: 4px;
+    height: 6px;
+    border: solid var(--bg-surface);
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(40deg);
+  }
+  .status-badge .chevron {
+    margin-left: 2px;
+    color: var(--text-3);
+    font-size: 9px;
+    transition: var(--transition);
+  }
+
+  /* ── Status dropdown ───────────────────────────────────── */
+  .status-dropdown-container { position: relative; }
+  .status-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 4px;
+    z-index: 10;
+    min-width: 170px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    animation: dropdownIn 120ms ease-out;
+  }
+  .status-dropdown.open { display: block; }
+  @keyframes dropdownIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .status-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--text-1);
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  .status-option:hover { background: var(--bg-hover); }
+  .status-option.active {
+    background: rgba(255,112,0,0.1);
+    color: var(--orange);
+  }
+  .status-option .check-mark {
+    margin-left: auto;
+    color: var(--orange);
+    font-size: 11px;
+    opacity: 0;
+  }
+  .status-option.active .check-mark { opacity: 1; }
+  .status-option .status-dot { width: 8px; height: 8px; }
+  .status-option .status-dot.done::after {
+    top: 1px; left: 2px; width: 3px; height: 5px;
+    border-width: 0 1.2px 1.2px 0;
+  }
+
+  /* ── Assignees ─────────────────────────────────────────── */
+  .assignee-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .assignee-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 3px 8px 3px 3px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background var(--transition);
+    font-size: 12px;
+    color: var(--text-1);
+  }
+  .assignee-chip:hover { background: var(--bg-hover); }
+  .avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--bg-base);
+    flex-shrink: 0;
+  }
+  .avatar.av-orange  { background: var(--orange); }
+  .avatar.av-blue    { background: var(--blue); }
+  .avatar.av-purple  { background: var(--purple); }
+  .avatar.av-green   { background: var(--green); }
+
+  .add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--text-3);
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+    border: 1px dashed transparent;
+  }
+  .add-btn:hover {
+    color: var(--text-2);
+    border-color: var(--border);
+    background: var(--bg-hover);
+  }
+  .add-btn .plus {
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1;
+  }
+
+  /* ── Priority selector ─────────────────────────────────── */
+  .priority-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px 3px 6px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--transition);
+    border: 1px solid transparent;
+  }
+  .priority-badge:hover {
+    background: var(--bg-hover);
+    border-color: var(--border);
+  }
+  .priority-icon {
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .priority-icon svg { width: 14px; height: 14px; }
+  .priority-badge .chevron {
+    margin-left: 2px;
+    color: var(--text-3);
+    font-size: 9px;
+  }
+
+  /* Priority dropdown */
+  .priority-dropdown-container { position: relative; }
+  .priority-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 4px;
+    z-index: 10;
+    min-width: 160px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    animation: dropdownIn 120ms ease-out;
+  }
+  .priority-dropdown.open { display: block; }
+  .priority-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--text-1);
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  .priority-option:hover { background: var(--bg-hover); }
+  .priority-option.active {
+    background: rgba(255,112,0,0.08);
+    color: var(--orange);
+  }
+  .priority-option .check-mark {
+    margin-left: auto;
+    color: var(--orange);
+    font-size: 11px;
+    opacity: 0;
+  }
+  .priority-option.active .check-mark { opacity: 1; }
+  .priority-option .priority-icon svg { width: 12px; height: 12px; }
+
+  /* ── Labels ────────────────────────────────────────────── */
+  .labels-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .label-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px 2px 6px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    border: 1px solid transparent;
+  }
+  .label-chip:hover { filter: brightness(1.15); }
+  .label-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .label-chip.l-red    { background: rgba(253,63,41,0.15); color: #FF8A7A; }
+  .label-chip.l-red .label-dot    { background: var(--red); }
+  .label-chip.l-orange { background: rgba(255,112,0,0.15); color: #FFB266; }
+  .label-chip.l-orange .label-dot { background: var(--orange); }
+  .label-chip.l-blue   { background: rgba(59,130,246,0.15); color: #7EB4FC; }
+  .label-chip.l-blue .label-dot   { background: var(--blue); }
+  .label-chip.l-green  { background: rgba(34,197,94,0.15); color: #6EE7A0; }
+  .label-chip.l-green .label-dot  { background: var(--green); }
+  .label-chip.l-purple { background: rgba(168,85,247,0.15); color: #C89EFC; }
+  .label-chip.l-purple .label-dot { background: var(--purple); }
+  .label-chip.l-yellow { background: rgba(255,203,0,0.15); color: #FFE066; }
+  .label-chip.l-yellow .label-dot { background: var(--yellow); }
+  .label-chip.l-pink   { background: rgba(236,72,153,0.15); color: #F5A3C7; }
+  .label-chip.l-pink .label-dot   { background: var(--pink); }
+  .label-chip.l-cyan   { background: rgba(6,182,212,0.15); color: #67E8F9; }
+  .label-chip.l-cyan .label-dot   { background: var(--cyan); }
+
+  /* ── Due date ──────────────────────────────────────────── */
+  .due-date-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px 3px 7px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background var(--transition);
+    border: 1px solid transparent;
+    color: var(--text-1);
+  }
+  .due-date-badge:hover {
+    background: var(--bg-hover);
+    border-color: var(--border);
+  }
+  .due-date-badge .cal-icon { color: var(--text-2); font-size: 13px; flex-shrink: 0; display: flex; }
+  .due-date-badge.overdue { color: var(--red); }
+  .due-date-badge.overdue .cal-icon { color: var(--red); }
+  .due-date-badge.today { color: var(--orange); }
+  .due-date-badge.today .cal-icon { color: var(--orange); }
+  .due-date-badge .chevron { color: var(--text-3); font-size: 9px; margin-left: 2px; }
+
+  /* ── Project selector ──────────────────────────────────── */
+  .project-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 3px 10px 3px 6px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background var(--transition);
+    border: 1px solid transparent;
+    color: var(--text-1);
+  }
+  .project-badge:hover {
+    background: var(--bg-hover);
+    border-color: var(--border);
+  }
+  .project-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+
+  /* ── Parent task link ──────────────────────────────────── */
+  .parent-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--blue);
+    cursor: pointer;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition);
+    text-decoration: none;
+    border: 1px solid transparent;
+  }
+  .parent-link:hover {
+    background: rgba(59,130,246,0.1);
+    border-color: rgba(59,130,246,0.2);
+  }
+  .parent-link .parent-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    opacity: 0.7;
+  }
+
+  /* ── Sub-tasks ─────────────────────────────────────────── */
+  .subtasks-section { padding: 0 16px; }
+  .subtasks-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .subtasks-progress-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-3);
+  }
+  .subtasks-progress-bar {
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .subtasks-progress-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+    transition: width 300ms ease;
+  }
+  .subtask-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .subtask-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  .subtask-item:hover { background: var(--bg-hover); }
+  .subtask-checkbox {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1.5px solid var(--border-hover);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+  }
+  .subtask-item.checked .subtask-checkbox {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .subtask-item.checked .subtask-checkbox::after {
+    content: '';
+    width: 4px;
+    height: 6px;
+    border: solid var(--bg-base);
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(40deg);
+    margin-top: -1px;
+  }
+  .subtask-text {
+    font-size: 12px;
+    color: var(--text-1);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .subtask-item.checked .subtask-text {
+    color: var(--text-3);
+    text-decoration: line-through;
+    text-decoration-color: var(--text-3);
+  }
+
+  /* ── Timestamps ────────────────────────────────────────── */
+  .timestamp {
+    font-size: 11px;
+    color: var(--text-3);
+    padding: 2px 0;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: -0.01em;
+  }
+
+  /* ── Footer actions ────────────────────────────────────── */
+  .panel-footer {
+    border-top: 1px solid var(--border);
+    padding: 8px 12px;
+    display: flex;
+    gap: 2px;
+  }
+  .footer-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: all var(--transition);
+    border: none;
+    background: transparent;
+    flex: 1;
+    justify-content: center;
+  }
+  .footer-btn.copy-link {
+    color: var(--text-2);
+  }
+  .footer-btn.copy-link:hover {
+    color: var(--text-1);
+    background: var(--bg-elevated);
+  }
+  .footer-btn.delete-task {
+    color: var(--text-3);
+  }
+  .footer-btn.delete-task:hover {
+    color: var(--red);
+    background: rgba(253,63,41,0.08);
+  }
+  .footer-btn svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+  }
+
+  /* ── Standalone panel (no modal frame) ─────────────────── */
+  .standalone-panel .properties-panel {
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+    overflow: hidden;
+  }
+</style>
+</head>
+<body>
+
+<!-- Page header -->
+<div class="page-title">Task Properties & Metadata Panel</div>
+<div class="page-subtitle">
+  Right-side properties panel for task detail modals. Dense property list with dropdowns, pickers, and sub-task progress.
+</div>
+<div class="design-badge">Agent 5 &mdash; Design Sprint</div>
+
+<div class="showcase">
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- Variant 1: Full modal context                        -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="showcase-item">
+    <div class="showcase-label">In modal context (status dropdown open)</div>
+    <div class="modal-frame">
+      <!-- Left: content placeholder -->
+      <div class="content-placeholder">
+        <div class="cp-breadcrumb">
+          <span>AI Office</span>
+          <span class="sep">/</span>
+          <span>In Progress</span>
+          <span class="sep">/</span>
+          <span style="color:var(--text-1);">TSK-247</span>
+        </div>
+        <div class="cp-title">Implement sandbox lifecycle manager for Daytona workspaces</div>
+        <div class="cp-desc">
+          The manager needs to handle workspace creation, health monitoring, and graceful teardown.
+          Uses the <code>daytona-sdk</code> package with our auth wrapper.
+        </div>
+        <div class="cp-body">
+          <span style="color:var(--text-3);">Activity feed & comments area</span>
+        </div>
+      </div>
+
+      <!-- Right: Properties panel — with status dropdown shown -->
+      <div class="properties-panel">
+        <div class="panel-header">
+          <h3>Properties</h3>
+          <span class="task-id">TSK-247</span>
+        </div>
+
+        <div class="panel-body">
+
+          <!-- Status (dropdown open) -->
+          <div class="prop-row">
+            <div class="prop-label">Status</div>
+            <div class="prop-value">
+              <div class="status-dropdown-container">
+                <div class="status-badge" style="background:var(--bg-hover);border-color:var(--border);">
+                  <span class="status-dot in-progress"></span>
+                  <span>In Progress</span>
+                  <span class="chevron">&#9662;</span>
+                </div>
+                <div class="status-dropdown open">
+                  <div class="status-option">
+                    <span class="status-dot backlog" style="width:8px;height:8px;"></span>
+                    Backlog
+                    <span class="check-mark">&#10003;</span>
+                  </div>
+                  <div class="status-option">
+                    <span class="status-dot todo" style="width:8px;height:8px;border-width:1.5px;"></span>
+                    Todo
+                    <span class="check-mark">&#10003;</span>
+                  </div>
+                  <div class="status-option active">
+                    <span class="status-dot in-progress" style="width:8px;height:8px;"></span>
+                    In Progress
+                    <span class="check-mark">&#10003;</span>
+                  </div>
+                  <div class="status-option">
+                    <span class="status-dot review" style="width:8px;height:8px;"></span>
+                    Review
+                    <span class="check-mark">&#10003;</span>
+                  </div>
+                  <div class="status-option">
+                    <span class="status-dot done" style="width:8px;height:8px;"></span>
+                    Done
+                    <span class="check-mark">&#10003;</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Priority -->
+          <div class="prop-row">
+            <div class="prop-label">Priority</div>
+            <div class="prop-value">
+              <div class="priority-dropdown-container">
+                <div class="priority-badge">
+                  <span class="priority-icon">
+                    <svg viewBox="0 0 16 16" fill="none">
+                      <rect x="1" y="10" width="3" height="5" rx="0.5" fill="var(--orange)"/>
+                      <rect x="6" y="6" width="3" height="9" rx="0.5" fill="var(--orange)"/>
+                      <rect x="11" y="2" width="3" height="13" rx="0.5" fill="var(--orange)" opacity="0.3"/>
+                    </svg>
+                  </span>
+                  <span style="color:var(--orange);">High</span>
+                  <span class="chevron">&#9662;</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Assignees -->
+          <div class="prop-row">
+            <div class="prop-label">Assignees</div>
+            <div class="prop-value">
+              <div class="assignee-list">
+                <div class="assignee-chip">
+                  <span class="avatar av-orange">EK</span>
+                  <span>Elena Kozlov</span>
+                </div>
+                <div class="assignee-chip">
+                  <span class="avatar av-blue">MR</span>
+                  <span>Marcus Reyes</span>
+                </div>
+                <div class="add-btn">
+                  <span class="plus">+</span>
+                  <span>Add assignee</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Labels -->
+          <div class="prop-row">
+            <div class="prop-label">Labels</div>
+            <div class="prop-value">
+              <div class="labels-wrap">
+                <span class="label-chip l-orange"><span class="label-dot"></span>backend</span>
+                <span class="label-chip l-blue"><span class="label-dot"></span>infra</span>
+                <span class="label-chip l-purple"><span class="label-dot"></span>agent</span>
+                <div class="add-btn" style="margin-top:2px;">
+                  <span class="plus">+</span>
+                  <span>Add label</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="prop-divider"></div>
+
+          <!-- Due Date -->
+          <div class="prop-row">
+            <div class="prop-label">Due date</div>
+            <div class="prop-value">
+              <div class="due-date-badge today">
+                <span class="cal-icon">
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                    <rect x="1.5" y="2.5" width="13" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+                    <line x1="1.5" y1="6.5" x2="14.5" y2="6.5" stroke="currentColor" stroke-width="1.3"/>
+                    <line x1="5" y1="1" x2="5" y2="4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                    <line x1="11" y1="1" x2="11" y2="4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                  </svg>
+                </span>
+                <span>Mar 1, 2026</span>
+                <span class="chevron">&#9662;</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Project -->
+          <div class="prop-row">
+            <div class="prop-label">Project</div>
+            <div class="prop-value">
+              <div class="project-badge">
+                <span class="project-icon" style="background:var(--orange);">
+                  <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
+                    <rect x="2" y="2" width="5" height="5" rx="1" fill="var(--bg-base)"/>
+                    <rect x="9" y="2" width="5" height="5" rx="1" fill="var(--bg-base)"/>
+                    <rect x="2" y="9" width="5" height="5" rx="1" fill="var(--bg-base)"/>
+                    <rect x="9" y="9" width="5" height="5" rx="1" fill="var(--bg-base)"/>
+                  </svg>
+                </span>
+                <span>AI Office</span>
+                <span class="chevron" style="color:var(--text-3);font-size:9px;">&#9662;</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Parent task -->
+          <div class="prop-row">
+            <div class="prop-label">Parent</div>
+            <div class="prop-value">
+              <a class="parent-link" href="javascript:void(0)">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 8h8M9 5l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Workspace infra</span>
+                <span class="parent-id">TSK-201</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="prop-divider"></div>
+
+          <!-- Sub-tasks -->
+          <div class="subtasks-section">
+            <div class="section-title" style="padding:10px 0 6px;">Sub-tasks</div>
+            <div class="subtasks-header">
+              <span class="subtasks-progress-text">3 / 5</span>
+              <span class="subtasks-progress-text" style="color:var(--green);">60%</span>
+            </div>
+            <div class="subtasks-progress-bar">
+              <div class="subtasks-progress-fill" style="width:60%;"></div>
+            </div>
+            <div class="subtask-list">
+              <div class="subtask-item checked">
+                <span class="subtask-checkbox"></span>
+                <span class="subtask-text">Define workspace API schema</span>
+              </div>
+              <div class="subtask-item checked">
+                <span class="subtask-checkbox"></span>
+                <span class="subtask-text">Create Daytona SDK wrapper</span>
+              </div>
+              <div class="subtask-item checked">
+                <span class="subtask-checkbox"></span>
+                <span class="subtask-text">Implement health check polling</span>
+              </div>
+              <div class="subtask-item">
+                <span class="subtask-checkbox"></span>
+                <span class="subtask-text">Add workspace timeout handling</span>
+              </div>
+              <div class="subtask-item">
+                <span class="subtask-checkbox"></span>
+                <span class="subtask-text">Write integration tests</span>
+              </div>
+            </div>
+            <div class="add-btn" style="margin-top:4px;">
+              <span class="plus">+</span>
+              <span>Add sub-task</span>
+            </div>
+          </div>
+
+          <div class="prop-divider"></div>
+
+          <!-- Timestamps -->
+          <div class="prop-row" style="cursor:default;">
+            <div class="prop-label">Created</div>
+            <div class="prop-value">
+              <span class="timestamp">Feb 24, 2026 09:14</span>
+            </div>
+          </div>
+          <div class="prop-row" style="cursor:default;padding-bottom:12px;">
+            <div class="prop-label">Updated</div>
+            <div class="prop-value">
+              <span class="timestamp">Feb 28, 2026 14:37</span>
+            </div>
+          </div>
+        </div><!-- end .panel-body -->
+
+        <!-- Footer -->
+        <div class="panel-footer">
+          <button class="footer-btn copy-link" id="copyBtn1">
+            <svg viewBox="0 0 16 16" fill="none">
+              <path d="M6.5 9.5a3.5 3.5 0 0 0 5 0l2-2a3.5 3.5 0 0 0-5-5l-1 1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9.5 6.5a3.5 3.5 0 0 0-5 0l-2 2a3.5 3.5 0 0 0 5 5l1-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Copy link
+          </button>
+          <button class="footer-btn delete-task">
+            <svg viewBox="0 0 16 16" fill="none">
+              <path d="M2 4h12M5.33 4V2.67a1.33 1.33 0 0 1 1.34-1.34h2.66a1.33 1.33 0 0 1 1.34 1.34V4M12.67 4v9.33a1.33 1.33 0 0 1-1.34 1.34H4.67a1.33 1.33 0 0 1-1.34-1.34V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Delete
+          </button>
+        </div>
+      </div><!-- end .properties-panel -->
+    </div><!-- end .modal-frame -->
+  </div><!-- end showcase-item 1 -->
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- Variant 2: Standalone panel with priority dropdown    -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="showcase-item standalone-panel">
+    <div class="showcase-label">Standalone (priority dropdown open)</div>
+    <div class="properties-panel">
+      <div class="panel-header">
+        <h3>Properties</h3>
+        <span class="task-id">TSK-089</span>
+      </div>
+
+      <div class="panel-body">
+
+        <!-- Status -->
+        <div class="prop-row">
+          <div class="prop-label">Status</div>
+          <div class="prop-value">
+            <div class="status-badge">
+              <span class="status-dot review"></span>
+              <span>Review</span>
+              <span class="chevron">&#9662;</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Priority (dropdown open) -->
+        <div class="prop-row">
+          <div class="prop-label">Priority</div>
+          <div class="prop-value">
+            <div class="priority-dropdown-container">
+              <div class="priority-badge" style="background:var(--bg-hover);border-color:var(--border);">
+                <span class="priority-icon">
+                  <svg viewBox="0 0 16 16" fill="none">
+                    <rect x="1" y="10" width="3" height="5" rx="0.5" fill="var(--red)"/>
+                    <rect x="6" y="6" width="3" height="9" rx="0.5" fill="var(--red)"/>
+                    <rect x="11" y="2" width="3" height="13" rx="0.5" fill="var(--red)"/>
+                  </svg>
+                </span>
+                <span style="color:var(--red);">Urgent</span>
+                <span class="chevron">&#9662;</span>
+              </div>
+              <div class="priority-dropdown open">
+                <div class="priority-option active">
+                  <span class="priority-icon">
+                    <svg viewBox="0 0 16 16" fill="none">
+                      <rect x="1" y="10" width="3" height="5" rx="0.5" fill="var(--red)"/>
+                      <rect x="6" y="6" width="3" height="9" rx="0.5" fill="var(--red)"/>
+                      <rect x="11" y="2" width="3" height="13" rx="0.5" fill="var(--red)"/>
+                    </svg>
+                  </span>
+                  <span style="color:var(--red);">Urgent</span>
+                  <span class="check-mark">&#10003;</span>
+                </div>
+                <div class="priority-option">
+                  <span class="priority-icon">
+                    <svg viewBox="0 0 16 16" fill="none">
+                      <rect x="1" y="10" width="3" height="5" rx="0.5" fill="var(--orange)"/>
+                      <rect x="6" y="6" width="3" height="9" rx="0.5" fill="var(--orange)"/>
+                      <rect x="11" y="2" width="3" height="13" rx="0.5" fill="var(--orange)" opacity="0.3"/>
+                    </svg>
+                  </span>
+                  <span>High</span>
+                  <span class="check-mark">&#10003;</span>
+                </div>
+                <div class="priority-option">
+                  <span class="priority-icon">
+                    <svg viewBox="0 0 16 16" fill="none">
+                      <rect x="1" y="10" width="3" height="5" rx="0.5" fill="var(--yellow)"/>
+                      <rect x="6" y="6" width="3" height="9" rx="0.5" fill="var(--yellow)" opacity="0.3"/>
+                      <rect x="11" y="2" width="3" height="13" rx="0.5" fill="var(--yellow)" opacity="0.15"/>
+                    </svg>
+                  </span>
+                  <span>Medium</span>
+                  <span class="check-mark">&#10003;</span>
+                </div>
+                <div class="priority-option">
+                  <span class="priority-icon">
+                    <svg viewBox="0 0 16 16" fill="none">
+                      <rect x="1" y="10" width="3" height="5" rx="0.5" fill="var(--text-3)"/>
+                      <rect x="6" y="6" width="3" height="9" rx="0.5" fill="var(--text-3)" opacity="0.3"/>
+                      <rect x="11" y="2" width="3" height="13" rx="0.5" fill="var(--text-3)" opacity="0.15"/>
+                    </svg>
+                  </span>
+                  <span style="color:var(--text-3);">Low</span>
+                  <span class="check-mark">&#10003;</span>
+                </div>
+                <div class="priority-option">
+                  <span class="priority-icon">
+                    <svg viewBox="0 0 16 16" fill="none">
+                      <line x1="3" y1="8" x2="13" y2="8" stroke="var(--text-3)" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+                    </svg>
+                  </span>
+                  <span style="color:var(--text-3);">None</span>
+                  <span class="check-mark">&#10003;</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Assignees -->
+        <div class="prop-row">
+          <div class="prop-label">Assignees</div>
+          <div class="prop-value">
+            <div class="assignee-list">
+              <div class="assignee-chip">
+                <span class="avatar av-green">SH</span>
+                <span>Sara Huang</span>
+              </div>
+              <div class="add-btn">
+                <span class="plus">+</span>
+                <span>Add assignee</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Labels -->
+        <div class="prop-row">
+          <div class="prop-label">Labels</div>
+          <div class="prop-value">
+            <div class="labels-wrap">
+              <span class="label-chip l-red"><span class="label-dot"></span>bug</span>
+              <span class="label-chip l-green"><span class="label-dot"></span>hotfix</span>
+              <span class="label-chip l-cyan"><span class="label-dot"></span>auth</span>
+              <div class="add-btn" style="margin-top:2px;">
+                <span class="plus">+</span>
+                <span>Add label</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="prop-divider"></div>
+
+        <!-- Due Date (overdue!) -->
+        <div class="prop-row">
+          <div class="prop-label">Due date</div>
+          <div class="prop-value">
+            <div class="due-date-badge overdue">
+              <span class="cal-icon">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                  <rect x="1.5" y="2.5" width="13" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+                  <line x1="1.5" y1="6.5" x2="14.5" y2="6.5" stroke="currentColor" stroke-width="1.3"/>
+                  <line x1="5" y1="1" x2="5" y2="4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                  <line x1="11" y1="1" x2="11" y2="4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <span>Feb 26, 2026</span>
+              <span class="chevron">&#9662;</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Project -->
+        <div class="prop-row">
+          <div class="prop-label">Project</div>
+          <div class="prop-value">
+            <div class="project-badge">
+              <span class="project-icon" style="background:var(--orange);">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
+                  <rect x="2" y="2" width="5" height="5" rx="1" fill="var(--bg-base)"/>
+                  <rect x="9" y="2" width="5" height="5" rx="1" fill="var(--bg-base)"/>
+                  <rect x="2" y="9" width="5" height="5" rx="1" fill="var(--bg-base)"/>
+                  <rect x="9" y="9" width="5" height="5" rx="1" fill="var(--bg-base)"/>
+                </svg>
+              </span>
+              <span>AI Office</span>
+              <span class="chevron" style="color:var(--text-3);font-size:9px;">&#9662;</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Parent task -->
+        <div class="prop-row">
+          <div class="prop-label">Parent</div>
+          <div class="prop-value">
+            <a class="parent-link" href="javascript:void(0)">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                <path d="M4 8h8M9 5l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Auth system</span>
+              <span class="parent-id">TSK-050</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="prop-divider"></div>
+
+        <!-- Sub-tasks (mostly done) -->
+        <div class="subtasks-section">
+          <div class="section-title" style="padding:10px 0 6px;">Sub-tasks</div>
+          <div class="subtasks-header">
+            <span class="subtasks-progress-text">4 / 4</span>
+            <span class="subtasks-progress-text" style="color:var(--green);">100%</span>
+          </div>
+          <div class="subtasks-progress-bar">
+            <div class="subtasks-progress-fill" style="width:100%;"></div>
+          </div>
+          <div class="subtask-list">
+            <div class="subtask-item checked">
+              <span class="subtask-checkbox"></span>
+              <span class="subtask-text">Reproduce auth token bug</span>
+            </div>
+            <div class="subtask-item checked">
+              <span class="subtask-checkbox"></span>
+              <span class="subtask-text">Fix token refresh race condition</span>
+            </div>
+            <div class="subtask-item checked">
+              <span class="subtask-checkbox"></span>
+              <span class="subtask-text">Add retry logic for expired tokens</span>
+            </div>
+            <div class="subtask-item checked">
+              <span class="subtask-checkbox"></span>
+              <span class="subtask-text">Regression test coverage</span>
+            </div>
+          </div>
+          <div class="add-btn" style="margin-top:4px;">
+            <span class="plus">+</span>
+            <span>Add sub-task</span>
+          </div>
+        </div>
+
+        <div class="prop-divider"></div>
+
+        <!-- Timestamps -->
+        <div class="prop-row" style="cursor:default;">
+          <div class="prop-label">Created</div>
+          <div class="prop-value">
+            <span class="timestamp">Feb 22, 2026 11:02</span>
+          </div>
+        </div>
+        <div class="prop-row" style="cursor:default;padding-bottom:12px;">
+          <div class="prop-label">Updated</div>
+          <div class="prop-value">
+            <span class="timestamp">Feb 28, 2026 16:45</span>
+          </div>
+        </div>
+
+      </div><!-- end .panel-body -->
+
+      <!-- Footer -->
+      <div class="panel-footer">
+        <button class="footer-btn copy-link" id="copyBtn2">
+          <svg viewBox="0 0 16 16" fill="none">
+            <path d="M6.5 9.5a3.5 3.5 0 0 0 5 0l2-2a3.5 3.5 0 0 0-5-5l-1 1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9.5 6.5a3.5 3.5 0 0 0-5 0l-2 2a3.5 3.5 0 0 0 5 5l1-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Copy link
+        </button>
+        <button class="footer-btn delete-task">
+          <svg viewBox="0 0 16 16" fill="none">
+            <path d="M2 4h12M5.33 4V2.67a1.33 1.33 0 0 1 1.34-1.34h2.66a1.33 1.33 0 0 1 1.34 1.34V4M12.67 4v9.33a1.33 1.33 0 0 1-1.34 1.34H4.67a1.33 1.33 0 0 1-1.34-1.34V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Delete
+        </button>
+      </div>
+    </div><!-- end .properties-panel -->
+  </div><!-- end showcase-item 2 -->
+
+</div><!-- end .showcase -->
+
+<script>
+  // Toggle subtask checkboxes (for both panels)
+  document.querySelectorAll('.subtask-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+      this.classList.toggle('checked');
+      // Find the closest subtasks section and update its progress
+      var section = this.closest('.subtasks-section');
+      if (!section) return;
+      var items = section.querySelectorAll('.subtask-item');
+      var checked = section.querySelectorAll('.subtask-item.checked');
+      var total = items.length;
+      var done = checked.length;
+      var pct = Math.round((done / total) * 100);
+      section.querySelector('.subtasks-progress-fill').style.width = pct + '%';
+      var texts = section.querySelectorAll('.subtasks-progress-text');
+      texts[0].textContent = done + ' / ' + total;
+      texts[1].textContent = pct + '%';
+    });
+  });
+
+  // Copy link button animations
+  document.querySelectorAll('.footer-btn.copy-link').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var original = this.innerHTML;
+      this.innerHTML = '<svg viewBox="0 0 16 16" fill="none" width="13" height="13"><path d="M13.5 4.5l-7 7L3 8" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Copied!';
+      this.style.color = 'var(--green)';
+      var self = this;
+      setTimeout(function() {
+        self.innerHTML = original;
+        self.style.color = '';
+      }, 1500);
+    });
+  });
+</script>
+
+</body>
+</html>

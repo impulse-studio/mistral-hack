@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Modal — AI Office Kanban</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ========================================
+     RESET & BASE
+     ======================================== */
+  *, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  :root {
+    /* Backgrounds */
+    --bg-base: #0A0A0B;
+    --bg-surface: #111113;
+    --bg-elevated: #1A1A1D;
+    --bg-raised: #202024;
+    --bg-hover: #252529;
+    --bg-active: #2A2A30;
+
+    /* Borders */
+    --border-subtle: #2A2A2E;
+    --border-default: #333338;
+    --border-hover: #3A3A3E;
+    --border-focus: #FF7000;
+
+    /* Text */
+    --text-primary: #FAFAFA;
+    --text-secondary: #A0A0A8;
+    --text-tertiary: #6B6B73;
+    --text-quaternary: #4A4A52;
+
+    /* Accent */
+    --mistral-orange: #FF7000;
+    --mistral-orange-dim: rgba(255, 112, 0, 0.12);
+    --mistral-orange-soft: rgba(255, 112, 0, 0.2);
+    --mistral-red: #FD3F29;
+    --mistral-red-dim: rgba(253, 63, 41, 0.12);
+    --mistral-yellow: #FFCB00;
+    --mistral-yellow-dim: rgba(255, 203, 0, 0.12);
+    --success: #22C55E;
+    --success-dim: rgba(34, 197, 94, 0.12);
+    --info: #3B82F6;
+    --info-dim: rgba(59, 130, 246, 0.12);
+    --purple: #A855F7;
+    --purple-dim: rgba(168, 85, 247, 0.12);
+
+    /* Syntax highlighting */
+    --syn-keyword: #C678DD;
+    --syn-string: #98C379;
+    --syn-function: #61AFEF;
+    --syn-variable: #E5C07B;
+    --syn-comment: #5C6370;
+    --syn-property: #E06C75;
+    --syn-number: #D19A66;
+
+    /* Misc */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --transition-fast: 150ms ease;
+    --transition-normal: 200ms ease;
+    --transition-slow: 300ms ease-out;
+
+    /* Shadows for modal */
+    --shadow-modal:
+      0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 32px 64px -16px rgba(0, 0, 0, 0.65),
+      0 16px 32px -8px rgba(0, 0, 0, 0.45),
+      0 0 80px -20px rgba(255, 112, 0, 0.06);
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ========================================
+     BACKDROP
+     ======================================== */
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    z-index: 100;
+    animation: fadeIn 200ms ease-out;
+  }
+
+  /* Subtle radial glow behind modal */
+  .backdrop::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 800px;
+    height: 600px;
+    background: radial-gradient(ellipse, rgba(255, 112, 0, 0.03) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -50%) translateY(16px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%) translateY(0) scale(1);
+    }
+  }
+
+  /* ========================================
+     MODAL
+     ======================================== */
+  .modal {
+    position: fixed;
+    z-index: 101;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 720px;
+    max-height: 85vh;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-modal);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideUp 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Mistral orange accent line at top */
+  .modal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 24px;
+    right: 24px;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 112, 0, 0.4) 20%,
+      rgba(255, 112, 0, 0.6) 50%,
+      rgba(255, 112, 0, 0.4) 80%,
+      transparent 100%
+    );
+    z-index: 1;
+  }
+
+  /* ========================================
+     MODAL HEADER
+     ======================================== */
+  .modal-header {
+    padding: 18px 24px 0 24px;
+    flex-shrink: 0;
+  }
+
+  .modal-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.02em;
+  }
+
+  .breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: color var(--transition-fast);
+    cursor: pointer;
+  }
+
+  .breadcrumb-item:hover {
+    color: var(--text-secondary);
+  }
+
+  .breadcrumb-sep {
+    color: var(--text-quaternary);
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+  }
+
+  .breadcrumb-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    background: var(--bg-elevated);
+    padding: 2px 7px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+    transition: all var(--transition-fast);
+  }
+
+  .breadcrumb-id:hover {
+    color: var(--text-secondary);
+    border-color: var(--border-hover);
+  }
+
+  .modal-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .action-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: none;
+    background: none;
+  }
+
+  .action-btn:hover {
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+  }
+
+  .action-btn:last-child:hover {
+    color: var(--text-primary);
+  }
+
+  .action-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* ========================================
+     TITLE
+     ======================================== */
+  .task-title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 0 0 16px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .task-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.35;
+    flex: 1;
+    letter-spacing: -0.025em;
+    cursor: text;
+    padding: 3px 6px;
+    margin: -3px -6px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    transition: all var(--transition-fast);
+  }
+
+  .task-title:hover {
+    background: var(--bg-elevated);
+    border-color: var(--border-subtle);
+  }
+
+  /* ========================================
+     BODY — TWO COLUMN LAYOUT
+     ======================================== */
+  .modal-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* ========================================
+     LEFT — MAIN CONTENT
+     ======================================== */
+  .content-area {
+    flex: 1;
+    min-width: 0;
+    padding: 18px 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .content-area::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .content-area::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .content-area::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 2px;
+  }
+
+  .content-area::-webkit-scrollbar-thumb:hover {
+    background: var(--border-hover);
+  }
+
+  /* Status selector */
+  .status-selector-wrap {
+    position: relative;
+  }
+
+  .status-selector {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px 5px 8px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+    width: fit-content;
+  }
+
+  .status-selector:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-hover);
+  }
+
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .status-dot.in-progress {
+    background: conic-gradient(var(--mistral-orange) 0deg, var(--mistral-orange) 180deg, transparent 180deg, transparent 360deg);
+    border: 1.5px solid var(--mistral-orange);
+  }
+
+  .status-dot.backlog {
+    background: var(--text-quaternary);
+  }
+
+  .status-dot.todo {
+    border: 1.5px solid var(--text-secondary);
+    background: transparent;
+  }
+
+  .status-dot.review {
+    background: var(--mistral-yellow);
+  }
+
+  .status-dot.done {
+    background: var(--success);
+  }
+
+  .status-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .status-chevron {
+    color: var(--text-quaternary);
+    display: flex;
+    align-items: center;
+  }
+
+  .status-chevron svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Status dropdown — visible on hover for design showcase */
+  .status-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 180px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 4px;
+    z-index: 10;
+    box-shadow:
+      0 8px 24px -4px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.03);
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: all 150ms ease-out;
+  }
+
+  .status-selector-wrap:hover .status-dropdown {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .status-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .status-option:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  .status-option.active {
+    background: var(--mistral-orange-dim);
+    color: var(--mistral-orange);
+  }
+
+  .status-option .check-icon {
+    margin-left: auto;
+    opacity: 0;
+    width: 14px;
+    height: 14px;
+    color: var(--mistral-orange);
+  }
+
+  .status-option.active .check-icon {
+    opacity: 1;
+  }
+
+  /* ========================================
+     DESCRIPTION (Markdown-rendered)
+     ======================================== */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+    margin-bottom: 10px;
+  }
+
+  .description {
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--text-secondary);
+  }
+
+  .description p {
+    margin-bottom: 12px;
+  }
+
+  .description p:last-child {
+    margin-bottom: 0;
+  }
+
+  .description strong {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .description em {
+    color: var(--text-secondary);
+    font-style: italic;
+  }
+
+  .description a {
+    color: var(--mistral-orange);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(255, 112, 0, 0.3);
+    transition: border-color var(--transition-fast);
+  }
+
+  .description a:hover {
+    border-bottom-color: var(--mistral-orange);
+  }
+
+  .description code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: var(--mistral-orange);
+  }
+
+  .description pre {
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 16px 18px;
+    margin: 14px 0;
+    overflow-x: auto;
+    position: relative;
+  }
+
+  .description pre::before {
+    content: 'TypeScript';
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-quaternary);
+    background: var(--bg-elevated);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  .description pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--text-secondary);
+  }
+
+  /* Syntax highlighting classes */
+  .syn-k { color: var(--syn-keyword); }
+  .syn-s { color: var(--syn-string); }
+  .syn-f { color: var(--syn-function); }
+  .syn-v { color: var(--syn-variable); }
+  .syn-c { color: var(--syn-comment); font-style: italic; }
+  .syn-p { color: var(--syn-property); }
+  .syn-n { color: var(--syn-number); }
+  .syn-o { color: var(--text-tertiary); }
+
+  .description ul, .description ol {
+    padding-left: 20px;
+    margin: 10px 0;
+  }
+
+  .description li {
+    margin-bottom: 6px;
+    color: var(--text-secondary);
+  }
+
+  .description li::marker {
+    color: var(--text-quaternary);
+  }
+
+  .description h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 18px 0 6px 0;
+    letter-spacing: -0.01em;
+  }
+
+  .description blockquote {
+    border-left: 2px solid var(--mistral-orange);
+    padding: 8px 14px;
+    margin: 14px 0;
+    color: var(--text-tertiary);
+    font-style: italic;
+    background: rgba(255, 112, 0, 0.03);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+
+  /* ========================================
+     SUBTASKS
+     ======================================== */
+  .subtasks-section {
+    margin-top: 2px;
+  }
+
+  .subtasks-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .subtasks-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .subtasks-progress-text {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-tertiary);
+  }
+
+  .subtasks-progress-bar {
+    width: 60px;
+    height: 3px;
+    background: var(--bg-raised);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .subtasks-progress-fill {
+    height: 100%;
+    width: 66%;
+    background: linear-gradient(90deg, var(--mistral-orange), #FF9030);
+    border-radius: 2px;
+    transition: width 300ms ease-out;
+  }
+
+  .subtask-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .subtask-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    transition: background var(--transition-fast);
+    cursor: pointer;
+  }
+
+  .subtask-item:hover {
+    background: var(--bg-elevated);
+  }
+
+  .subtask-checkbox {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1.5px solid var(--border-hover);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all var(--transition-fast);
+  }
+
+  .subtask-checkbox.checked {
+    background: var(--success);
+    border-color: var(--success);
+  }
+
+  .subtask-checkbox.checked svg {
+    color: white;
+  }
+
+  .subtask-checkbox svg {
+    width: 10px;
+    height: 10px;
+    color: transparent;
+  }
+
+  .subtask-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .subtask-item.completed .subtask-text {
+    color: var(--text-quaternary);
+    text-decoration: line-through;
+    text-decoration-color: var(--text-quaternary);
+  }
+
+  /* ========================================
+     RIGHT — PROPERTIES PANEL
+     ======================================== */
+  .properties-panel {
+    width: 224px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--border-subtle);
+    padding: 16px 14px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: rgba(26, 26, 29, 0.3);
+  }
+
+  .property-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 8px;
+    border-radius: var(--radius-sm);
+    transition: background var(--transition-fast);
+    cursor: pointer;
+    min-height: 34px;
+  }
+
+  .property-row:hover {
+    background: var(--bg-elevated);
+  }
+
+  .property-label {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 72px;
+  }
+
+  .property-label svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+
+  .property-value {
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-align: right;
+  }
+
+  /* Assignee */
+  .avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: 600;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .avatar.orange { background: linear-gradient(135deg, var(--mistral-orange), #E06000); }
+  .avatar.blue { background: linear-gradient(135deg, var(--info), #2563EB); }
+  .avatar.green { background: linear-gradient(135deg, var(--success), #16A34A); }
+
+  /* Priority */
+  .priority-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .priority-icon {
+    display: flex;
+    align-items: center;
+  }
+
+  .priority-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* Labels */
+  .label-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+  }
+
+  .label-chip.orange {
+    background: var(--mistral-orange-dim);
+    color: var(--mistral-orange);
+  }
+
+  .label-chip.blue {
+    background: var(--info-dim);
+    color: var(--info);
+  }
+
+  .label-chip.green {
+    background: var(--success-dim);
+    color: var(--success);
+  }
+
+  .labels-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-end;
+  }
+
+  /* Due date */
+  .due-date-badge {
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .due-date-badge.upcoming {
+    color: var(--text-secondary);
+  }
+
+  .due-date-badge.today {
+    color: var(--mistral-orange);
+  }
+
+  .due-date-badge.overdue {
+    color: var(--mistral-red);
+  }
+
+  /* Properties divider */
+  .properties-divider {
+    height: 1px;
+    background: var(--border-subtle);
+    margin: 8px 0;
+  }
+
+  /* Timestamps */
+  .property-meta {
+    padding: 4px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .meta-label {
+    font-size: 10px;
+    color: var(--text-quaternary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .meta-value {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ========================================
+     BOTTOM — ACTIVITY TOGGLE
+     ======================================== */
+  .modal-footer {
+    flex-shrink: 0;
+    border-top: 1px solid var(--border-subtle);
+    padding: 0;
+  }
+
+  .activity-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 24px;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+  }
+
+  .activity-toggle:hover {
+    background: rgba(26, 26, 29, 0.5);
+  }
+
+  .activity-toggle-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-tertiary);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .activity-toggle-left svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .activity-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: var(--bg-raised);
+    color: var(--text-tertiary);
+    padding: 1px 6px;
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .activity-tabs {
+    display: flex;
+    gap: 0;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .activity-tab {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 3px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-weight: 500;
+  }
+
+  .activity-tab:hover {
+    color: var(--text-secondary);
+  }
+
+  .activity-tab.active {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  .activity-chevron {
+    display: flex;
+    align-items: center;
+    color: var(--text-quaternary);
+    transition: transform var(--transition-fast);
+  }
+
+  .activity-chevron svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* Activity preview (collapsed hint) */
+  .activity-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 24px 10px 24px;
+  }
+
+  .activity-preview-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+
+  .activity-preview-avatar {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    font-weight: 600;
+    color: white;
+  }
+
+  .activity-preview-time {
+    color: var(--text-quaternary);
+    font-size: 10px;
+  }
+
+  /* ========================================
+     PROJECT ICON
+     ======================================== */
+  .project-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    flex-shrink: 0;
+  }
+
+  .project-icon.orange {
+    background: var(--mistral-orange-dim);
+    color: var(--mistral-orange);
+  }
+
+  /* ========================================
+     KEYBOARD HINT
+     ======================================== */
+  .kbd {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 1px 4px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    color: var(--text-quaternary);
+    line-height: 1;
+  }
+
+  /* ========================================
+     RESPONSIVE HINT (purely decorative)
+     ======================================== */
+  @media (max-width: 780px) {
+    .modal {
+      width: calc(100vw - 32px);
+    }
+    .properties-panel {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Dimmed backdrop -->
+<div class="backdrop"></div>
+
+<!-- Modal -->
+<div class="modal">
+
+  <!-- ==========================================
+       HEADER
+       ========================================== -->
+  <div class="modal-header">
+    <div class="modal-topbar">
+      <!-- Breadcrumb -->
+      <div class="breadcrumb">
+        <div class="breadcrumb-item">
+          <div class="project-icon orange">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="10" height="10" rx="2"/>
+            </svg>
+          </div>
+          <span>AI Office</span>
+        </div>
+        <span class="breadcrumb-sep">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M3.5 2L6.5 5L3.5 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <div class="breadcrumb-item">
+          <div class="status-dot in-progress" style="width: 8px; height: 8px;"></div>
+          <span>In Progress</span>
+        </div>
+        <span class="breadcrumb-sep">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M3.5 2L6.5 5L3.5 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="breadcrumb-id">TSK-247</span>
+      </div>
+
+      <!-- Actions -->
+      <div class="modal-actions">
+        <button class="action-btn" title="Copy link">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6.5 9.5l3-3"/>
+            <path d="M9 10.5l1.5-1.5a2.12 2.12 0 000-3 2.12 2.12 0 00-3 0L6 7.5"/>
+            <path d="M7 5.5L5.5 7a2.12 2.12 0 000 3 2.12 2.12 0 003 0L10 8.5"/>
+          </svg>
+        </button>
+        <button class="action-btn" title="More actions">
+          <svg viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="4" cy="8" r="1.2"/>
+            <circle cx="8" cy="8" r="1.2"/>
+            <circle cx="12" cy="8" r="1.2"/>
+          </svg>
+        </button>
+        <button class="action-btn" title="Close (Esc)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Title (editable inline feel) -->
+    <div class="task-title-row">
+      <div class="task-title">Implement sandbox file system watcher for real-time agent output</div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       BODY — Two Column
+       ========================================== -->
+  <div class="modal-body">
+
+    <!-- LEFT — Main content -->
+    <div class="content-area">
+
+      <!-- Status selector -->
+      <div class="status-selector-wrap">
+        <div class="status-selector">
+          <div class="status-dot in-progress"></div>
+          <span class="status-label">In Progress</span>
+          <span class="status-chevron">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 4.5L6 7.5L9 4.5"/>
+            </svg>
+          </span>
+        </div>
+
+        <!-- Dropdown (appears on hover for design showcase) -->
+        <div class="status-dropdown">
+          <div class="status-option">
+            <div class="status-dot backlog"></div>
+            <span>Backlog</span>
+            <svg class="check-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l3 3 5-5"/></svg>
+          </div>
+          <div class="status-option">
+            <div class="status-dot todo"></div>
+            <span>Todo</span>
+            <svg class="check-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l3 3 5-5"/></svg>
+          </div>
+          <div class="status-option active">
+            <div class="status-dot in-progress"></div>
+            <span>In Progress</span>
+            <svg class="check-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l3 3 5-5"/></svg>
+          </div>
+          <div class="status-option">
+            <div class="status-dot review"></div>
+            <span>Review</span>
+            <svg class="check-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l3 3 5-5"/></svg>
+          </div>
+          <div class="status-option">
+            <div class="status-dot done"></div>
+            <span>Done</span>
+            <svg class="check-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l3 3 5-5"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div>
+        <div class="section-label">Description</div>
+        <div class="description">
+          <p>The sandbox file system watcher needs to monitor <strong>all file changes</strong> made by coding agents in real-time and broadcast them to the UI via Convex subscriptions.</p>
+
+          <h3>Requirements</h3>
+          <ul>
+            <li>Watch <code>/workspace</code> directory recursively for creates, updates, and deletes</li>
+            <li>Debounce rapid changes (50ms window) to prevent flooding</li>
+            <li>Emit structured events with <code>path</code>, <code>action</code>, and <code>timestamp</code></li>
+            <li>Support <a href="#">.gitignore</a>-style exclude patterns for <code>node_modules</code></li>
+          </ul>
+
+          <h3>Implementation Notes</h3>
+          <p>Use the Daytona SDK's <code>fs.watch()</code> API with the <em>recursive</em> flag. The watcher should be started when an agent begins execution and cleaned up on completion.</p>
+
+          <pre><code><span class="syn-k">const</span> <span class="syn-v">watcher</span> <span class="syn-o">=</span> <span class="syn-v">daytona</span>.<span class="syn-v">fs</span>.<span class="syn-f">watch</span>(<span class="syn-s">"/workspace"</span>, {
+  <span class="syn-p">recursive</span>: <span class="syn-k">true</span>,
+  <span class="syn-p">filter</span>: [<span class="syn-s">"!node_modules"</span>, <span class="syn-s">"!.git"</span>],
+});
+
+<span class="syn-v">watcher</span>.<span class="syn-f">on</span>(<span class="syn-s">"change"</span>, (<span class="syn-v">event</span>) <span class="syn-k">=></span> {
+  <span class="syn-v">ctx</span>.<span class="syn-f">runMutation</span>(<span class="syn-v">api</span>.<span class="syn-v">files</span>.<span class="syn-p">recordChange</span>, {
+    <span class="syn-p">agentId</span>,
+    <span class="syn-p">path</span>: <span class="syn-v">event</span>.<span class="syn-p">path</span>,
+    <span class="syn-p">action</span>: <span class="syn-v">event</span>.<span class="syn-p">type</span>,
+  });
+});</code></pre>
+
+          <blockquote>Edge case: handle symlinks carefully -- the watcher should resolve them but not follow circular references.</blockquote>
+        </div>
+      </div>
+
+      <!-- Subtasks -->
+      <div class="subtasks-section">
+        <div class="subtasks-header">
+          <div class="subtasks-header-left">
+            <div class="section-label" style="margin-bottom: 0;">Sub-tasks</div>
+            <div class="subtasks-progress-text">2/3</div>
+            <div class="subtasks-progress-bar">
+              <div class="subtasks-progress-fill"></div>
+            </div>
+          </div>
+        </div>
+        <div class="subtask-list">
+          <div class="subtask-item completed">
+            <div class="subtask-checkbox checked">
+              <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 5l2.5 2.5L8 3"/>
+              </svg>
+            </div>
+            <span class="subtask-text">Set up Daytona SDK watcher integration</span>
+          </div>
+          <div class="subtask-item completed">
+            <div class="subtask-checkbox checked">
+              <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 5l2.5 2.5L8 3"/>
+              </svg>
+            </div>
+            <span class="subtask-text">Add debounce logic and event batching</span>
+          </div>
+          <div class="subtask-item">
+            <div class="subtask-checkbox">
+              <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 5l2.5 2.5L8 3"/>
+              </svg>
+            </div>
+            <span class="subtask-text">Wire up Convex mutation for broadcasting changes</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT — Properties panel -->
+    <div class="properties-panel">
+
+      <!-- Assignee -->
+      <div class="property-row">
+        <div class="property-label">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7" cy="4.5" r="2.5"/>
+            <path d="M2 12.5c0-2.5 2-4 5-4s5 1.5 5 4"/>
+          </svg>
+          Assignee
+        </div>
+        <div class="property-value">
+          <div class="avatar orange">MK</div>
+          <span>Mika K.</span>
+        </div>
+      </div>
+
+      <!-- Priority -->
+      <div class="property-row">
+        <div class="property-label">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 2v7"/>
+            <path d="M7 12h.01"/>
+          </svg>
+          Priority
+        </div>
+        <div class="property-value">
+          <div class="priority-indicator">
+            <div class="priority-icon" style="color: var(--mistral-orange);">
+              <svg viewBox="0 0 14 14" fill="currentColor">
+                <rect x="1" y="8" width="3" height="5" rx="0.5"/>
+                <rect x="5.5" y="5" width="3" height="8" rx="0.5"/>
+                <rect x="10" y="2" width="3" height="11" rx="0.5" opacity="0.3"/>
+              </svg>
+            </div>
+            <span style="color: var(--mistral-orange);">High</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Labels -->
+      <div class="property-row" style="align-items: flex-start; padding-top: 9px;">
+        <div class="property-label" style="padding-top: 2px;">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 7.5V3a1 1 0 011-1h4.5L12 6.5 7.5 11 2 7.5z"/>
+            <circle cx="5" cy="5" r="0.8" fill="currentColor"/>
+          </svg>
+          Labels
+        </div>
+        <div class="labels-stack">
+          <span class="label-chip orange">backend</span>
+          <span class="label-chip blue">agent</span>
+        </div>
+      </div>
+
+      <!-- Due Date -->
+      <div class="property-row">
+        <div class="property-label">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1.5" y="2.5" width="11" height="10" rx="1.5"/>
+            <path d="M1.5 5.5h11"/>
+            <path d="M4.5 1v2"/>
+            <path d="M9.5 1v2"/>
+          </svg>
+          Due date
+        </div>
+        <div class="property-value">
+          <span class="due-date-badge today">Mar 2</span>
+        </div>
+      </div>
+
+      <!-- Project -->
+      <div class="property-row">
+        <div class="property-label">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="10" height="10" rx="2"/>
+            <path d="M5 6h4"/>
+            <path d="M5 8.5h2.5"/>
+          </svg>
+          Project
+        </div>
+        <div class="property-value">
+          <div class="project-icon orange">
+            <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="10" height="10" rx="2"/>
+            </svg>
+          </div>
+          <span>AI Office</span>
+        </div>
+      </div>
+
+      <!-- Parent -->
+      <div class="property-row">
+        <div class="property-label">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h6"/>
+            <path d="M4 4v6"/>
+            <rect x="8" y="5" width="4" height="4" rx="1"/>
+          </svg>
+          Parent
+        </div>
+        <div class="property-value">
+          <span style="color: var(--text-tertiary); font-family: 'JetBrains Mono', monospace; font-size: 11px;">TSK-201</span>
+        </div>
+      </div>
+
+      <div class="properties-divider"></div>
+
+      <!-- Timestamps -->
+      <div class="property-meta">
+        <div class="meta-row">
+          <span class="meta-label">Created</span>
+          <span class="meta-value">Feb 24, 10:32</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Updated</span>
+          <span class="meta-value">Feb 28, 09:15</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ==========================================
+       FOOTER — Activity toggle
+       ========================================== -->
+  <div class="modal-footer">
+    <div class="activity-toggle">
+      <div class="activity-toggle-left">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 8a6 6 0 01-6 6 6 6 0 01-6-6 6 6 0 016-6 6 6 0 016 6z"/>
+          <path d="M8 4.5V8l2.5 1.5"/>
+        </svg>
+        <span>Activity</span>
+        <span class="activity-count">7</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div class="activity-tabs">
+          <span class="activity-tab active">All</span>
+          <span class="activity-tab">Comments</span>
+          <span class="activity-tab">History</span>
+        </div>
+        <div class="activity-chevron">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 5.5l3 3 3-3"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <!-- Recent activity hint -->
+    <div class="activity-preview">
+      <div class="activity-preview-item">
+        <div class="activity-preview-avatar" style="background: linear-gradient(135deg, var(--info), #2563EB);">SL</div>
+        <span>Sara commented</span>
+        <span class="activity-preview-time">2h ago</span>
+      </div>
+      <span style="color: var(--text-quaternary);">&middot;</span>
+      <div class="activity-preview-item">
+        <div class="activity-preview-avatar" style="background: linear-gradient(135deg, var(--mistral-orange), #E06000);">MK</div>
+        <span>Mika changed priority</span>
+        <span class="activity-preview-time">5h ago</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

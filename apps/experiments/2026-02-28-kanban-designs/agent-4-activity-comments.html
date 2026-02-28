@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440, initial-scale=1.0">
+<title>Task Modal — Activity & Comments</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0A0A0B;
+    color: #FAFAFA;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+
+  /* ===== DESIGN TOKENS ===== */
+  :root {
+    --bg-base: #0A0A0B;
+    --bg-surface: #111113;
+    --bg-elevated: #1A1A1D;
+    --bg-hover: #1F1F23;
+    --bg-active: #252529;
+
+    --border-subtle: #2A2A2E;
+    --border-hover: #3A3A3E;
+    --border-focus: #FF7000;
+
+    --text-primary: #FAFAFA;
+    --text-secondary: #A0A0A8;
+    --text-tertiary: #6B6B73;
+    --text-muted: #505058;
+
+    --accent-orange: #FF7000;
+    --accent-orange-dim: rgba(255, 112, 0, 0.12);
+    --accent-orange-hover: #FF8A2E;
+    --accent-red: #FD3F29;
+    --accent-red-dim: rgba(253, 63, 41, 0.12);
+    --accent-yellow: #FFCB00;
+    --accent-yellow-dim: rgba(255, 203, 0, 0.10);
+    --accent-green: #22C55E;
+    --accent-green-dim: rgba(34, 197, 94, 0.12);
+    --accent-blue: #3B82F6;
+    --accent-blue-dim: rgba(59, 130, 246, 0.12);
+    --accent-purple: #A855F7;
+    --accent-purple-dim: rgba(168, 85, 247, 0.12);
+
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --radius-full: 9999px;
+
+    --transition-fast: 150ms ease;
+    --transition-normal: 200ms ease;
+    --transition-slow: 300ms ease-out;
+  }
+
+  /* ===== MODAL CONTAINER ===== */
+  .modal-container {
+    width: 680px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  /* ===== MODAL HEADER (Context) ===== */
+  .modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .modal-header .breadcrumb {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.02em;
+  }
+  .modal-header .breadcrumb span {
+    color: var(--text-secondary);
+  }
+
+  .modal-header .task-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    background: var(--bg-elevated);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .modal-header .task-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-left: auto;
+    flex: 1;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ===== ACTIVITY SECTION ===== */
+  .activity-section {
+    display: flex;
+    flex-direction: column;
+    max-height: 760px;
+  }
+
+  /* ===== TAB BAR ===== */
+  .tab-bar {
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border-subtle);
+    gap: 0;
+    position: relative;
+  }
+
+  .tab-bar::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--border-subtle);
+  }
+
+  .tab {
+    position: relative;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: color var(--transition-fast);
+    user-select: none;
+    z-index: 1;
+  }
+
+  .tab:hover {
+    color: var(--text-secondary);
+  }
+
+  .tab.active {
+    color: var(--text-primary);
+  }
+
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 16px;
+    right: 16px;
+    height: 2px;
+    background: var(--accent-orange);
+    border-radius: 2px 2px 0 0;
+    animation: tabSlideIn 200ms ease-out;
+  }
+
+  @keyframes tabSlideIn {
+    from { transform: scaleX(0); opacity: 0; }
+    to { transform: scaleX(1); opacity: 1; }
+  }
+
+  .tab .count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    margin-left: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: var(--radius-full);
+    background: var(--bg-elevated);
+    color: var(--text-tertiary);
+    vertical-align: middle;
+    line-height: 1;
+  }
+
+  .tab.active .count-badge {
+    background: var(--accent-orange-dim);
+    color: var(--accent-orange);
+  }
+
+  .tab-bar .sort-btn {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 8px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .tab-bar .sort-btn:hover {
+    color: var(--text-secondary);
+    border-color: var(--border-subtle);
+    background: var(--bg-elevated);
+  }
+
+  .tab-bar .sort-btn svg {
+    width: 12px;
+    height: 12px;
+    opacity: 0.6;
+  }
+
+  /* ===== FEED CONTENT ===== */
+  .feed-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-subtle) transparent;
+  }
+
+  .feed-content::-webkit-scrollbar {
+    width: 6px;
+  }
+  .feed-content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .feed-content::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 3px;
+  }
+
+  /* ===== LOAD MORE ===== */
+  .load-more-container {
+    display: flex;
+    justify-content: center;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .load-more-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .load-more-btn:hover {
+    color: var(--text-secondary);
+    border-color: var(--border-hover);
+    background: var(--bg-hover);
+  }
+
+  .load-more-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .load-more-btn .more-count {
+    color: var(--text-muted);
+  }
+
+  /* ===== ACTIVITY ENTRY ===== */
+  .activity-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 24px;
+    transition: background var(--transition-fast);
+  }
+
+  .activity-entry:hover {
+    background: rgba(255, 255, 255, 0.015);
+  }
+
+  .activity-icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+  }
+
+  .activity-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .activity-icon.status-change {
+    background: var(--accent-orange-dim);
+    color: var(--accent-orange);
+  }
+  .activity-icon.assignment {
+    background: var(--accent-blue-dim);
+    color: var(--accent-blue);
+  }
+  .activity-icon.priority-change {
+    background: var(--accent-yellow-dim);
+    color: var(--accent-yellow);
+  }
+  .activity-icon.label-change {
+    background: var(--accent-purple-dim);
+    color: var(--accent-purple);
+  }
+  .activity-icon.created {
+    background: var(--accent-green-dim);
+    color: var(--accent-green);
+  }
+  .activity-icon.comment-icon {
+    background: rgba(255,255,255,0.05);
+    color: var(--text-tertiary);
+  }
+
+  .activity-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .activity-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.45;
+  }
+
+  .activity-text .actor {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .activity-text .value {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .activity-text .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 7px 1px 5px;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: var(--radius-full);
+    vertical-align: middle;
+    line-height: 1.6;
+  }
+
+  .status-badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-badge.todo {
+    background: rgba(250,250,250,0.06);
+    color: var(--text-secondary);
+  }
+  .status-badge.todo .dot {
+    border: 1.5px solid var(--text-secondary);
+    background: transparent;
+  }
+
+  .status-badge.in-progress {
+    background: var(--accent-orange-dim);
+    color: var(--accent-orange);
+  }
+  .status-badge.in-progress .dot {
+    background: var(--accent-orange);
+  }
+
+  .status-badge.review {
+    background: var(--accent-yellow-dim);
+    color: var(--accent-yellow);
+  }
+  .status-badge.review .dot {
+    background: var(--accent-yellow);
+  }
+
+  .status-badge.done {
+    background: var(--accent-green-dim);
+    color: var(--accent-green);
+  }
+  .status-badge.done .dot {
+    background: var(--accent-green);
+  }
+
+  .status-badge.backlog {
+    background: rgba(107,107,115,0.12);
+    color: var(--text-tertiary);
+  }
+  .status-badge.backlog .dot {
+    background: var(--text-tertiary);
+  }
+
+  .activity-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .activity-arrow {
+    color: var(--text-muted);
+    margin: 0 2px;
+  }
+
+  /* ===== DIVIDER (date separator) ===== */
+  .date-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 24px;
+    margin: 4px 0;
+  }
+
+  .date-divider .line {
+    flex: 1;
+    height: 1px;
+    background: var(--border-subtle);
+  }
+
+  .date-divider .label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  /* ===== COMMENT THREAD ===== */
+  .comment {
+    padding: 14px 24px;
+    transition: background var(--transition-fast);
+    position: relative;
+  }
+
+  .comment:hover {
+    background: rgba(255, 255, 255, 0.015);
+  }
+
+  .comment + .comment {
+    border-top: 1px solid rgba(42, 42, 46, 0.5);
+  }
+
+  .comment-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .comment-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    text-transform: uppercase;
+    position: relative;
+  }
+
+  .comment-avatar.online::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    border: 2px solid var(--bg-surface);
+  }
+
+  .avatar-ev { background: linear-gradient(135deg, #FF7000, #FF8A2E); }
+  .avatar-sm { background: linear-gradient(135deg, #3B82F6, #60A5FA); }
+  .avatar-jk { background: linear-gradient(135deg, #A855F7, #C084FC); }
+  .avatar-lr { background: linear-gradient(135deg, #22C55E, #4ADE80); }
+  .avatar-ai { background: linear-gradient(135deg, #FF7000, #FFCB00); }
+
+  .comment-author {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 6px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent-orange);
+    background: var(--accent-orange-dim);
+    border-radius: var(--radius-sm);
+    vertical-align: middle;
+    line-height: 1.6;
+  }
+
+  .comment-time {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .comment-edited {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .comment-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+  }
+
+  .comment:hover .comment-actions {
+    opacity: 1;
+  }
+
+  .comment-action-btn {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .comment-action-btn:hover {
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+  }
+
+  .comment-action-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .comment-body {
+    margin-left: 40px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+  }
+
+  .comment-body p {
+    margin-bottom: 6px;
+  }
+
+  .comment-body p:last-child {
+    margin-bottom: 0;
+  }
+
+  .comment-body code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 1px 5px;
+    border-radius: var(--radius-sm);
+    color: var(--accent-orange);
+  }
+
+  .comment-body pre {
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin: 8px 0;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+  }
+
+  .comment-body strong {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .comment-body a {
+    color: var(--accent-blue);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(59,130,246,0.3);
+    transition: border-color var(--transition-fast);
+  }
+
+  .comment-body a:hover {
+    border-color: var(--accent-blue);
+  }
+
+  .comment-body .mention {
+    color: var(--accent-orange);
+    background: var(--accent-orange-dim);
+    padding: 0 4px;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .comment-body .mention:hover {
+    background: rgba(255, 112, 0, 0.2);
+  }
+
+  .comment-body blockquote {
+    border-left: 3px solid var(--border-hover);
+    margin: 8px 0;
+    padding: 4px 12px;
+    color: var(--text-tertiary);
+    font-style: italic;
+  }
+
+  .comment-body ul, .comment-body ol {
+    margin: 6px 0;
+    padding-left: 20px;
+  }
+
+  .comment-body li {
+    margin-bottom: 3px;
+  }
+
+  .comment-body .task-ref {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    color: var(--accent-blue);
+    cursor: pointer;
+    text-decoration: none;
+    border-bottom: none;
+  }
+
+  .comment-body .task-ref:hover {
+    background: var(--accent-blue-dim);
+    border-color: rgba(59,130,246,0.3);
+  }
+
+  /* ===== REACTIONS ===== */
+  .comment-reactions {
+    margin-left: 40px;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .reaction {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    font-size: 12px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-elevated);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    user-select: none;
+    line-height: 1;
+  }
+
+  .reaction:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-hover);
+  }
+
+  .reaction.active {
+    border-color: rgba(255, 112, 0, 0.3);
+    background: var(--accent-orange-dim);
+  }
+
+  .reaction .emoji {
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  .reaction .count {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+  }
+
+  .reaction.active .count {
+    color: var(--accent-orange);
+  }
+
+  .add-reaction-btn {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-full);
+    border: 1px dashed var(--border-subtle);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    opacity: 0;
+  }
+
+  .comment:hover .add-reaction-btn,
+  .comment-reactions:hover .add-reaction-btn {
+    opacity: 1;
+  }
+
+  .add-reaction-btn:hover {
+    border-color: var(--border-hover);
+    border-style: solid;
+    color: var(--text-tertiary);
+    background: var(--bg-elevated);
+  }
+
+  .add-reaction-btn svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  /* ===== COMMENT INPUT ===== */
+  .comment-input-section {
+    border-top: 1px solid var(--border-subtle);
+    padding: 16px 24px;
+    background: var(--bg-surface);
+  }
+
+  .comment-input-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .comment-input-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #FF7000, #FF8A2E);
+    color: white;
+    margin-top: 1px;
+  }
+
+  .input-container {
+    flex: 1;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: border-color var(--transition-fast);
+    background: var(--bg-base);
+  }
+
+  .input-container:focus-within {
+    border-color: var(--accent-orange);
+    box-shadow: 0 0 0 1px var(--accent-orange-dim);
+  }
+
+  /* Markdown Toolbar */
+  .md-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    gap: 1px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+  }
+
+  .md-toolbar-btn {
+    width: 28px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .md-toolbar-btn:hover {
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+  }
+
+  .md-toolbar-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .md-toolbar .separator {
+    width: 1px;
+    height: 16px;
+    background: var(--border-subtle);
+    margin: 0 4px;
+  }
+
+  .md-toolbar .toolbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .md-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-right: 8px;
+  }
+
+  .md-hint kbd {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    padding: 1px 4px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    background: var(--bg-elevated);
+    color: var(--text-tertiary);
+  }
+
+  .comment-textarea {
+    width: 100%;
+    min-height: 72px;
+    max-height: 200px;
+    resize: vertical;
+    padding: 10px 12px;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-primary);
+  }
+
+  .comment-textarea::placeholder {
+    color: var(--text-muted);
+  }
+
+  .input-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: var(--bg-surface);
+    border-top: 1px solid rgba(42,42,46,0.4);
+  }
+
+  .input-footer-left {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .attach-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    transition: all var(--transition-fast);
+  }
+
+  .attach-btn:hover {
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+  }
+
+  .attach-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .submit-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--accent-orange);
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .submit-btn:hover {
+    background: var(--accent-orange-hover);
+    transform: translateY(-1px);
+  }
+
+  .submit-btn:active {
+    transform: translateY(0);
+  }
+
+  .submit-btn svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  /* ===== TOOLTIP ===== */
+  .tooltip-parent {
+    position: relative;
+  }
+  .tooltip-parent::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.92);
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    pointer-events: none;
+    opacity: 0;
+    transition: all var(--transition-fast);
+  }
+  .tooltip-parent:hover::before {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+
+  /* ===== THREAD CONNECTOR LINE ===== */
+  .comment.has-replies {
+    padding-bottom: 0;
+  }
+
+  .reply-thread {
+    margin-left: 40px;
+    padding-left: 20px;
+    border-left: 2px solid var(--border-subtle);
+    margin-bottom: 0;
+  }
+
+  .reply-thread .comment {
+    padding: 10px 24px 10px 0;
+    border-top: none;
+  }
+
+  .reply-thread .comment + .comment {
+    border-top: none;
+  }
+
+  .reply-thread .comment-body {
+    margin-left: 38px;
+  }
+
+  .reply-thread .comment-reactions {
+    margin-left: 38px;
+  }
+
+  .reply-count-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 40px;
+    margin-top: 6px;
+    margin-bottom: 10px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--accent-blue);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: 'Inter', sans-serif;
+  }
+
+  .reply-count-btn:hover {
+    background: var(--accent-blue-dim);
+  }
+
+  .reply-count-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* ===== ANIMATIONS ===== */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .comment, .activity-entry {
+    animation: fadeInUp 300ms ease-out both;
+  }
+
+  .comment:nth-child(1) { animation-delay: 0ms; }
+  .comment:nth-child(2) { animation-delay: 40ms; }
+  .comment:nth-child(3) { animation-delay: 80ms; }
+  .comment:nth-child(4) { animation-delay: 120ms; }
+  .activity-entry:nth-child(1) { animation-delay: 0ms; }
+  .activity-entry:nth-child(2) { animation-delay: 30ms; }
+  .activity-entry:nth-child(3) { animation-delay: 60ms; }
+  .activity-entry:nth-child(4) { animation-delay: 90ms; }
+  .activity-entry:nth-child(5) { animation-delay: 120ms; }
+
+  /* ===== PRIORITY INLINE BADGES ===== */
+  .priority-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    vertical-align: middle;
+  }
+
+  .priority-badge.urgent {
+    background: var(--accent-red-dim);
+    color: var(--accent-red);
+  }
+
+  .priority-badge.high {
+    background: var(--accent-orange-dim);
+    color: var(--accent-orange);
+  }
+
+  .priority-badge.medium {
+    background: var(--accent-yellow-dim);
+    color: var(--accent-yellow);
+  }
+
+  .priority-badge svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  /* ===== IMAGE PREVIEW IN COMMENT ===== */
+  .comment-image {
+    margin-top: 8px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+    overflow: hidden;
+    max-width: 360px;
+    background: var(--bg-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 140px;
+    position: relative;
+    cursor: pointer;
+    transition: border-color var(--transition-fast);
+  }
+
+  .comment-image:hover {
+    border-color: var(--border-hover);
+  }
+
+  .comment-image .placeholder-img {
+    color: var(--text-muted);
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .comment-image .placeholder-img svg {
+    width: 24px;
+    height: 24px;
+    opacity: 0.4;
+  }
+</style>
+</head>
+<body>
+
+<div class="modal-container">
+
+  <!-- Modal Header (context) -->
+  <div class="modal-header">
+    <span class="breadcrumb">AI Office <span>/</span> In Progress</span>
+    <span class="task-id">#TSK-247</span>
+    <span class="task-title">Implement sandbox file watcher</span>
+  </div>
+
+  <!-- Activity Section -->
+  <div class="activity-section">
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+      <div class="tab">Activity <span class="count-badge">12</span></div>
+      <div class="tab active">Comments <span class="count-badge">5</span></div>
+      <div class="tab">All <span class="count-badge">17</span></div>
+
+      <button class="sort-btn tooltip-parent" data-tooltip="Sort order">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <path d="M2 4h12M4 8h8M6 12h4"/>
+        </svg>
+        Newest
+      </button>
+    </div>
+
+    <!-- Feed Content -->
+    <div class="feed-content">
+
+      <!-- Load More -->
+      <div class="load-more-container">
+        <button class="load-more-btn">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M8 3v10M3 8l5-5 5 5"/>
+          </svg>
+          Load older
+          <span class="more-count">(8 more)</span>
+        </button>
+      </div>
+
+      <!-- Date Divider -->
+      <div class="date-divider">
+        <span class="line"></span>
+        <span class="label">Feb 26, 2026</span>
+        <span class="line"></span>
+      </div>
+
+      <!-- Activity: Created -->
+      <div class="activity-entry">
+        <div class="activity-icon created">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="8" cy="8" r="5.5"/>
+            <path d="M8 5.5v5M5.5 8h5"/>
+          </svg>
+        </div>
+        <div class="activity-body">
+          <div class="activity-text">
+            <span class="actor">Elena Vasquez</span> created this task
+          </div>
+          <div class="activity-meta">Feb 26 at 9:14 AM</div>
+        </div>
+      </div>
+
+      <!-- Activity: Assignment -->
+      <div class="activity-entry">
+        <div class="activity-icon assignment">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="8" cy="5" r="3"/>
+            <path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/>
+          </svg>
+        </div>
+        <div class="activity-body">
+          <div class="activity-text">
+            <span class="actor">Elena Vasquez</span> assigned <span class="value">Sam Miller</span>
+          </div>
+          <div class="activity-meta">Feb 26 at 9:15 AM</div>
+        </div>
+      </div>
+
+      <!-- Activity: Priority Change -->
+      <div class="activity-entry">
+        <div class="activity-icon priority-change">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 13V3l9 3.5L3 10"/>
+          </svg>
+        </div>
+        <div class="activity-body">
+          <div class="activity-text">
+            <span class="actor">Elena Vasquez</span> set priority to
+            <span class="priority-badge high">
+              <svg viewBox="0 0 10 10" fill="currentColor"><rect x="1" y="1" width="8" height="2" rx="0.5"/><rect x="1" y="4.5" width="8" height="2" rx="0.5"/><rect x="1" y="8" width="5" height="2" rx="0.5" opacity="0.4"/></svg>
+              High
+            </span>
+          </div>
+          <div class="activity-meta">Feb 26 at 9:15 AM</div>
+        </div>
+      </div>
+
+      <!-- Comment 1 -->
+      <div class="comment">
+        <div class="comment-header">
+          <div class="comment-avatar avatar-ev online">EV</div>
+          <span class="comment-author">Elena Vasquez</span>
+          <span class="comment-time">Feb 26 at 9:22 AM</span>
+          <div class="comment-actions">
+            <button class="comment-action-btn tooltip-parent" data-tooltip="React">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M5.5 6.5h.01M10.5 6.5h.01"/><path d="M5.5 10c.7.8 1.6 1.2 2.5 1.2s1.8-.4 2.5-1.2"/></svg>
+            </button>
+            <button class="comment-action-btn tooltip-parent" data-tooltip="Reply">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8L2 5v8l4-3"/><path d="M6 5h5.5a2.5 2.5 0 010 5H10"/></svg>
+            </button>
+            <button class="comment-action-btn tooltip-parent" data-tooltip="More">
+              <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12" cy="8" r="1.2"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="comment-body">
+          <p>We need the file watcher to support <strong>recursive directory monitoring</strong> on the Daytona sandbox. The inotify approach won't scale for deeply nested project structures.</p>
+          <p>I'm thinking we use <code>fswatch</code> with the kqueue backend as a fallback. <span class="mention">@Sam Miller</span> can you look into the Rust <code>notify</code> crate? It might give us cross-platform support out of the box.</p>
+          <p>Related: <a class="task-ref">#TSK-198</a> (sandbox fs permissions)</p>
+        </div>
+        <div class="comment-reactions">
+          <span class="reaction active">
+            <span class="emoji">&#128077;</span>
+            <span class="count">3</span>
+          </span>
+          <span class="reaction">
+            <span class="emoji">&#128640;</span>
+            <span class="count">1</span>
+          </span>
+          <button class="add-reaction-btn tooltip-parent" data-tooltip="Add reaction">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M5 8h6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Date Divider -->
+      <div class="date-divider">
+        <span class="line"></span>
+        <span class="label">Feb 27, 2026</span>
+        <span class="line"></span>
+      </div>
+
+      <!-- Activity: Status Change -->
+      <div class="activity-entry">
+        <div class="activity-icon status-change">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 2.5L13.5 5 11 7.5"/><path d="M2.5 5h11M5 13.5L2.5 11 5 8.5"/><path d="M13.5 11h-11"/>
+          </svg>
+        </div>
+        <div class="activity-body">
+          <div class="activity-text">
+            <span class="actor">Sam Miller</span> changed status from
+            <span class="status-badge todo"><span class="dot"></span> Todo</span>
+            <span class="activity-arrow">&rarr;</span>
+            <span class="status-badge in-progress"><span class="dot"></span> In Progress</span>
+          </div>
+          <div class="activity-meta">Feb 27 at 10:03 AM</div>
+        </div>
+      </div>
+
+      <!-- Comment 2: Sam's reply with code -->
+      <div class="comment has-replies">
+        <div class="comment-header">
+          <div class="comment-avatar avatar-sm">SM</div>
+          <span class="comment-author">Sam Miller</span>
+          <span class="comment-time">Feb 27 at 11:45 AM</span>
+          <span class="comment-edited">(edited)</span>
+          <div class="comment-actions">
+            <button class="comment-action-btn tooltip-parent" data-tooltip="React">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M5.5 6.5h.01M10.5 6.5h.01"/><path d="M5.5 10c.7.8 1.6 1.2 2.5 1.2s1.8-.4 2.5-1.2"/></svg>
+            </button>
+            <button class="comment-action-btn tooltip-parent" data-tooltip="Reply">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8L2 5v8l4-3"/><path d="M6 5h5.5a2.5 2.5 0 010 5H10"/></svg>
+            </button>
+            <button class="comment-action-btn tooltip-parent" data-tooltip="More">
+              <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12" cy="8" r="1.2"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="comment-body">
+          <p>Good call on the <code>notify</code> crate. I've been prototyping with it and debouncing works well. Here's the core watcher setup:</p>
+          <pre><code>let (tx, rx) = channel();
+let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
+watcher.watch(Path::new("/workspace"), RecursiveMode::Recursive)?;
+
+for event in rx {
+    match event?.kind {
+        EventKind::Modify(_) | EventKind::Create(_) => {
+            debounce_and_sync(event.paths).await;
+        }
+        _ => {}
+    }
+}</code></pre>
+          <p>Handles ~2k files with <strong>< 5ms</strong> latency on create/modify events. We'll need to add <code>.gitignore</code>-style filtering for <code>node_modules</code> and build artifacts though.</p>
+        </div>
+        <div class="comment-reactions">
+          <span class="reaction active">
+            <span class="emoji">&#10084;&#65039;</span>
+            <span class="count">2</span>
+          </span>
+          <span class="reaction">
+            <span class="emoji">&#127881;</span>
+            <span class="count">1</span>
+          </span>
+          <span class="reaction">
+            <span class="emoji">&#128293;</span>
+            <span class="count">4</span>
+          </span>
+          <button class="add-reaction-btn tooltip-parent" data-tooltip="Add reaction">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M5 8h6"/></svg>
+          </button>
+        </div>
+
+        <!-- Thread reply link -->
+        <button class="reply-count-btn">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8L2 5v8l4-3"/><path d="M6 5h5.5a2.5 2.5 0 010 5H10"/></svg>
+          2 replies
+        </button>
+
+        <!-- Threaded replies -->
+        <div class="reply-thread">
+          <div class="comment">
+            <div class="comment-header">
+              <div class="comment-avatar avatar-jk" style="width:26px;height:26px;font-size:10px;">JK</div>
+              <span class="comment-author">Jordan Kim</span>
+              <span class="comment-time">Feb 27 at 12:30 PM</span>
+              <div class="comment-actions">
+                <button class="comment-action-btn tooltip-parent" data-tooltip="React">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M5.5 6.5h.01M10.5 6.5h.01"/><path d="M5.5 10c.7.8 1.6 1.2 2.5 1.2s1.8-.4 2.5-1.2"/></svg>
+                </button>
+                <button class="comment-action-btn tooltip-parent" data-tooltip="More">
+                  <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12" cy="8" r="1.2"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="comment-body">
+              <p>Nice! You might want to check the <code>ignore</code> crate for the gitignore filtering -- it's what ripgrep uses under the hood and handles nested <code>.gitignore</code> files properly.</p>
+            </div>
+          </div>
+
+          <div class="comment">
+            <div class="comment-header">
+              <div class="comment-avatar avatar-sm" style="width:26px;height:26px;font-size:10px;">SM</div>
+              <span class="comment-author">Sam Miller</span>
+              <span class="comment-time">Feb 27 at 12:42 PM</span>
+              <div class="comment-actions">
+                <button class="comment-action-btn tooltip-parent" data-tooltip="React">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M5.5 6.5h.01M10.5 6.5h.01"/><path d="M5.5 10c.7.8 1.6 1.2 2.5 1.2s1.8-.4 2.5-1.2"/></svg>
+                </button>
+                <button class="comment-action-btn tooltip-parent" data-tooltip="More">
+                  <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12" cy="8" r="1.2"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="comment-body">
+              <p>Perfect, already added it. Thanks <span class="mention">@Jordan Kim</span> &#128588;</p>
+            </div>
+            <div class="comment-reactions">
+              <span class="reaction">
+                <span class="emoji">&#128077;</span>
+                <span class="count">1</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comment 3: AI Agent comment -->
+      <div class="comment">
+        <div class="comment-header">
+          <div class="comment-avatar avatar-ai">
+            <svg viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+              <path d="M8 2L3 5v6l5 3 5-3V5L8 2z"/>
+              <circle cx="8" cy="8" r="2" fill="white" stroke="none" opacity="0.6"/>
+            </svg>
+          </div>
+          <span class="comment-author">Sandbox Agent</span>
+          <span class="ai-badge">
+            <svg viewBox="0 0 8 8" fill="currentColor" style="width:7px;height:7px;"><circle cx="4" cy="4" r="3"/></svg>
+            AI
+          </span>
+          <span class="comment-time">Feb 27 at 2:15 PM</span>
+          <div class="comment-actions">
+            <button class="comment-action-btn tooltip-parent" data-tooltip="React">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M5.5 6.5h.01M10.5 6.5h.01"/><path d="M5.5 10c.7.8 1.6 1.2 2.5 1.2s1.8-.4 2.5-1.2"/></svg>
+            </button>
+            <button class="comment-action-btn tooltip-parent" data-tooltip="More">
+              <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12" cy="8" r="1.2"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="comment-body">
+          <p>I've analyzed the file watcher implementation and found a potential issue:</p>
+          <blockquote>The current debounce window (50ms) may be too aggressive for large file operations like <code>git checkout</code>. Recommend increasing to 200ms with a max-wait of 1s.</blockquote>
+          <p>Also, here are the benchmark results from the sandbox:</p>
+          <ul>
+            <li><strong>1,000 files</strong> &mdash; 2.1ms avg event latency</li>
+            <li><strong>10,000 files</strong> &mdash; 4.8ms avg event latency</li>
+            <li><strong>50,000 files</strong> &mdash; 12.3ms avg event latency (with filtering)</li>
+          </ul>
+          <p>Memory usage stays under <strong>8MB</strong> for all scenarios. The <code>ignore</code> crate filtering reduces events by ~60% in typical Node.js projects.</p>
+        </div>
+        <div class="comment-reactions">
+          <span class="reaction active">
+            <span class="emoji">&#128077;</span>
+            <span class="count">4</span>
+          </span>
+          <span class="reaction">
+            <span class="emoji">&#129299;</span>
+            <span class="count">2</span>
+          </span>
+          <button class="add-reaction-btn tooltip-parent" data-tooltip="Add reaction">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M5 8h6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Date Divider: Today -->
+      <div class="date-divider">
+        <span class="line"></span>
+        <span class="label">Today</span>
+        <span class="line"></span>
+      </div>
+
+      <!-- Activity: Label added -->
+      <div class="activity-entry">
+        <div class="activity-icon label-change">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2.5 9.5V4a1.5 1.5 0 011.5-1.5h5.5L13.5 7 9 11.5 2.5 9.5z"/>
+            <circle cx="6" cy="5.5" r="1" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="activity-body">
+          <div class="activity-text">
+            <span class="actor">Sam Miller</span> added label
+            <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;font-size:11px;font-weight:500;border-radius:9999px;background:rgba(168,85,247,0.12);color:#A855F7;vertical-align:middle;">infrastructure</span>
+          </div>
+          <div class="activity-meta">Today at 8:30 AM</div>
+        </div>
+      </div>
+
+      <!-- Activity: Status Change to Review -->
+      <div class="activity-entry">
+        <div class="activity-icon status-change">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 2.5L13.5 5 11 7.5"/><path d="M2.5 5h11M5 13.5L2.5 11 5 8.5"/><path d="M13.5 11h-11"/>
+          </svg>
+        </div>
+        <div class="activity-body">
+          <div class="activity-text">
+            <span class="actor">Sam Miller</span> changed status from
+            <span class="status-badge in-progress"><span class="dot"></span> In Progress</span>
+            <span class="activity-arrow">&rarr;</span>
+            <span class="status-badge review"><span class="dot"></span> Review</span>
+          </div>
+          <div class="activity-meta">Today at 9:15 AM</div>
+        </div>
+      </div>
+
+      <!-- Comment 4: Most recent -->
+      <div class="comment">
+        <div class="comment-header">
+          <div class="comment-avatar avatar-lr">LR</div>
+          <span class="comment-author">Lisa Reeves</span>
+          <span class="comment-time">Today at 10:02 AM</span>
+          <div class="comment-actions">
+            <button class="comment-action-btn tooltip-parent" data-tooltip="React">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M5.5 6.5h.01M10.5 6.5h.01"/><path d="M5.5 10c.7.8 1.6 1.2 2.5 1.2s1.8-.4 2.5-1.2"/></svg>
+            </button>
+            <button class="comment-action-btn tooltip-parent" data-tooltip="Reply">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8L2 5v8l4-3"/><path d="M6 5h5.5a2.5 2.5 0 010 5H10"/></svg>
+            </button>
+            <button class="comment-action-btn tooltip-parent" data-tooltip="More">
+              <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12" cy="8" r="1.2"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="comment-body">
+          <p>Reviewed the PR -- looking solid overall. Two things before I approve:</p>
+          <ol>
+            <li>Can we add a <strong>health check endpoint</strong> that returns watcher status + watched file count? Would help with debugging in production.</li>
+            <li>The error handling in the <code>debounce_and_sync</code> path silently swallows <code>PermissionDenied</code> errors. We should surface those to the agent's activity log.</li>
+          </ol>
+          <p>Otherwise this is ready to ship. Great work <span class="mention">@Sam Miller</span>!</p>
+        </div>
+        <div class="comment-reactions">
+          <span class="reaction">
+            <span class="emoji">&#128588;</span>
+            <span class="count">1</span>
+          </span>
+          <button class="add-reaction-btn tooltip-parent" data-tooltip="Add reaction">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M5 8h6"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /feed-content -->
+
+    <!-- Comment Input -->
+    <div class="comment-input-section">
+      <div class="comment-input-wrapper">
+        <div class="comment-input-avatar">EV</div>
+        <div class="input-container">
+          <div class="md-toolbar">
+            <!-- Bold -->
+            <button class="md-toolbar-btn tooltip-parent" data-tooltip="Bold">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2h5a3 3 0 011.8 5.4A3.2 3.2 0 019.5 14H4V2zm2 5h2.5a1.2 1.2 0 000-2.4H6V7zm0 4.4h3a1.4 1.4 0 000-2.8H6v2.8z"/></svg>
+            </button>
+            <!-- Italic -->
+            <button class="md-toolbar-btn tooltip-parent" data-tooltip="Italic">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M6 2h6v1.5H9.8L7.2 12.5H9V14H3v-1.5h2.2l2.6-9H6V2z"/></svg>
+            </button>
+            <!-- Strikethrough -->
+            <button class="md-toolbar-btn tooltip-parent" data-tooltip="Strikethrough">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 8h12v1.2H2V8zM5.2 6.2c0-1.8 1.5-3.2 3.3-3.2 1.4 0 2.6.8 3 2l-1.4.5c-.2-.7-.9-1.2-1.6-1.2-.9 0-1.8.6-1.8 1.5 0 .2 0 .3.1.5h-1.5c-.1-.3-.1-.7-.1-1.1zm5.6 4.6c0 1.8-1.5 3.2-3.3 3.2-1.4 0-2.6-.8-3-2l1.4-.5c.2.7.9 1.2 1.6 1.2.9 0 1.8-.6 1.8-1.5 0-.2 0-.3-.1-.5h1.5c.1.3.1.7.1 1.1z"/></svg>
+            </button>
+
+            <div class="separator"></div>
+
+            <!-- Code -->
+            <button class="md-toolbar-btn tooltip-parent" data-tooltip="Inline code">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4L1.5 8 5 12M11 4l3.5 4L11 12"/></svg>
+            </button>
+            <!-- Code block -->
+            <button class="md-toolbar-btn tooltip-parent" data-tooltip="Code block">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="12" height="12" rx="2"/>
+                <path d="M5 6l2 2-2 2M9 10h2"/>
+              </svg>
+            </button>
+            <!-- Link -->
+            <button class="md-toolbar-btn tooltip-parent" data-tooltip="Link">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6.5 9.5a3 3 0 004-4l-1-1a3 3 0 00-4 0L4 6"/><path d="M9.5 6.5a3 3 0 00-4 4l1 1a3 3 0 004 0L12 10"/></svg>
+            </button>
+
+            <div class="separator"></div>
+
+            <!-- List -->
+            <button class="md-toolbar-btn tooltip-parent" data-tooltip="Bullet list">
+              <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="4" r="1.2"/><circle cx="3" cy="8" r="1.2"/><circle cx="3" cy="12" r="1.2"/><rect x="6" y="3.2" width="8" height="1.6" rx="0.5"/><rect x="6" y="7.2" width="8" height="1.6" rx="0.5"/><rect x="6" y="11.2" width="8" height="1.6" rx="0.5"/></svg>
+            </button>
+            <!-- Quote -->
+            <button class="md-toolbar-btn tooltip-parent" data-tooltip="Quote">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 3v10h2V9h2V3H3zm6 0v10h2V9h2V3H9z" opacity="0.7"/></svg>
+            </button>
+            <!-- Mention -->
+            <button class="md-toolbar-btn tooltip-parent" data-tooltip="Mention">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M11 8v1.5a1.5 1.5 0 003 0V8a6 6 0 10-3 5.2"/></svg>
+            </button>
+
+            <div class="toolbar-right">
+              <span class="md-hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send</span>
+            </div>
+          </div>
+
+          <textarea class="comment-textarea" placeholder="Write a comment... Use @ to mention, ``` for code blocks"></textarea>
+
+          <div class="input-footer">
+            <div class="input-footer-left">
+              <button class="attach-btn tooltip-parent" data-tooltip="Attach file">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 7.5l-5.8 5.8a3 3 0 01-4.2-4.2L9.8 2.8a2 2 0 012.8 2.8l-5.8 5.8a1 1 0 01-1.4-1.4L11 4.5"/></svg>
+                Attach
+              </button>
+              <button class="attach-btn tooltip-parent" data-tooltip="Upload image">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="2" width="12" height="12" rx="2"/>
+                  <circle cx="5.5" cy="5.5" r="1.2"/>
+                  <path d="M14 11l-3-3-5 5"/>
+                  <path d="M10 14l3-3 1 1"/>
+                </svg>
+                Image
+              </button>
+            </div>
+            <button class="submit-btn">
+              Comment
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h12M10 4l4 4-4 4"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /activity-section -->
+
+</div><!-- /modal-container -->
+
+</body>
+</html>
