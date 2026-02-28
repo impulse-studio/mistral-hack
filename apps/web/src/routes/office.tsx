@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { OfficeAgentPanel } from "@/components/office/OfficeAgentPanel.component";
 import { OfficeCanvas } from "@/components/office/OfficeCanvas.component";
-import { ManagerBar } from "@/lib/manager/ManagerBar.component";
 import { MasterAgentPanel } from "@/lib/masterAgentPanel/MasterAgentPanel.component";
 import { initTileset } from "@/lib/pixelAgents/initTileset";
 import { OfficeState } from "@/lib/pixelAgents/officeState";
@@ -32,12 +31,7 @@ export const Route = createFileRoute("/office")({
 function OfficePage() {
 	const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 	const [showManagerModal, setShowManagerModal] = useState(false);
-	const [isThinking, setIsThinking] = useState(false);
 	const [tilesetReady, setTilesetReady] = useState(false);
-	const [threadId, setThreadId] = useState<string | null>(() => {
-		if (typeof window === "undefined") return null;
-		return sessionStorage.getItem("office-thread-id");
-	});
 	const officeRef = useRef<OfficeState | null>(null);
 	const agentMapRef = useRef(new Map<string, number>()); // convex agent _id → canvas id
 	const nextCanvasIdRef = useRef(1);
@@ -46,8 +40,6 @@ function OfficePage() {
 	// ── Convex mutations ──
 	const initDesks = useMutation(api.office.mutations.initDesks);
 	const ensureManager = useMutation(api.office.mutations.ensureManager);
-	const createThread = useMutation(api.chat.createNewThread);
-	const sendMessage = useMutation(api.chat.sendMessage);
 
 	// ── Convex subscriptions ──
 	const convexOffice = useQuery(api.office.queries.getOfficeState);
@@ -150,27 +142,6 @@ function OfficePage() {
 		setSelectedAgentId(null);
 	}, []);
 
-	// ── Send task to manager via Convex chat ──
-	const handleSubmitTask = useCallback(
-		async (prompt: string) => {
-			setIsThinking(true);
-			try {
-				let tid = threadId;
-				if (!tid) {
-					tid = await createThread();
-					setThreadId(tid);
-					sessionStorage.setItem("office-thread-id", tid);
-				}
-				await sendMessage({ threadId: tid, prompt, channel: "web" });
-			} catch (e) {
-				console.error("[Office] Send failed:", e);
-			} finally {
-				setIsThinking(false);
-			}
-		},
-		[threadId, createThread, sendMessage],
-	);
-
 	// ── Resolve selected agent info for panel ──
 	const selectedChar =
 		selectedAgentId !== null ? (officeState?.characters.get(selectedAgentId) ?? null) : null;
@@ -219,18 +190,10 @@ function OfficePage() {
 				</span>
 			</div>
 
-			{/* Canvas — fills space above manager bar */}
-			<div className="absolute inset-0 bottom-14">
+			{/* Canvas — fills entire space */}
+			<div className="absolute inset-0">
 				<OfficeCanvas officeState={officeState} onClickAgent={handleClickAgent} />
 			</div>
-
-			{/* Manager bar — fixed bottom */}
-			<ManagerBar
-				onSubmitTask={handleSubmitTask}
-				isThinking={isThinking}
-				agentCount={officeState.characters.size}
-				sandboxStatus="running"
-			/>
 
 			{/* Agent side panel */}
 			{agentInfo && (

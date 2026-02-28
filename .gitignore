@@ -12,6 +12,7 @@ storybook-static
 # Environment variables
 .env
 .env*.local
+.env.cloud
 
 # IDEs and editors
 .vscode/*
