@@ -1,5 +1,3 @@
-"use node";
-
 import { api, internal } from "../_generated/api";
 import { httpAction } from "../_generated/server";
 
