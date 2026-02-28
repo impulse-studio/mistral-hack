@@ -32,6 +32,9 @@ jobs:
         env:
           STORYBOOK_BASE: /mistral-hack/
 
+      - name: Verify Storybook preview iframe output
+        run: test -f apps/web/storybook-static/iframe.html
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
