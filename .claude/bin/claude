@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Project-specific claude wrapper that injects system prompt from file
+#
+# Setup:
+# 1. direnv loads .envrc which adds .claude/bin to PATH
+# 2. This wrapper intercepts `claude` and appends system prompt
+# 3. Rules enforcement persists through context compaction
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+SYSTEM_PROMPT="$PROJECT_DIR/.claude/claude.system.md"
+
+# Find the real claude binary (skip this wrapper)
+if [[ -x "$HOME/.local/bin/claude" ]]; then
+  CLAUDE_BIN="$HOME/.local/bin/claude"
+elif [[ -x "/usr/local/bin/claude" ]]; then
+  CLAUDE_BIN="/usr/local/bin/claude"
+else
+  CLAUDE_BIN=$(type -a claude | grep -v "$SCRIPT_DIR" | head -1 | awk '{print $3}')
+fi
+
+if [[ -f "$SYSTEM_PROMPT" ]]; then
+  exec "$CLAUDE_BIN" --append-system-prompt "$(cat "$SYSTEM_PROMPT")" "$@"
+else
+  exec "$CLAUDE_BIN" "$@"
+fi
