@@ -1,3 +1,4 @@
+import type { KanbanDragData } from "@/lib/kanban/KanbanItem.component";
 import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
 import { PixelGlow } from "@/lib/pixel/PixelGlow";
 import { PixelText } from "@/lib/pixel/PixelText";
@@ -17,18 +18,34 @@ interface ChatWindowProps {
 	messages: ChatWindowMessage[];
 	onSend: (text: string) => void;
 	isLoading?: boolean;
+	/** Called when a kanban task is dropped onto the chat message list. */
+	onTaskDrop?: (data: KanbanDragData) => void;
 	variant?: "standalone" | "panel";
 	title?: string;
 	className?: string;
+	/** Voice state — passed through to ChatInput. */
+	voiceRecording?: boolean;
+	voiceProcessing?: boolean;
+	voiceAnalyser?: AnalyserNode | null;
+	onVoiceStart?: () => void;
+	onVoiceStop?: () => void;
+	onVoiceCancel?: () => void;
 }
 
 function ChatWindow({
 	messages,
 	onSend,
 	isLoading = false,
+	onTaskDrop,
 	variant = "standalone",
 	title = "Manager Chat",
 	className,
+	voiceRecording,
+	voiceProcessing,
+	voiceAnalyser,
+	onVoiceStart,
+	onVoiceStop,
+	onVoiceCancel,
 }: ChatWindowProps) {
 	const hasStreamingMessage = messages.some((m) => m.status === "streaming");
 
@@ -49,10 +66,24 @@ function ChatWindow({
 			</div>
 
 			{/* Messages */}
-			<ChatMessageList messages={messages} isLoading={isLoading} className="flex-1" />
+			<ChatMessageList
+				messages={messages}
+				isLoading={isLoading}
+				onTaskDrop={onTaskDrop}
+				className="flex-1"
+			/>
 
 			{/* Input */}
-			<ChatInput onSend={onSend} disabled={isLoading} />
+			<ChatInput
+				onSend={onSend}
+				disabled={isLoading}
+				voiceRecording={voiceRecording}
+				voiceProcessing={voiceProcessing}
+				voiceAnalyser={voiceAnalyser}
+				onVoiceStart={onVoiceStart}
+				onVoiceStop={onVoiceStop}
+				onVoiceCancel={onVoiceCancel}
+			/>
 		</PixelBorderBox>
 	);
 }

@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
 
 export const Route = createFileRoute("/proto/v2")({
@@ -13,22 +12,6 @@ const ROWS = 14;
 const ZOOM = 3;
 const W = COLS * TILE;
 const H = ROWS * TILE;
-
-const containerStyle: React.CSSProperties = {
-	width: "100%",
-	height: "100vh",
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "center",
-	background: "#0a0a14",
-};
-
-const canvasStyle: React.CSSProperties = {
-	width: W * ZOOM,
-	height: H * ZOOM,
-	imageRendering: "pixelated",
-	cursor: "pointer",
-};
 
 // ─── COLORS ──────────────────────────────────────────
 const C = {

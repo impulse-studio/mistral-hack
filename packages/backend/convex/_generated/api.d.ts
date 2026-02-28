@@ -38,6 +38,8 @@ import type * as tasks_queries from "../tasks/queries.js";
 import type * as telegram_process from "../telegram/process.js";
 import type * as telegram_send from "../telegram/send.js";
 import type * as telegram_webhook from "../telegram/webhook.js";
+import type * as voice_converse from "../voice/converse.js";
+import type * as voice_elevenLabsStream from "../voice/elevenLabsStream.js";
 import type * as workpool from "../workpool.js";
 
 import type {
@@ -77,6 +79,8 @@ declare const fullApi: ApiFromModules<{
   "telegram/process": typeof telegram_process;
   "telegram/send": typeof telegram_send;
   "telegram/webhook": typeof telegram_webhook;
+  "voice/converse": typeof voice_converse;
+  "voice/elevenLabsStream": typeof voice_elevenLabsStream;
   workpool: typeof workpool;
 }>;
 

@@ -23,11 +23,13 @@
 		"convex": "catalog:",
 		"convex-durable-agents": "^0.2.4",
 		"dotenv": "catalog:",
+		"ws": "^8.19.0",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@mistral-hack/config": "workspace:*",
 		"@types/node": "^24.3.0",
+		"@types/ws": "^8.18.1",
 		"typescript": "catalog:"
 	}
 }

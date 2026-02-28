@@ -7,10 +7,10 @@ import { cn } from "@/lib/utils";
 
 import { ChatWindowSmart } from "../chat/ChatWindow.smart";
 import {
-	KanbanBoardReadonly,
+	KanbanBoard,
 	type KanbanBoardFilters,
 	type KanbanBoardTask,
-} from "../kanban/KanbanBoardReadonly.component";
+} from "../kanban/KanbanBoard.component";
 
 const KANBAN_FILTERS: KanbanBoardFilters = {
 	statuses: ["backlog", "todo", "in_progress", "review", "done"],
@@ -79,15 +79,17 @@ function MasterAgentPanel({ className }: MasterAgentPanelProps) {
 		<div className={cn("flex h-full gap-4", className)}>
 			{/* Left: Manager Chat */}
 			<div className="flex h-full w-[420px] shrink-0 flex-col">
-				<ChatWindowSmart variant="panel" title="Manager" />
+				<ChatWindowSmart variant="panel" title="Manager" acceptTaskDrop />
 			</div>
 
 			{/* Right: Kanban Board */}
 			<div className="flex min-w-0 flex-1 flex-col">
-				<KanbanBoardReadonly
+				<KanbanBoard
 					title="Task Board"
 					tasks={tasks}
 					filters={KANBAN_FILTERS}
+					readOnly
+					allowDragOut
 					className="h-full"
 				/>
 			</div>

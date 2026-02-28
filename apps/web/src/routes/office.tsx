@@ -3,15 +3,20 @@ import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { Authenticated, AuthLoading, Unauthenticated, useMutation, useQuery } from "convex/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { PixelAvatar } from "@/components/PixelAvatar";
 import { OfficeAgentPanel } from "@/components/office/OfficeAgentPanel.component";
 import { OfficeCanvas } from "@/components/office/OfficeCanvas.component";
-import { ManagerBar } from "@/lib/manager/ManagerBar.component";
+import { authClient } from "@/lib/auth-client";
+import { MasterAgentPanel } from "@/lib/masterAgentPanel/MasterAgentPanel.component";
 import { initTileset } from "@/lib/pixelAgents/initTileset";
 import { OfficeState } from "@/lib/pixelAgents/officeState";
 
 const EMPTY_TASKS: never[] = [];
 const EMPTY_TERMINAL: never[] = [];
 const EMPTY_REASONING: never[] = [];
+
+/** Reserved canvas ID for the always-present manager character */
+const MANAGER_CANVAS_ID = 0;
 
 /** Map desk position to canvas chair UID */
 function deskPositionToChairUid(position: { x: number; y: number }, label?: string): string {
@@ -44,13 +49,13 @@ function OfficePage() {
 }
 
 function OfficeContent() {
+	const user = useQuery(api.auth.getCurrentUser);
+
+	console.log(user);
+
 	const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
-	const [isThinking, setIsThinking] = useState(false);
+	const [showManagerModal, setShowManagerModal] = useState(false);
 	const [tilesetReady, setTilesetReady] = useState(false);
-	const [threadId, setThreadId] = useState<string | null>(() => {
-		if (typeof window === "undefined") return null;
-		return sessionStorage.getItem("office-thread-id");
-	});
 	const officeRef = useRef<OfficeState | null>(null);
 	const agentMapRef = useRef(new Map<string, number>()); // convex agent _id → canvas id
 	const nextCanvasIdRef = useRef(1);
@@ -59,8 +64,6 @@ function OfficeContent() {
 	// ── Convex mutations ──
 	const initDesks = useMutation(api.office.mutations.initDesks);
 	const ensureManager = useMutation(api.office.mutations.ensureManager);
-	const createThread = useMutation(api.chat.createNewThread);
-	const sendMessage = useMutation(api.chat.sendMessage);
 
 	// ── Convex subscriptions ──
 	const convexOffice = useQuery(api.office.queries.getOfficeState);
@@ -70,9 +73,11 @@ function OfficeContent() {
 		initTileset(true).then(() => setTilesetReady(true));
 	}, []);
 
-	// Create OfficeState once tileset is ready
+	// Create OfficeState once tileset is ready, spawn permanent manager character
 	if (tilesetReady && !officeRef.current) {
-		officeRef.current = new OfficeState();
+		const os = new OfficeState();
+		os.addAgent(MANAGER_CANVAS_ID, 0, 0, "chair-mgr", true);
+		officeRef.current = os;
 	}
 	const officeState = officeRef.current;
 
@@ -108,6 +113,14 @@ function OfficeContent() {
 			if (agent.status === "completed" || agent.status === "despawning") continue;
 			activeConvexIds.add(agent._id);
 
+			// Manager agents from Convex map to the permanent local manager character
+			if (agent.type === "manager") {
+				agentMapRef.current.set(agent._id, MANAGER_CANVAS_ID);
+				const isActive = agent.status === "working" || agent.status === "thinking";
+				os.setAgentActive(MANAGER_CANVAS_ID, isActive);
+				continue;
+			}
+
 			// Resolve chair UID from desk
 			const desk = agent.deskId ? deskById.get(agent.deskId) : null;
 			const chairUid = desk ? deskPositionToChairUid(desk.position, desk.label) : undefined;
@@ -117,11 +130,10 @@ function OfficeContent() {
 				const canvasId = nextCanvasIdRef.current++;
 				agentMapRef.current.set(agent._id, canvasId);
 
-				const isManager = agent.type === "manager";
 				const palette = canvasId % 6;
 				const hue = canvasId * 60;
 
-				os.addAgent(canvasId, palette, hue, chairUid, isManager);
+				os.addAgent(canvasId, palette, hue, chairUid);
 			}
 
 			// Sync active state
@@ -130,44 +142,29 @@ function OfficeContent() {
 			os.setAgentActive(canvasId, isActive);
 		}
 
-		// Remove agents no longer in Convex
+		// Remove agents no longer in Convex (never remove the permanent manager)
 		for (const [convexId, canvasId] of agentMapRef.current) {
 			if (!activeConvexIds.has(convexId)) {
+				if (canvasId === MANAGER_CANVAS_ID) continue;
 				os.removeAgent(canvasId);
 				agentMapRef.current.delete(convexId);
 			}
 		}
 	}, [convexOffice]);
 
-	// Agent click handler
+	// Agent click handler — manager opens modal, others open side panel
 	const handleClickAgent = useCallback((agentId: number) => {
+		if (agentId === MANAGER_CANVAS_ID) {
+			setSelectedAgentId(null);
+			setShowManagerModal(true);
+			return;
+		}
 		setSelectedAgentId(agentId >= 0 ? agentId : null);
 	}, []);
 
 	const handleClosePanel = useCallback(() => {
 		setSelectedAgentId(null);
 	}, []);
-
-	// ── Send task to manager via Convex chat ──
-	const handleSubmitTask = useCallback(
-		async (prompt: string) => {
-			setIsThinking(true);
-			try {
-				let tid = threadId;
-				if (!tid) {
-					tid = await createThread();
-					setThreadId(tid);
-					sessionStorage.setItem("office-thread-id", tid);
-				}
-				await sendMessage({ threadId: tid, prompt, channel: "web" });
-			} catch (e) {
-				console.error("[Office] Send failed:", e);
-			} finally {
-				setIsThinking(false);
-			}
-		},
-		[threadId, createThread, sendMessage],
-	);
 
 	// ── Resolve selected agent info for panel ──
 	const selectedChar =
@@ -210,25 +207,40 @@ function OfficeContent() {
 
 	return (
 		<div className="relative h-full w-full overflow-hidden bg-background">
-			{/* Title overlay */}
-			<div className="absolute left-4 top-3 z-30 font-mono">
-				<span className="text-[9px] uppercase tracking-widest text-accent-foreground/70">
-					AI Office
-				</span>
+			{/* Title + logout overlay */}
+			<div className="absolute px-4 w-full top-0 h-12 z-30 flex items-center justify-between font-mono bg-black">
+				{user && (
+					<div className="flex items-center gap-2.5">
+						<PixelAvatar src={user.image} size={28} />
+						<div className="flex flex-col">
+							<span className="text-[9px] tracking-widest text-muted-foreground">{user.name}</span>
+							<span className="text-[9px] tracking-widest text-muted-foreground">{user.email}</span>
+						</div>
+					</div>
+				)}
+				<div className="flex items-center gap-2">
+					<button
+						type="button"
+						onClick={() => {
+							authClient.signOut({
+								fetchOptions: {
+									onSuccess: () => {
+										location.reload();
+									},
+								},
+							});
+						}}
+						className="flex h-7 items-center gap-1.5 border-2 border-border bg-card px-2 font-mono text-[9px] uppercase tracking-widest text-muted-foreground shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:text-accent-foreground hover:shadow-pixel-hover active:translate-x-px active:translate-y-px"
+					>
+						Sign Out
+					</button>
+				</div>
 			</div>
 
-			{/* Canvas — fills space above manager bar */}
-			<div className="absolute inset-0 bottom-14">
+			{/* Canvas — fills entire space */}
+			<div className="absolute inset-0">
 				<OfficeCanvas officeState={officeState} onClickAgent={handleClickAgent} />
 			</div>
-
-			{/* Manager bar — fixed bottom */}
-			<ManagerBar
-				onSubmitTask={handleSubmitTask}
-				isThinking={isThinking}
-				agentCount={officeState.characters.size}
-				sandboxStatus="running"
-			/>
 
 			{/* Agent side panel */}
 			{agentInfo && (
@@ -239,6 +251,39 @@ function OfficeContent() {
 					reasoningSteps={EMPTY_REASONING}
 					onClose={handleClosePanel}
 				/>
+			)}
+
+			{/* Manager modal */}
+			{showManagerModal && (
+				<div
+					className="absolute inset-0 z-50 flex items-center justify-center bg-background/80"
+					onClick={(e) => {
+						if (e.target === e.currentTarget) setShowManagerModal(false);
+					}}
+					onKeyDown={(e) => {
+						if (e.key === "Escape") setShowManagerModal(false);
+					}}
+				>
+					<div className="relative flex h-[85%] w-[90%] max-w-[1200px] flex-col border-2 border-border bg-card shadow-pixel inset-shadow-pixel">
+						{/* Header */}
+						<div className="flex items-center justify-between border-b-2 border-border px-4 py-2">
+							<span className="font-mono text-xs uppercase tracking-widest text-accent-foreground/70">
+								Manager Office
+							</span>
+							<button
+								type="button"
+								onClick={() => setShowManagerModal(false)}
+								className="flex h-7 w-7 items-center justify-center border-2 border-border bg-card font-mono text-xs text-muted-foreground shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:text-accent-foreground hover:shadow-pixel-hover active:translate-x-px active:translate-y-px"
+							>
+								×
+							</button>
+						</div>
+						{/* Content */}
+						<div className="min-h-0 flex-1 overflow-hidden p-4">
+							<MasterAgentPanel />
+						</div>
+					</div>
+				</div>
 			)}
 		</div>
 	);

@@ -1,9 +1,14 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute, redirect } from "@tanstack/react-router";
 
 import { HeroIllustration } from "@/components/HeroIllustration.component";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
+	beforeLoad: ({ context }) => {
+		if (context.isAuthenticated) {
+			throw redirect({ to: "/office" });
+		}
+	},
 	component: HomeComponent,
 });
 

@@ -1,7 +1,8 @@
+import { useCallback, useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import type { KanbanBoardTask } from "./KanbanBoardReadonly.component";
-import { KanbanBoardReadonly } from "./KanbanBoardReadonly.component";
+import type { KanbanBoardTask, KanbanTaskStatus } from "./KanbanBoard.component";
+import { KanbanBoard } from "./KanbanBoard.component";
 
 const sampleTasks: KanbanBoardTask[] = [
 	{
@@ -63,8 +64,8 @@ const sampleTasks: KanbanBoardTask[] = [
 ];
 
 const meta = {
-	title: "managed/KanbanBoardReadonly",
-	component: KanbanBoardReadonly,
+	title: "managed/KanbanBoard",
+	component: KanbanBoard,
 	decorators: [
 		(Story) => (
 			<div className="h-[760px] bg-background p-6">
@@ -72,18 +73,42 @@ const meta = {
 			</div>
 		),
 	],
-} satisfies Meta<typeof KanbanBoardReadonly>;
+} satisfies Meta<typeof KanbanBoard>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
+export const Readonly: Story = {
 	args: {
 		title: "Agent Task Board",
 		tasks: sampleTasks,
+		readOnly: true,
 		filters: {
 			statuses: ["backlog", "todo", "in_progress", "review", "done"],
 		},
+	},
+};
+
+export const Interactive: Story = {
+	args: {
+		title: "Agent Task Board",
+		tasks: sampleTasks,
+		readOnly: false,
+		filters: {
+			statuses: ["backlog", "todo", "in_progress", "review", "done"],
+		},
+	},
+	render: function InteractiveBoard(args) {
+		const [tasks, setTasks] = useState(args.tasks);
+
+		const handleTaskMove = useCallback(
+			(taskId: string, _fromStatus: KanbanTaskStatus, toStatus: KanbanTaskStatus) => {
+				setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: toStatus } : t)));
+			},
+			[],
+		);
+
+		return <KanbanBoard {...args} tasks={tasks} onTaskMove={handleTaskMove} />;
 	},
 };
 
@@ -91,6 +116,7 @@ export const FocusedFilters: Story = {
 	args: {
 		title: "Agent Task Board",
 		tasks: sampleTasks,
+		readOnly: true,
 		filters: {
 			statuses: ["todo", "in_progress", "review"],
 			priorities: ["high", "urgent"],

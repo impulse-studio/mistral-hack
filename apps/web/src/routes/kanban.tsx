@@ -3,10 +3,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
 
 import {
-	KanbanBoardReadonly,
+	KanbanBoard,
 	type KanbanBoardFilters,
 	type KanbanBoardTask,
-} from "@/lib/kanban/KanbanBoardReadonly.component";
+} from "@/lib/kanban/KanbanBoard.component";
 
 export const Route = createFileRoute("/kanban")({
 	component: RouteComponent,
@@ -78,10 +78,11 @@ function RouteComponent() {
 
 	return (
 		<div className="h-full overflow-hidden p-4">
-			<KanbanBoardReadonly
+			<KanbanBoard
 				title="Office Kanban"
 				tasks={tasks}
 				filters={readonlyFilters}
+				readOnly
 				className="h-full"
 			/>
 		</div>

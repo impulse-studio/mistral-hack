@@ -1,3 +1,5 @@
+import { useCallback } from "react";
+
 import { PixelBadge } from "@/lib/pixel/PixelBadge";
 import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
 import { PixelText } from "@/lib/pixel/PixelText";
@@ -5,7 +7,8 @@ import { cn } from "@/lib/utils";
 
 import { KanbanColumn } from "./KanbanColumn.component";
 import { KanbanEmptyState } from "./EmptyState.component";
-import type { KanbanItemLabel, KanbanItemProps } from "./KanbanItem.component";
+import type { KanbanDragData, KanbanItemLabel, KanbanItemProps } from "./KanbanItem.component";
+import { KANBAN_DRAG_TYPE } from "./KanbanItem.component";
 
 const EMPTY_ITEMS: KanbanItemProps[] = [];
 
@@ -32,12 +35,18 @@ interface KanbanBoardFilters {
 	search?: string;
 }
 
-interface KanbanBoardReadonlyProps {
+interface KanbanBoardProps {
 	tasks: KanbanBoardTask[];
 	filters?: KanbanBoardFilters;
 	title?: string;
 	showFilterSummary?: boolean;
+	/** When true, items cannot be dragged. Defaults to true. */
+	readOnly?: boolean;
+	/** When true, items are draggable even in readOnly mode (for dragging to external targets like chat). */
+	allowDragOut?: boolean;
 	onTaskClick?: (id: string) => void;
+	/** Called when a task is moved via DnD. Only fires when readOnly=false. */
+	onTaskMove?: (taskId: string, fromStatus: KanbanTaskStatus, toStatus: KanbanTaskStatus) => void;
 	className?: string;
 }
 
@@ -136,14 +145,17 @@ function formatFilterSummary(filters: KanbanBoardFilters) {
 	return pieces;
 }
 
-function KanbanBoardReadonly({
+function KanbanBoard({
 	tasks,
 	filters = {},
 	title = "Kanban Board",
 	showFilterSummary = true,
+	readOnly = true,
+	allowDragOut = false,
 	onTaskClick,
+	onTaskMove,
 	className,
-}: KanbanBoardReadonlyProps) {
+}: KanbanBoardProps) {
 	const filteredTasks = filterTasks(tasks, filters);
 	const filterSummary = formatFilterSummary(filters);
 
@@ -175,11 +187,20 @@ function KanbanBoardReadonly({
 		return activeStatuses.has(column.status);
 	});
 
+	const handleTaskDrop = useCallback(
+		(data: KanbanDragData, targetStatus: string) => {
+			if (readOnly) return;
+			onTaskMove?.(
+				data.id,
+				data.sourceStatus as KanbanTaskStatus,
+				targetStatus as KanbanTaskStatus,
+			);
+		},
+		[readOnly, onTaskMove],
+	);
+
 	return (
-		<section
-			data-slot="kanban-board-readonly"
-			className={cn("flex h-full flex-col gap-4", className)}
-		>
+		<section data-slot="kanban-board" className={cn("flex h-full flex-col gap-4", className)}>
 			<PixelBorderBox className="flex items-center justify-between gap-4 px-4 py-3">
 				<div className="flex min-w-0 flex-col gap-1">
 					<PixelText as="h2" variant="heading">
@@ -191,9 +212,11 @@ function KanbanBoardReadonly({
 						</PixelText>
 					)}
 				</div>
-				<PixelBadge color="cyan" size="md">
-					Readonly
-				</PixelBadge>
+				{readOnly && (
+					<PixelBadge color="cyan" size="md">
+						Readonly
+					</PixelBadge>
+				)}
 			</PixelBorderBox>
 
 			{filteredTasks.length === 0 ? (
@@ -203,7 +226,7 @@ function KanbanBoardReadonly({
 					description="Try broadening the filter settings passed into this board."
 				/>
 			) : (
-				<div className="flex min-h-0 flex-1 gap-4 overflow-x-auto pb-2">
+				<div className="flex h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-2">
 					{visibleColumns.map((column) => (
 						<KanbanColumn
 							key={column.status}
@@ -211,8 +234,10 @@ function KanbanBoardReadonly({
 							status={column.status}
 							items={groupedByStatus.get(column.status) || EMPTY_ITEMS}
 							accentColor={column.accentColor}
-							readOnly
+							readOnly={readOnly}
+							allowDragOut={allowDragOut}
 							onItemClick={onTaskClick}
+							onTaskDrop={!readOnly ? handleTaskDrop : undefined}
 						/>
 					))}
 				</div>
@@ -221,5 +246,14 @@ function KanbanBoardReadonly({
 	);
 }
 
-export { KanbanBoardReadonly };
-export type { KanbanBoardReadonlyProps, KanbanBoardFilters, KanbanBoardTask, KanbanTaskStatus };
+/** @deprecated Use KanbanBoard with readOnly={true} instead. */
+const KanbanBoardReadonly = KanbanBoard;
+
+export { KanbanBoard, KanbanBoardReadonly, KANBAN_DRAG_TYPE };
+export type {
+	KanbanBoardProps,
+	KanbanBoardFilters,
+	KanbanBoardTask,
+	KanbanTaskStatus,
+	KanbanDragData,
+};

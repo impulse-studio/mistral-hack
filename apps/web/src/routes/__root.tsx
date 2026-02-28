@@ -69,9 +69,8 @@ function RootDocument() {
 	const pathname = useRouterState({
 		select: (s) => s.location.pathname,
 	});
-	const hideHeaderRoutes = ["/", "/sign-in", "/sign-up"];
+	const hideHeaderRoutes = ["/", "/sign-in", "/sign-up", "/office"];
 	const showHeader = !hideHeaderRoutes.includes(pathname);
-
 	return (
 		<ConvexBetterAuthProvider
 			client={context.convexQueryClient.convexClient}
@@ -81,6 +80,9 @@ function RootDocument() {
 			<html lang="en" className="dark">
 				<head>
 					<HeadContent />
+					{import.meta.env.DEV && (
+						<script src="//unpkg.com/react-grab/dist/index.global.js" crossOrigin="anonymous" />
+					)}
 				</head>
 				<body>
 					<div className={showHeader ? "grid h-svh grid-rows-[auto_1fr]" : "h-svh"}>
