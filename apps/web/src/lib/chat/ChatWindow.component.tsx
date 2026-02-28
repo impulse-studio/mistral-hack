@@ -23,6 +23,13 @@ interface ChatWindowProps {
 	variant?: "standalone" | "panel";
 	title?: string;
 	className?: string;
+	/** Voice state — passed through to ChatInput. */
+	voiceRecording?: boolean;
+	voiceProcessing?: boolean;
+	voiceAnalyser?: AnalyserNode | null;
+	onVoiceStart?: () => void;
+	onVoiceStop?: () => void;
+	onVoiceCancel?: () => void;
 }
 
 function ChatWindow({
@@ -33,6 +40,12 @@ function ChatWindow({
 	variant = "standalone",
 	title = "Manager Chat",
 	className,
+	voiceRecording,
+	voiceProcessing,
+	voiceAnalyser,
+	onVoiceStart,
+	onVoiceStop,
+	onVoiceCancel,
 }: ChatWindowProps) {
 	const hasStreamingMessage = messages.some((m) => m.status === "streaming");
 
@@ -61,7 +74,16 @@ function ChatWindow({
 			/>
 
 			{/* Input */}
-			<ChatInput onSend={onSend} disabled={isLoading} />
+			<ChatInput
+				onSend={onSend}
+				disabled={isLoading}
+				voiceRecording={voiceRecording}
+				voiceProcessing={voiceProcessing}
+				voiceAnalyser={voiceAnalyser}
+				onVoiceStart={onVoiceStart}
+				onVoiceStop={onVoiceStop}
+				onVoiceCancel={onVoiceCancel}
+			/>
 		</PixelBorderBox>
 	);
 }

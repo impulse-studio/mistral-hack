@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { TetrisGame } from "./TetrisGame.component";
+import { GamesTetrisTetrisGame as TetrisGame } from "./TetrisGame.component";
 
 const meta = {
 	title: "games/TetrisGame",

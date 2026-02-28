@@ -7,6 +7,7 @@ import type { KanbanDragData } from "@/lib/kanban/KanbanItem.component";
 
 import type { ChatWindowMessage } from "./ChatWindow.component";
 import { ChatWindow } from "./ChatWindow.component";
+import { chatUseVoiceConverse as useVoiceConverse } from "./useVoiceConverse";
 
 const THREAD_STORAGE_KEY = "chat-thread-id";
 
@@ -68,6 +69,7 @@ function ChatWindowSmart({
 		[chatRawMessages],
 	);
 
+	// ── Text send ────────────────────────────────────────
 	async function handleChatSmartSend(text: string) {
 		if (chatIsLoading) return;
 
@@ -88,6 +90,44 @@ function ChatWindowSmart({
 		}
 	}
 
+	// ── Voice converse ───────────────────────────────────
+	const ensureThreadId = useCallback(async () => {
+		if (chatActiveThreadId) return chatActiveThreadId;
+		const id = await createThread();
+		setAndPersistThreadId(id);
+		onThreadCreated?.(id);
+		return id;
+	}, [chatActiveThreadId, createThread, setAndPersistThreadId, onThreadCreated]);
+
+	const {
+		voiceConverseStartRecording,
+		voiceConverseStopAndSend,
+		voiceConverseCancel,
+		voiceConverseIsRecording,
+		voiceConverseIsProcessing,
+	} = useVoiceConverse({
+		threadId: chatActiveThreadId,
+		ensureThreadId,
+	});
+
+	const [voiceAnalyser, setVoiceAnalyser] = useState<AnalyserNode | null>(null);
+
+	const handleVoiceStart = useCallback(async () => {
+		const analyser = await voiceConverseStartRecording();
+		setVoiceAnalyser(analyser);
+	}, [voiceConverseStartRecording]);
+
+	const handleVoiceStop = useCallback(() => {
+		voiceConverseStopAndSend();
+		setVoiceAnalyser(null);
+	}, [voiceConverseStopAndSend]);
+
+	const handleVoiceCancel = useCallback(() => {
+		voiceConverseCancel();
+		setVoiceAnalyser(null);
+	}, [voiceConverseCancel]);
+
+	// ── Task drop ────────────────────────────────────────
 	const handleTaskDrop = useCallback(
 		(data: KanbanDragData) => {
 			const prompt = `[Task: ${data.title}] (${data.id}, status: ${data.sourceStatus})`;
@@ -106,6 +146,12 @@ function ChatWindowSmart({
 			variant={variant}
 			title={title}
 			className={className}
+			voiceRecording={voiceConverseIsRecording}
+			voiceProcessing={voiceConverseIsProcessing}
+			voiceAnalyser={voiceAnalyser}
+			onVoiceStart={handleVoiceStart}
+			onVoiceStop={handleVoiceStop}
+			onVoiceCancel={handleVoiceCancel}
 		/>
 	);
 }

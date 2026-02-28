@@ -1,6 +1,7 @@
 import { Mic, MicOff, Send } from "pixelarticons/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
+import { PixelGlow } from "@/lib/pixel/PixelGlow";
 import { TranscriptionWaveform } from "@/lib/transcription/PixelWaveform";
 import { cn } from "@/lib/utils";
 
@@ -8,14 +9,27 @@ interface ChatInputProps {
 	onSend: (text: string) => void;
 	disabled?: boolean;
 	className?: string;
+	/** Voice recording state — provided by parent via useVoiceConverse. */
+	voiceRecording?: boolean;
+	voiceProcessing?: boolean;
+	voiceAnalyser?: AnalyserNode | null;
+	onVoiceStart?: () => void;
+	onVoiceStop?: () => void;
+	onVoiceCancel?: () => void;
 }
 
-function ChatInput({ onSend, disabled = false, className }: ChatInputProps) {
+function ChatInput({
+	onSend,
+	disabled = false,
+	className,
+	voiceRecording = false,
+	voiceProcessing = false,
+	voiceAnalyser = null,
+	onVoiceStart,
+	onVoiceStop,
+	onVoiceCancel,
+}: ChatInputProps) {
 	const [chatInputValue, setChatInputValue] = useState("");
-	const [recording, setRecording] = useState(false);
-	const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
-	const streamRef = useRef<MediaStream | null>(null);
-	const ctxRef = useRef<AudioContext | null>(null);
 
 	function handleChatInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
 		if (e.key === "Enter" && chatInputValue.trim() !== "" && !disabled) {
@@ -31,68 +45,63 @@ function ChatInput({ onSend, disabled = false, className }: ChatInputProps) {
 		}
 	}
 
-	const startRecording = useCallback(async () => {
-		try {
-			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-			streamRef.current = stream;
-			const ctx = new AudioContext();
-			ctxRef.current = ctx;
-			const source = ctx.createMediaStreamSource(stream);
-			const node = ctx.createAnalyser();
-			node.fftSize = 256;
-			source.connect(node);
-			setAnalyser(node);
-			setRecording(true);
-		} catch (err) {
-			console.error("Failed to access microphone:", err);
-		}
-	}, []);
+	// Processing state — waiting for backend voice response
+	if (voiceProcessing) {
+		return (
+			<div
+				className={cn(
+					"flex h-16 items-center justify-center gap-2 border-t-2 border-border px-3",
+					className,
+				)}
+			>
+				<PixelGlow color="orange" pulse label="Processing voice..." size="sm" />
+			</div>
+		);
+	}
 
-	const stopRecording = useCallback(() => {
-		streamRef.current?.getTracks().forEach((t) => t.stop());
-		ctxRef.current?.close();
-		streamRef.current = null;
-		ctxRef.current = null;
-		setAnalyser(null);
-		setRecording(false);
-	}, []);
-
-	// Cleanup on unmount
-	useEffect(() => {
-		return () => {
-			streamRef.current?.getTracks().forEach((t) => t.stop());
-			ctxRef.current?.close();
-		};
-	}, []);
-
-	if (recording) {
+	// Recording state — show waveform + stop button
+	if (voiceRecording) {
 		return (
 			<div className={cn("flex h-16 items-center gap-2 border-t-2 border-border px-3", className)}>
 				<button
 					type="button"
-					aria-label="Stop recording"
-					onClick={stopRecording}
+					aria-label="Cancel recording"
+					onClick={onVoiceCancel}
 					className={cn(
 						"inline-flex shrink-0 items-center justify-center border-2 p-2",
-						"border-red-500 bg-red-500/15 text-red-500 hover:bg-red-500/25",
+						"border-muted-foreground bg-muted/50 text-muted-foreground hover:bg-muted/75",
 						"active:translate-x-px active:translate-y-px active:inset-shadow-pressed",
 						"transition-all duration-150",
 					)}
 				>
 					<MicOff className="size-4" />
 				</button>
-				<TranscriptionWaveform analyser={analyser} bars={48} className="flex-1" />
+				<TranscriptionWaveform analyser={voiceAnalyser} bars={48} className="flex-1" />
+				<button
+					type="button"
+					aria-label="Send voice message"
+					onClick={onVoiceStop}
+					className={cn(
+						"inline-flex shrink-0 items-center justify-center border-2 p-2",
+						"border-brand-accent bg-brand-accent/15 text-brand-accent hover:bg-brand-accent/25",
+						"active:translate-x-px active:translate-y-px active:inset-shadow-pressed",
+						"transition-all duration-150",
+					)}
+				>
+					<Send className="size-4" />
+				</button>
 			</div>
 		);
 	}
 
+	// Default state — text input + mic button
 	return (
 		<div className={cn("flex h-16 items-center gap-2 border-t-2 border-border px-3", className)}>
 			<button
 				type="button"
 				aria-label="Start voice input"
-				onClick={startRecording}
-				disabled={disabled}
+				onClick={onVoiceStart}
+				disabled={disabled || !onVoiceStart}
 				className={cn(
 					"inline-flex shrink-0 items-center justify-center border-2 border-border bg-card p-2 text-foreground",
 					"hover:-translate-x-px hover:-translate-y-px hover:shadow-pixel-hover",
