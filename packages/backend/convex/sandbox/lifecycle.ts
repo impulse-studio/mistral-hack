@@ -12,12 +12,28 @@ const SHARED_VOLUME_MOUNT = "/home/company";
 type SandboxResult = { sandboxId: Id<"sandbox">; daytonaId: string };
 
 /**
- * Ensure the shared Daytona volume exists (create-if-not-exists).
- * Returns the volume ID for use in sandbox creation.
+ * Ensure the shared Daytona volume exists and is ready.
+ * Polls until the volume leaves pending_create state (up to ~30s).
  */
 async function ensureSharedVolume(): Promise<string> {
 	const daytona = getDaytona();
 	const volume = await withRetry(() => daytona.volume.get(SHARED_VOLUME_NAME, true));
+
+	// Wait for volume to be ready (it may be in pending_create right after creation)
+	const POLL_INTERVAL_MS = 2000;
+	const MAX_POLLS = 15; // 30s total
+	for (let i = 0; i < MAX_POLLS; i++) {
+		const current = await daytona.volume.get(SHARED_VOLUME_NAME);
+		if (current.state === "ready") return current.id;
+		console.log(
+			`[ensureSharedVolume] Volume state: ${current.state}, waiting... (${i + 1}/${MAX_POLLS})`,
+		);
+		await new Promise<void>((resolve) => {
+			setTimeout(resolve, POLL_INTERVAL_MS);
+		});
+	}
+
+	// Return the id anyway — the create call will fail with a clear error if still not ready
 	return volume.id;
 }
 
@@ -38,6 +54,8 @@ export const createSandbox = internalAction({
 						language: "typescript",
 						volumes: [{ volumeId, mountPath: SHARED_VOLUME_MOUNT }],
 						labels: agentId ? { agentId } : undefined,
+						autoStopInterval: 0,
+						autoDeleteInterval: -1,
 					},
 					{ timeout: 60 },
 				),
@@ -196,10 +214,26 @@ export const ensureRunning = internalAction({
 		}
 
 		if (sandboxRecord.status === "running") {
-			return {
-				sandboxId: sandboxRecord._id,
-				daytonaId: sandboxRecord.daytonaId,
-			};
+			// Verify the sandbox still exists in Daytona (it may have been auto-deleted)
+			try {
+				const daytona = getDaytona();
+				await withRetry(() => daytona.findOne({ idOrName: sandboxRecord.daytonaId }));
+				return {
+					sandboxId: sandboxRecord._id,
+					daytonaId: sandboxRecord.daytonaId,
+				};
+			} catch {
+				// Sandbox is gone from Daytona — mark as error and recreate
+				console.warn(
+					`[ensureRunning] Sandbox ${sandboxRecord.daytonaId} not found in Daytona, recreating`,
+				);
+				await ctx.runMutation(internal.sandbox.mutations.updateStatus, {
+					sandboxId: sandboxRecord._id,
+					status: "error",
+					error: "Sandbox not found in Daytona",
+				});
+				return await ctx.runAction(internal.sandbox.lifecycle.createSandbox, { agentId, name });
+			}
 		}
 
 		if (sandboxRecord.status === "stopped" || sandboxRecord.status === "archived") {

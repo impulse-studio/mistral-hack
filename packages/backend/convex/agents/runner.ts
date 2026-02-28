@@ -31,7 +31,7 @@ async function runComputerUseTask(
 	});
 
 	// 3. Get display info for context
-	const displayInfo = await ctx.runAction(internal.sandbox.computerUse.getDisplayInfo);
+	const displayInfo = await ctx.runAction(internal.sandbox.computerUse.getDisplayInfo, { agentId });
 
 	// 4. Open a browser for browser-role agents
 	if (task.description?.includes("http") || task.title.toLowerCase().includes("browser")) {

@@ -20,10 +20,16 @@ export const onSubAgentComplete = internalMutation({
 			await ctx.db.patch(taskId, { error });
 		}
 
-		// Free the desk
+		// Despawn the agent — free desk and mark as done
 		const agent = await ctx.db.get(agentId);
-		if (agent?.deskId) {
-			await ctx.db.patch(agent.deskId, { occupiedBy: undefined });
+		if (agent) {
+			if (agent.deskId) {
+				await ctx.db.patch(agent.deskId, { occupiedBy: undefined });
+			}
+			await ctx.db.patch(agentId, {
+				status: "despawning",
+				completedAt: Date.now(),
+			});
 		}
 
 		// Stop the agent's sandbox (preserves disk via shared volume)
