@@ -62,6 +62,19 @@
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-ring: var(--sidebar-ring);
 	--color-brand-accent: var(--brand-accent);
+
+	/* Pixel glow pulse animation */
+	--animate-pixel-pulse: pixel-pulse 1s steps(2, end) infinite;
+}
+
+@keyframes pixel-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.4;
+	}
 }
 
 :root {
