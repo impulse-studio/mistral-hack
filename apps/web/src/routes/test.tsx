@@ -47,7 +47,8 @@ function ManagerChat() {
 
 	const { results: messages } = useUIMessages(
 		api.chat.listMessages,
-		threadId ? { threadId } : "skip",
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- useUIMessages overload doesn't narrow union correctly
+		(threadId ? { threadId } : "skip") as any,
 		{ initialNumItems: 50, stream: true },
 	);
 
