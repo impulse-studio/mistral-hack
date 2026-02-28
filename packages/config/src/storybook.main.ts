@@ -16,6 +16,14 @@ export function createStorybookConfig(
 		addons: [getAbsolutePath("@storybook/addon-a11y"), getAbsolutePath("@storybook/addon-docs")],
 		framework: getAbsolutePath("@storybook/react-vite"),
 		viteFinal: (viteConfig) => {
+			const storybookConvexUrl = process.env.VITE_CONVEX_URL ?? "https://example.com";
+			const storybookConvexSiteUrl = process.env.VITE_CONVEX_SITE_URL ?? "https://example.com";
+
+			viteConfig.define ??= {};
+			viteConfig.define["import.meta.env.VITE_CONVEX_URL"] = JSON.stringify(storybookConvexUrl);
+			viteConfig.define["import.meta.env.VITE_CONVEX_SITE_URL"] =
+				JSON.stringify(storybookConvexSiteUrl);
+
 			if (process.env.STORYBOOK_BASE) {
 				viteConfig.base = process.env.STORYBOOK_BASE;
 			}
