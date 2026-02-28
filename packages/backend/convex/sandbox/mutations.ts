@@ -9,6 +9,7 @@ export const ensureSandbox = mutation({
 		agentId: v.optional(v.id("agents")),
 		name: v.optional(v.string()),
 	},
+	returns: v.id("sandbox"),
 	handler: async (ctx, { daytonaId, agentId, name }) => {
 		// If agentId provided, look up by agent
 		if (agentId) {
@@ -42,6 +43,7 @@ export const ensureSandboxInternal = internalMutation({
 		agentId: v.optional(v.id("agents")),
 		name: v.optional(v.string()),
 	},
+	returns: v.id("sandbox"),
 	handler: async (ctx, { daytonaId, agentId, name }) => {
 		if (agentId) {
 			const existing = await ctx.db
@@ -74,6 +76,7 @@ export const updateStatus = internalMutation({
 		status: sandboxStatusValidator,
 		error: v.optional(v.string()),
 	},
+	returns: v.null(),
 	handler: async (ctx, { sandboxId, status, error }) => {
 		const patch: Record<string, unknown> = { status };
 		if (error !== undefined) patch.error = error;
@@ -88,6 +91,7 @@ export const updateStatus = internalMutation({
 // Record activity (extends auto-stop timer)
 export const recordActivity = internalMutation({
 	args: { sandboxId: v.id("sandbox") },
+	returns: v.null(),
 	handler: async (ctx, { sandboxId }) => {
 		await ctx.db.patch(sandboxId, {
 			lastActivity: Date.now(),
@@ -101,6 +105,7 @@ export const setAutoStopInterval = mutation({
 		sandboxId: v.id("sandbox"),
 		minutes: v.number(),
 	},
+	returns: v.null(),
 	handler: async (ctx, { sandboxId, minutes }) => {
 		await ctx.db.patch(sandboxId, {
 			autoStopInterval: minutes,
@@ -114,6 +119,7 @@ export const updateDiskUsage = internalMutation({
 		sandboxId: v.id("sandbox"),
 		diskUsage: v.string(),
 	},
+	returns: v.null(),
 	handler: async (ctx, { sandboxId, diskUsage }) => {
 		await ctx.db.patch(sandboxId, { diskUsage });
 	},

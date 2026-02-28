@@ -11,18 +11,22 @@ export const onSubAgentComplete = internalMutation({
 		result: v.optional(v.string()),
 		error: v.optional(v.string()),
 	},
+	returns: v.null(),
 	handler: async (ctx, { agentId, taskId, success, result, error }) => {
-		// Update task with result or error
-		if (success && result) {
-			await ctx.db.patch(taskId, { result });
-		}
-		if (!success && error) {
-			await ctx.db.patch(taskId, { error });
+		// Update task with result or error (idempotent: check current state first)
+		const task = await ctx.db.get(taskId);
+		if (task && task.status !== "done" && task.status !== "failed") {
+			if (success && result) {
+				await ctx.db.patch(taskId, { result });
+			}
+			if (!success && error) {
+				await ctx.db.patch(taskId, { error });
+			}
 		}
 
-		// Despawn the agent — free desk and mark as done
+		// Despawn the agent — free desk and mark as done (idempotent: check status)
 		const agent = await ctx.db.get(agentId);
-		if (agent) {
+		if (agent && agent.status !== "despawning") {
 			if (agent.deskId) {
 				await ctx.db.patch(agent.deskId, { occupiedBy: undefined });
 			}

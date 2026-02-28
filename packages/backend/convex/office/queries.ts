@@ -1,9 +1,14 @@
 import { v } from "convex/values";
 import { query, internalQuery } from "../_generated/server";
+import { agentDoc, deskDoc, taskDoc } from "../schema";
 
 // Get full office state — all desks with their occupants
 export const getOfficeState = query({
 	args: {},
+	returns: v.object({
+		desks: v.array(deskDoc),
+		agents: v.array(agentDoc),
+	}),
 	handler: async (ctx) => {
 		const desks = await ctx.db.query("desks").collect();
 		const agents = await ctx.db.query("agents").withIndex("by_status").collect();
@@ -15,15 +20,42 @@ export const getOfficeState = query({
 // Get all active agents (not completed/despawning)
 export const getActiveAgents = query({
 	args: {},
+	returns: v.array(agentDoc),
 	handler: async (ctx) => {
-		const agents = await ctx.db.query("agents").collect();
-		return agents.filter((a) => a.status !== "completed" && a.status !== "despawning");
+		// Fetch only active statuses via index instead of filtering all agents
+		const [idle, thinking, working, failed] = await Promise.all([
+			ctx.db
+				.query("agents")
+				.withIndex("by_status", (q) => q.eq("status", "idle"))
+				.collect(),
+			ctx.db
+				.query("agents")
+				.withIndex("by_status", (q) => q.eq("status", "thinking"))
+				.collect(),
+			ctx.db
+				.query("agents")
+				.withIndex("by_status", (q) => q.eq("status", "working"))
+				.collect(),
+			ctx.db
+				.query("agents")
+				.withIndex("by_status", (q) => q.eq("status", "failed"))
+				.collect(),
+		]);
+		return [...idle, ...thinking, ...working, ...failed];
 	},
 });
 
 // Get a single agent with their desk info
 export const getAgent = query({
 	args: { agentId: v.id("agents") },
+	returns: v.union(
+		v.object({
+			agent: agentDoc,
+			desk: v.union(deskDoc, v.null()),
+			currentTask: v.union(taskDoc, v.null()),
+		}),
+		v.null(),
+	),
 	handler: async (ctx, { agentId }) => {
 		const agent = await ctx.db.get(agentId);
 		if (!agent) return null;
@@ -45,6 +77,7 @@ export const getAgent = query({
 // Internal version for use by actions (runner, lifecycle, etc.)
 export const getAgentInternal = internalQuery({
 	args: { agentId: v.id("agents") },
+	returns: v.union(agentDoc, v.null()),
 	handler: async (ctx, { agentId }) => {
 		return await ctx.db.get(agentId);
 	},
@@ -53,6 +86,7 @@ export const getAgentInternal = internalQuery({
 // Get all desks
 export const getDesks = query({
 	args: {},
+	returns: v.array(deskDoc),
 	handler: async (ctx) => {
 		return await ctx.db.query("desks").collect();
 	},
@@ -61,6 +95,7 @@ export const getDesks = query({
 // Get available desk count
 export const getAvailableDeskCount = query({
 	args: {},
+	returns: v.number(),
 	handler: async (ctx) => {
 		const desks = await ctx.db.query("desks").collect();
 		return desks.filter((d) => !d.occupiedBy).length;

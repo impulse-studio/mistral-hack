@@ -2,6 +2,14 @@ import { v } from "convex/values";
 import { query } from "../_generated/server";
 import type { Doc } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
+import { agentLogFields } from "../schema";
+
+const agentLogWithScreenshot = v.object({
+	_id: v.id("agentLogs"),
+	_creationTime: v.number(),
+	...agentLogFields,
+	screenshotUrl: v.union(v.string(), v.null()),
+});
 
 async function resolveScreenshotUrls(ctx: QueryCtx, logs: Doc<"agentLogs">[]) {
 	return Promise.all(
@@ -21,6 +29,7 @@ export const streamForAgent = query({
 		agentId: v.id("agents"),
 		limit: v.optional(v.number()),
 	},
+	returns: v.array(agentLogWithScreenshot),
 	handler: async (ctx, { agentId, limit }) => {
 		const q = ctx.db
 			.query("agentLogs")
@@ -38,6 +47,7 @@ export const getRecent = query({
 	args: {
 		limit: v.optional(v.number()),
 	},
+	returns: v.array(agentLogWithScreenshot),
 	handler: async (ctx, { limit }) => {
 		const logs = await ctx.db
 			.query("agentLogs")
