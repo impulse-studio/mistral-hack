@@ -3,9 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Authenticated, AuthLoading, Unauthenticated, useQuery } from "convex/react";
 import { useState } from "react";
 
-import SignInForm from "@/components/sign-in-form";
-import SignUpForm from "@/components/sign-up-form";
-import UserMenu from "@/components/user-menu";
+import { SignInForm } from "@/components/sign-in-form";
+import { SignUpForm } from "@/components/sign-up-form";
+import { UserMenu } from "@/components/user-menu";
 
 export const Route = createFileRoute("/dashboard")({
   component: RouteComponent,

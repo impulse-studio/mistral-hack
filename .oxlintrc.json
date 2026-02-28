@@ -1,0 +1,240 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"categories": {
+		"correctness": "off",
+		"pedantic": "off",
+		"perf": "off",
+		"restriction": "off",
+		"style": "off",
+		"suspicious": "off"
+	},
+	"env": {
+		"browser": true,
+		"es2024": true
+	},
+	"ignorePatterns": [
+		"**/dist/**",
+		"**/out/**",
+		"**/node_modules/**",
+		".claude/**",
+		"apps/experiments/**",
+		"**/routeTree.gen.ts",
+		"**/_generated/**"
+	],
+	"plugins": [
+		"import",
+		"typescript",
+		"unicorn",
+		"promise",
+		"react",
+		"react-perf",
+		"jsx-a11y",
+		"oxc"
+	],
+	"settings": {
+		"react": {
+			"version": "19"
+		}
+	},
+	"overrides": [
+		{
+			"files": [
+				"**/*.test.ts",
+				"**/*.test.tsx",
+				"**/*.spec.ts",
+				"**/*.spec.tsx"
+			],
+			"rules": {
+				"typescript/no-explicit-any": "off",
+				"typescript/no-unsafe-type-assertion": "off"
+			}
+		},
+		{
+			"files": [
+				"**/vite.config.*",
+				"**/vitest.config.*",
+				"**/tailwind.config.*",
+				"**/postcss.config.*",
+				"**/app.config.*"
+			],
+			"rules": {
+				"import/no-default-export": "off"
+			}
+		},
+		{
+			"files": [
+				"**/*.stories.ts",
+				"**/*.stories.tsx"
+			],
+			"rules": {
+				"import/no-default-export": "off",
+				"react-perf/jsx-no-new-object-as-prop": "off",
+				"react-perf/jsx-no-new-array-as-prop": "off",
+				"react-perf/jsx-no-jsx-as-prop": "off"
+			}
+		},
+		{
+			"files": [
+				"**/convex/auth.config.ts",
+				"**/convex/convex.config.ts",
+				"**/convex/http.ts",
+				"**/convex/schema.ts"
+			],
+			"rules": {
+				"import/no-default-export": "off"
+			}
+		},
+		{
+			"files": [
+				"**/.storybook/main.ts",
+				"**/.storybook/preview.ts",
+				"**/.storybook/preview.tsx"
+			],
+			"rules": {
+				"import/no-default-export": "off"
+			}
+		},
+		{
+			"files": [
+				"**/routes/**"
+			],
+			"rules": {
+				"import/no-default-export": "off"
+			}
+		}
+	],
+	"rules": {
+		// =====================================================================
+		// Import — ban re-exports and default exports
+		// =====================================================================
+		"import/first": "warn",
+		"import/no-default-export": "error",
+		"import/no-duplicates": "error",
+		"import/no-empty-named-blocks": "warn",
+		"import/no-mutable-exports": "warn",
+		"import/no-named-as-default": "warn",
+		"import/no-self-import": "error",
+		"import/no-webpack-loader-syntax": "warn",
+
+		// =====================================================================
+		// Core (oxlint-only)
+		// =====================================================================
+		"no-delete-var": "warn",
+		"no-promise-executor-return": "error",
+		"no-unmodified-loop-condition": "warn",
+		"no-useless-backreference": "error",
+		"no-useless-escape": "warn",
+
+		// =====================================================================
+		// Security (oxlint-only)
+		// =====================================================================
+		"no-caller": "error",
+		"no-extend-native": "error",
+		"no-implied-eval": "error",
+		"no-new-func": "error",
+		"no-script-url": "error",
+
+		// =====================================================================
+		// TypeScript (type-aware)
+		// =====================================================================
+		"typescript/ban-ts-comment": "error",
+		"typescript/no-array-delete": "error",
+		"typescript/no-base-to-string": "error",
+		"typescript/no-confusing-non-null-assertion": "warn",
+		"typescript/no-duplicate-type-constituents": "warn",
+		"typescript/no-for-in-array": "error",
+		"typescript/no-misused-spread": "error",
+		"typescript/no-redundant-type-constituents": "warn",
+		"typescript/no-unnecessary-boolean-literal-compare": "warn",
+		"typescript/no-unnecessary-template-expression": "error",
+		"typescript/no-unnecessary-type-arguments": "warn",
+		"typescript/no-unnecessary-type-assertion": "error",
+		"typescript/no-unsafe-enum-comparison": "warn",
+		"typescript/no-unsafe-type-assertion": "warn",
+		"typescript/no-unsafe-unary-minus": "error",
+		"typescript/prefer-promise-reject-errors": "warn",
+		"typescript/require-array-sort-compare": "error",
+		"typescript/restrict-plus-operands": "warn",
+		"typescript/restrict-template-expressions": "warn",
+		"typescript/unbound-method": "warn",
+
+		// =====================================================================
+		// React
+		// =====================================================================
+		"react/checked-requires-onchange-or-readonly": "error",
+		"react/iframe-missing-sandbox": "error",
+		"react/jsx-no-constructed-context-values": "error",
+		"react/jsx-no-script-url": "error",
+		"react/jsx-no-undef": "error",
+		"react/jsx-props-no-spread-multi": "error",
+		"react/no-direct-mutation-state": "error",
+		"react/no-find-dom-node": "error",
+		"react/no-is-mounted": "error",
+		"react/no-namespace": "error",
+		"react/no-render-return-value": "error",
+		"react/no-string-refs": "error",
+		"react/no-this-in-sfc": "error",
+		"react/no-unescaped-entities": "error",
+		"react/no-unsafe": "warn",
+		"react/no-unstable-nested-components": "error",
+		"react/rules-of-hooks": "error",
+		"react/style-prop-object": "error",
+
+		// =====================================================================
+		// React perf
+		// =====================================================================
+		"react-perf/jsx-no-jsx-as-prop": "warn",
+		"react-perf/jsx-no-new-array-as-prop": "warn",
+		"react-perf/jsx-no-new-object-as-prop": "warn",
+
+		// =====================================================================
+		// Unicorn
+		// =====================================================================
+		"unicorn/consistent-function-scoping": "warn",
+		"unicorn/no-await-in-promise-methods": "error",
+		"unicorn/no-invalid-fetch-options": "error",
+		"unicorn/no-invalid-remove-event-listener": "error",
+		"unicorn/no-new-array": "warn",
+		"unicorn/no-single-promise-in-promise-methods": "warn",
+		"unicorn/no-useless-fallback-in-spread": "warn",
+		"unicorn/no-useless-promise-resolve-reject": "error",
+		"unicorn/no-useless-spread": "error",
+		"unicorn/numeric-separators-style": "warn",
+		"unicorn/prefer-add-event-listener": "warn",
+		"unicorn/prefer-array-find": "warn",
+		"unicorn/prefer-export-from": "warn",
+		"unicorn/prefer-set-has": "warn",
+		"unicorn/prefer-spread": "error",
+		"unicorn/prefer-string-slice": "error",
+		"unicorn/prefer-structured-clone": "warn",
+		"unicorn/prefer-switch": "warn",
+		"unicorn/prefer-type-error": "warn",
+		"unicorn/require-post-message-target-origin": "warn",
+		"unicorn/switch-case-braces": "error",
+
+		// =====================================================================
+		// Oxc
+		// =====================================================================
+		"oxc/approx-constant": "warn",
+		"oxc/bad-bitwise-operator": "error",
+		"oxc/bad-comparison-sequence": "error",
+		"oxc/bad-min-max-func": "error",
+		"oxc/bad-object-literal-comparison": "error",
+		"oxc/bad-replace-all-arg": "error",
+		"oxc/erasing-op": "error",
+		"oxc/missing-throw": "error",
+		"oxc/no-accumulating-spread": "warn",
+		"oxc/uninvoked-array-callback": "error",
+
+		// =====================================================================
+		// Promise
+		// =====================================================================
+		"promise/always-return": "warn",
+		"promise/no-multiple-resolved": "error",
+		"promise/no-nesting": "warn",
+		"promise/no-new-statics": "error",
+		"promise/no-promise-in-callback": "warn",
+		"promise/no-return-in-finally": "error",
+		"promise/valid-params": "error"
+	}
+}

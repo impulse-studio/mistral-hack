@@ -14,7 +14,7 @@ import { authClient } from "@/lib/auth-client";
 
 import { Button } from "./ui/button";
 
-export default function UserMenu() {
+export function UserMenu() {
   const user = useQuery(api.auth.getCurrentUser);
 
   return (
