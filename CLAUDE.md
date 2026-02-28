@@ -44,5 +44,5 @@ Routes:    `apps/web/src/routes/`
 <context-loading>
 - Vision, architecture, agent design → `.claude/docs/vision.md`
 - Stack reference docs → `.claude/docs/stacks/`
-- Styling/UI rules → `.claude/rules/styling.md`
+- Styling/UI rules → `.claude/rules/styling.md`, stack ref → `.claude/docs/stacks/styling.md`
 </context-loading>

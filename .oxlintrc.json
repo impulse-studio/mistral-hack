@@ -89,6 +89,27 @@
 			"rules": {
 				"import/no-default-export": "off"
 			}
+		},
+		{
+			"files": ["**/*.ts"],
+			"rules": {
+				"mistral-hack/tsx-pascal-case": [
+					"error",
+					{
+						"casing": "camelCase",
+						"exclude": [
+							"routes/",
+							"convex/",
+							".storybook/",
+							".config.",
+							"index.ts",
+							"types.ts",
+							"constants.ts",
+							"utils.ts"
+						]
+					}
+				]
+			}
 		}
 	],
 	"rules": {
@@ -231,7 +252,18 @@
 		"mistral-hack/tsx-pascal-case": [
 			"error",
 			{
-				"exclude": ["routes/", "__root", "router.tsx"]
+				"exclude": [
+					"routes/",
+					"__root",
+					"router.tsx",
+					"index.ts",
+					"types.ts",
+					"constants.ts",
+					"utils.ts",
+					"convex/",
+					".storybook/",
+					".config."
+				]
 			}
 		],
 		"mistral-hack/export-prefix": [

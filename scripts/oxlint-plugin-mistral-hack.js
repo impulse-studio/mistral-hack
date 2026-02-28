@@ -4,33 +4,48 @@
  * Custom rules for the mistral-hack monorepo.
  *
  * Rules:
- *   - tsx-pascal-case: Enforce PascalCase file names for .tsx files.
+ *   - tsx-pascal-case: Enforce casing for .ts/.tsx file names (configurable: PascalCase | camelCase).
  *   - export-prefix: Enforce that named exports are prefixed with the
  *     folder path (stripping configured root prefixes like components/, lib/).
  */
 
 const PASCAL_CASE_RE = /^[A-Z][a-zA-Z0-9]*$/;
+const CAMEL_CASE_RE = /^[a-z][a-zA-Z0-9]*$/;
 
-/**
- * Check if a string is PascalCase.
- * @param {string} str
- * @returns {boolean}
- */
+/** @param {string} str */
 function isPascalCase(str) {
 	return PASCAL_CASE_RE.test(str);
 }
 
-/**
- * Convert a kebab-case or snake_case string to PascalCase.
- * @param {string} str
- * @returns {string}
- */
+/** @param {string} str */
+function isCamelCase(str) {
+	return CAMEL_CASE_RE.test(str);
+}
+
+/** @param {string} str */
 function toPascalCase(str) {
 	return str
 		.split(/[-_]/)
 		.map((s) => s[0].toUpperCase() + s.slice(1))
 		.join("");
 }
+
+/** @param {string} str */
+function toCamelCase(str) {
+	const parts = str.split(/[-_]/);
+	return (
+		parts[0].toLowerCase() +
+		parts
+			.slice(1)
+			.map((s) => s[0].toUpperCase() + s.slice(1))
+			.join("")
+	);
+}
+
+const CASING = {
+	PascalCase: { check: isPascalCase, convert: toPascalCase },
+	camelCase: { check: isCamelCase, convert: toCamelCase },
+};
 
 /** @param {string[]} segments */
 function segmentsToCamelCase(segments) {
@@ -101,13 +116,17 @@ function extractExportNames(node) {
 const tsxPascalCaseRule = {
 	meta: {
 		docs: {
-			description: "Enforce PascalCase file names for .tsx files",
+			description: "Enforce file name casing for .ts and .tsx files (PascalCase or camelCase)",
 		},
 		fixable: null,
 		schema: [
 			{
 				type: "object",
 				properties: {
+					casing: {
+						type: "string",
+						enum: ["PascalCase", "camelCase"],
+					},
 					exclude: {
 						type: "array",
 						items: { type: "string" },
@@ -118,12 +137,17 @@ const tsxPascalCaseRule = {
 	},
 	create(context) {
 		const options = context.options[0] || {};
+		const casingName = options.casing || "PascalCase";
+		const { check, convert } = CASING[casingName];
 		const exclude = options.exclude || [];
 		const filename = context.filename || context.getFilename();
 		const normalized = filename.replace(/\\/g, "/");
 
-		// Only apply to .tsx files
-		if (!normalized.endsWith(".tsx")) return {};
+		// Only apply to .ts / .tsx files
+		if (!normalized.endsWith(".tsx") && !normalized.endsWith(".ts")) return {};
+
+		// Skip declaration files (.d.ts)
+		if (normalized.endsWith(".d.ts")) return {};
 
 		// Check exclusions
 		for (const pattern of exclude) {
@@ -132,13 +156,13 @@ const tsxPascalCaseRule = {
 
 		// Extract file stem: strip directory, then strip all extensions
 		// e.g. "SignInForm.component.tsx" → "SignInForm"
-		// e.g. "Button.stories.tsx" → "Button"
+		// e.g. "gameLoop.ts" → "gameLoop"
 		const basename = normalized.split("/").pop();
 		const stem = basename.split(".")[0];
 
-		if (isPascalCase(stem)) return {};
+		if (check(stem)) return {};
 
-		const suggestion = toPascalCase(stem);
+		const suggestion = convert(stem);
 		let reported = false;
 
 		return {
@@ -146,7 +170,7 @@ const tsxPascalCaseRule = {
 				if (reported) return;
 				reported = true;
 				context.report({
-					message: `File name "${basename}" must use PascalCase. Rename to "${suggestion}${basename.slice(stem.length)}".`,
+					message: `File name "${basename}" must use ${casingName}. Rename to "${suggestion}${basename.slice(stem.length)}".`,
 					node,
 				});
 			},
