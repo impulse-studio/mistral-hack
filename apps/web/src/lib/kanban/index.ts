@@ -12,3 +12,11 @@ export type {
 	KanbanTaskDetailModalProps,
 	KanbanTaskSubtask,
 } from "./KanbanTaskDetailModal.component";
+
+export { KanbanBoardReadonly } from "./KanbanBoardReadonly.component";
+export type {
+	KanbanBoardReadonlyProps,
+	KanbanBoardFilters,
+	KanbanBoardTask,
+	KanbanTaskStatus,
+} from "./KanbanBoardReadonly.component";

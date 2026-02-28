@@ -10,6 +10,7 @@ export interface KanbanColumnProps {
 	status: string;
 	items: KanbanItemProps[];
 	accentColor?: string;
+	readOnly?: boolean;
 	onAddItem?: () => void;
 	onItemClick?: (id: string) => void;
 	className?: string;
@@ -20,6 +21,7 @@ function KanbanColumn({
 	status,
 	items,
 	accentColor,
+	readOnly = false,
 	onAddItem,
 	onItemClick,
 	className,
@@ -58,9 +60,13 @@ function KanbanColumn({
 						<KanbanEmptyState
 							variant="column"
 							title="No tasks"
-							description="Drag tasks here or create a new one"
-							actionLabel="+ Add task"
-							onAction={onAddItem}
+							description={
+								readOnly
+									? "No tasks match the current filters"
+									: "Drag tasks here or create a new one"
+							}
+							actionLabel={readOnly ? undefined : "+ Add task"}
+							onAction={readOnly ? undefined : onAddItem}
 						/>
 					</div>
 				)}

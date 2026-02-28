@@ -4,6 +4,7 @@ export function Header() {
 	const links = [
 		{ to: "/", label: "Home" },
 		{ to: "/dashboard", label: "Dashboard" },
+		{ to: "/kanban", label: "Kanban" },
 		{ to: "/ai", label: "AI Chat" },
 	] as const;
 
