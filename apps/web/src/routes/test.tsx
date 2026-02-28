@@ -2,7 +2,7 @@ import { useUIMessages, useSmoothText, type UIMessage } from "@convex-dev/agent/
 import { api } from "@mistral-hack/backend/convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
-import { Send, Loader2, Monitor, Users, Plus, RefreshCw, CircleDot } from "lucide-react";
+import { Send, Loader, Monitor, Users, Plus, Reload, Radio } from "pixelarticons/react";
 import { useRef, useEffect, useState } from "react";
 import { Streamdown } from "streamdown";
 
@@ -102,7 +102,7 @@ function ManagerChat() {
 					{isLoading && !hasStreamingMessage && (
 						<div className="p-2 rounded bg-secondary/20 mr-6">
 							<div className="flex items-center gap-2 text-muted-foreground text-xs">
-								<Loader2 className="h-3 w-3 animate-spin" />
+								<Loader className="h-3 w-3 animate-spin" />
 								Thinking...
 							</div>
 						</div>
@@ -125,11 +125,7 @@ function ManagerChat() {
 						disabled={isLoading || !input.trim()}
 						className="h-8 w-8"
 					>
-						{isLoading ? (
-							<Loader2 className="h-3 w-3 animate-spin" />
-						) : (
-							<Send className="h-3 w-3" />
-						)}
+						{isLoading ? <Loader className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
 					</Button>
 				</form>
 			</CardContent>
@@ -200,9 +196,9 @@ function OfficeState() {
 						className="h-7 text-xs"
 					>
 						{isIniting ? (
-							<Loader2 className="h-3 w-3 animate-spin mr-1" />
+							<Loader className="h-3 w-3 animate-spin mr-1" />
 						) : (
-							<RefreshCw className="h-3 w-3 mr-1" />
+							<Reload className="h-3 w-3 mr-1" />
 						)}
 						Init Desks
 					</Button>
@@ -212,7 +208,7 @@ function OfficeState() {
 				{/* Sandbox Status */}
 				<div className="rounded border p-3">
 					<h3 className="text-xs font-semibold mb-2 flex items-center gap-2">
-						<CircleDot className="h-3 w-3" />
+						<Radio className="h-3 w-3" />
 						Sandbox
 					</h3>
 					{sandboxStatus ? (
@@ -390,7 +386,7 @@ function TasksBoard() {
 						className="w-full h-7 text-xs"
 					>
 						{isCreating ? (
-							<Loader2 className="h-3 w-3 animate-spin mr-1" />
+							<Loader className="h-3 w-3 animate-spin mr-1" />
 						) : (
 							<Plus className="h-3 w-3 mr-1" />
 						)}
@@ -438,7 +434,7 @@ function TasksBoard() {
 						})
 					) : (
 						<div className="flex items-center justify-center h-full">
-							<Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+							<Loader className="h-4 w-4 animate-spin text-muted-foreground" />
 						</div>
 					)}
 				</div>

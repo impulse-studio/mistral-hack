@@ -1,5 +1,7 @@
+import type { DragEvent } from "react";
 import type { VariantProps } from "class-variance-authority";
 
+import { useCallback, useState } from "react";
 import { cva } from "class-variance-authority";
 
 import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
@@ -73,6 +75,15 @@ export interface KanbanItemLabel {
 	color: NonNullable<VariantProps<typeof kanbanLabelVariants>["color"]>;
 }
 
+/** Custom MIME type for kanban drag data — external drop targets (e.g. chat) can consume this. */
+export const KANBAN_DRAG_TYPE = "application/kanban-task";
+
+export interface KanbanDragData {
+	id: string;
+	title: string;
+	sourceStatus: string;
+}
+
 export interface KanbanItemProps {
 	id: string;
 	title: string;
@@ -82,6 +93,10 @@ export interface KanbanItemProps {
 	subtasksTotal?: number;
 	assigneeInitials?: string;
 	assigneeColor?: string;
+	/** When true, the item is draggable. */
+	draggable?: boolean;
+	/** Status of the column this item belongs to (used in drag data). */
+	sourceStatus?: string;
 	className?: string;
 	onClick?: () => void;
 }
@@ -133,9 +148,28 @@ function KanbanItem({
 	subtasksTotal,
 	assigneeInitials,
 	assigneeColor,
+	draggable: isDraggable = false,
+	sourceStatus,
 	className,
 	onClick,
 }: KanbanItemProps) {
+	const [isDragging, setIsDragging] = useState(false);
+
+	const handleDragStart = useCallback(
+		(e: DragEvent<HTMLDivElement>) => {
+			const data: KanbanDragData = { id, title, sourceStatus: sourceStatus ?? "" };
+			e.dataTransfer.setData(KANBAN_DRAG_TYPE, JSON.stringify(data));
+			e.dataTransfer.setData("text/plain", title);
+			e.dataTransfer.effectAllowed = "move";
+			setIsDragging(true);
+		},
+		[id, title, sourceStatus],
+	);
+
+	const handleDragEnd = useCallback(() => {
+		setIsDragging(false);
+	}, []);
+
 	const hasSubtasks =
 		subtasksTotal !== undefined && subtasksTotal > 0 && subtasksDone !== undefined;
 	const subtasksDoneAll = hasSubtasks && subtasksDone === subtasksTotal;
@@ -143,7 +177,15 @@ function KanbanItem({
 	return (
 		<div
 			data-slot="kanban-item"
-			className={cn(kanbanItemVariants({ priority }), className)}
+			draggable={isDraggable}
+			onDragStart={isDraggable ? handleDragStart : undefined}
+			onDragEnd={isDraggable ? handleDragEnd : undefined}
+			className={cn(
+				kanbanItemVariants({ priority }),
+				isDraggable && "cursor-grab active:cursor-grabbing",
+				isDragging && "opacity-40",
+				className,
+			)}
 			onClick={onClick}
 		>
 			{/* Top row: ID + priority */}

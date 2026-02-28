@@ -6,12 +6,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { OfficeAgentPanel } from "@/components/office/OfficeAgentPanel.component";
 import { OfficeCanvas } from "@/components/office/OfficeCanvas.component";
 import { ManagerBar } from "@/lib/manager/ManagerBar.component";
+import { MasterAgentPanel } from "@/lib/masterAgentPanel/MasterAgentPanel.component";
 import { initTileset } from "@/lib/pixelAgents/initTileset";
 import { OfficeState } from "@/lib/pixelAgents/officeState";
 
 const EMPTY_TASKS: never[] = [];
 const EMPTY_TERMINAL: never[] = [];
 const EMPTY_REASONING: never[] = [];
+
+/** Reserved canvas ID for the always-present manager character */
+const MANAGER_CANVAS_ID = 0;
 
 /** Map desk position to canvas chair UID */
 function deskPositionToChairUid(position: { x: number; y: number }, label?: string): string {
@@ -27,6 +31,7 @@ export const Route = createFileRoute("/office")({
 
 function OfficePage() {
 	const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
+	const [showManagerModal, setShowManagerModal] = useState(false);
 	const [isThinking, setIsThinking] = useState(false);
 	const [tilesetReady, setTilesetReady] = useState(false);
 	const [threadId, setThreadId] = useState<string | null>(() => {
@@ -52,9 +57,11 @@ function OfficePage() {
 		initTileset(true).then(() => setTilesetReady(true));
 	}, []);
 
-	// Create OfficeState once tileset is ready
+	// Create OfficeState once tileset is ready, spawn permanent manager character
 	if (tilesetReady && !officeRef.current) {
-		officeRef.current = new OfficeState();
+		const os = new OfficeState();
+		os.addAgent(MANAGER_CANVAS_ID, 0, 0, "chair-mgr", true);
+		officeRef.current = os;
 	}
 	const officeState = officeRef.current;
 
@@ -90,6 +97,14 @@ function OfficePage() {
 			if (agent.status === "completed" || agent.status === "despawning") continue;
 			activeConvexIds.add(agent._id);
 
+			// Manager agents from Convex map to the permanent local manager character
+			if (agent.type === "manager") {
+				agentMapRef.current.set(agent._id, MANAGER_CANVAS_ID);
+				const isActive = agent.status === "working" || agent.status === "thinking";
+				os.setAgentActive(MANAGER_CANVAS_ID, isActive);
+				continue;
+			}
+
 			// Resolve chair UID from desk
 			const desk = agent.deskId ? deskById.get(agent.deskId) : null;
 			const chairUid = desk ? deskPositionToChairUid(desk.position, desk.label) : undefined;
@@ -99,11 +114,10 @@ function OfficePage() {
 				const canvasId = nextCanvasIdRef.current++;
 				agentMapRef.current.set(agent._id, canvasId);
 
-				const isManager = agent.type === "manager";
 				const palette = canvasId % 6;
 				const hue = canvasId * 60;
 
-				os.addAgent(canvasId, palette, hue, chairUid, isManager);
+				os.addAgent(canvasId, palette, hue, chairUid);
 			}
 
 			// Sync active state
@@ -112,17 +126,23 @@ function OfficePage() {
 			os.setAgentActive(canvasId, isActive);
 		}
 
-		// Remove agents no longer in Convex
+		// Remove agents no longer in Convex (never remove the permanent manager)
 		for (const [convexId, canvasId] of agentMapRef.current) {
 			if (!activeConvexIds.has(convexId)) {
+				if (canvasId === MANAGER_CANVAS_ID) continue;
 				os.removeAgent(canvasId);
 				agentMapRef.current.delete(convexId);
 			}
 		}
 	}, [convexOffice]);
 
-	// Agent click handler
+	// Agent click handler — manager opens modal, others open side panel
 	const handleClickAgent = useCallback((agentId: number) => {
+		if (agentId === MANAGER_CANVAS_ID) {
+			setSelectedAgentId(null);
+			setShowManagerModal(true);
+			return;
+		}
 		setSelectedAgentId(agentId >= 0 ? agentId : null);
 	}, []);
 
@@ -221,6 +241,39 @@ function OfficePage() {
 					reasoningSteps={EMPTY_REASONING}
 					onClose={handleClosePanel}
 				/>
+			)}
+
+			{/* Manager modal */}
+			{showManagerModal && (
+				<div
+					className="absolute inset-0 z-50 flex items-center justify-center bg-background/80"
+					onClick={(e) => {
+						if (e.target === e.currentTarget) setShowManagerModal(false);
+					}}
+					onKeyDown={(e) => {
+						if (e.key === "Escape") setShowManagerModal(false);
+					}}
+				>
+					<div className="relative flex h-[85%] w-[90%] max-w-[1200px] flex-col border-2 border-border bg-card shadow-pixel inset-shadow-pixel">
+						{/* Header */}
+						<div className="flex items-center justify-between border-b-2 border-border px-4 py-2">
+							<span className="font-mono text-xs uppercase tracking-widest text-accent-foreground/70">
+								Manager Office
+							</span>
+							<button
+								type="button"
+								onClick={() => setShowManagerModal(false)}
+								className="flex h-7 w-7 items-center justify-center border-2 border-border bg-card font-mono text-xs text-muted-foreground shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:text-accent-foreground hover:shadow-pixel-hover active:translate-x-px active:translate-y-px"
+							>
+								×
+							</button>
+						</div>
+						{/* Content */}
+						<div className="min-h-0 flex-1 overflow-hidden p-4">
+							<MasterAgentPanel />
+						</div>
+					</div>
+				</div>
 			)}
 		</div>
 	);

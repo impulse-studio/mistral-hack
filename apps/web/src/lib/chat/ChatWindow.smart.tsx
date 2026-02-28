@@ -1,7 +1,7 @@
 import { useUIMessages, type UIMessage } from "@convex-dev/agent/react";
 import { api } from "@mistral-hack/backend/convex/_generated/api";
 import { useMutation } from "convex/react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { ChatWindowMessage } from "./ChatWindow.component";
 import { ChatWindow } from "./ChatWindow.component";
@@ -33,11 +33,13 @@ function ChatWindowSmart({
 	title,
 	className,
 }: ChatWindowSmartProps) {
-	const [chatInternalThreadId, setChatInternalThreadId] = useState<string | null>(() => {
-		if (typeof window === "undefined") return null;
-		return sessionStorage.getItem(THREAD_STORAGE_KEY);
-	});
+	const [chatInternalThreadId, setChatInternalThreadId] = useState<string | null>(null);
 	const [chatIsLoading, setChatIsLoading] = useState(false);
+
+	useEffect(() => {
+		const stored = sessionStorage.getItem(THREAD_STORAGE_KEY);
+		if (stored) setChatInternalThreadId(stored);
+	}, []);
 
 	const chatActiveThreadId = controlledThreadId ?? chatInternalThreadId;
 
