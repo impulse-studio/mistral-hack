@@ -65,6 +65,10 @@
 
 	/* Pixel glow pulse animation */
 	--animate-pixel-pulse: pixel-pulse 1s steps(2, end) infinite;
+	/* Manager thinking dots animation */
+	--animate-thinking-dots: thinking-dots 1.5s steps(4, end) infinite;
+	/* Notification slide-in animation */
+	--animate-slide-in-right: slide-in-right 0.2s ease-out;
 }
 
 @keyframes pixel-pulse {
@@ -74,6 +78,32 @@
 	}
 	50% {
 		opacity: 0.4;
+	}
+}
+
+@keyframes thinking-dots {
+	0% {
+		content: "";
+	}
+	25% {
+		content: ".";
+	}
+	50% {
+		content: "..";
+	}
+	75% {
+		content: "...";
+	}
+}
+
+@keyframes slide-in-right {
+	from {
+		transform: translateX(100%);
+		opacity: 0;
+	}
+	to {
+		transform: translateX(0);
+		opacity: 1;
 	}
 }
 
