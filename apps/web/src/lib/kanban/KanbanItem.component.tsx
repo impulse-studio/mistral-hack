@@ -1,0 +1,197 @@
+import type { VariantProps } from "class-variance-authority";
+
+import { cva } from "class-variance-authority";
+
+import { cn } from "@/lib/utils";
+
+const kanbanItemVariants = cva(
+	"group/kanban-item relative cursor-pointer border-2 border-border bg-card p-2.5 shadow-pixel inset-shadow-pixel hover:border-muted-foreground/40 hover:shadow-pixel-hover hover:inset-shadow-pixel-hover hover:-translate-x-px hover:-translate-y-px",
+	{
+		variants: {
+			priority: {
+				urgent: "border-l-[3px] border-l-red-500",
+				high: "border-l-[3px] border-l-orange-500",
+				medium: "border-l-[3px] border-l-yellow-500",
+				low: "border-l-[3px] border-l-muted-foreground/40",
+				none: "",
+			},
+		},
+		defaultVariants: {
+			priority: "none",
+		},
+	},
+);
+
+const kanbanLabelVariants = cva(
+	"inline-flex items-center border px-1.5 py-px font-mono text-[10px] font-semibold uppercase tracking-widest",
+	{
+		variants: {
+			color: {
+				blue: "border-blue-500 bg-blue-500/10 text-blue-500",
+				purple: "border-purple-500 bg-purple-500/10 text-purple-500",
+				red: "border-red-500 bg-red-500/10 text-red-500",
+				green: "border-green-500 bg-green-500/10 text-green-500",
+				yellow: "border-yellow-500 bg-yellow-500/10 text-yellow-500",
+				orange: "border-orange-500 bg-orange-500/10 text-orange-500",
+				pink: "border-pink-500 bg-pink-500/10 text-pink-500",
+				cyan: "border-cyan-500 bg-cyan-500/10 text-cyan-500",
+				muted: "border-border bg-muted text-muted-foreground",
+			},
+		},
+		defaultVariants: {
+			color: "muted",
+		},
+	},
+);
+
+const priorityBarVariants = cva("w-[3px]", {
+	variants: {
+		level: {
+			urgent: "bg-red-500",
+			high: "bg-orange-500",
+			medium: "bg-yellow-500",
+			low: "bg-muted-foreground/40",
+			none: "bg-muted",
+		},
+		active: {
+			true: "",
+			false: "!bg-muted",
+		},
+	},
+	defaultVariants: {
+		level: "none",
+		active: true,
+	},
+});
+
+export interface KanbanItemLabel {
+	text: string;
+	color: NonNullable<VariantProps<typeof kanbanLabelVariants>["color"]>;
+}
+
+export interface KanbanItemProps {
+	id: string;
+	title: string;
+	priority?: NonNullable<VariantProps<typeof kanbanItemVariants>["priority"]>;
+	labels?: KanbanItemLabel[];
+	subtasksDone?: number;
+	subtasksTotal?: number;
+	assigneeInitials?: string;
+	assigneeColor?: string;
+	className?: string;
+	onClick?: () => void;
+}
+
+function PriorityBars({ priority }: { priority: NonNullable<KanbanItemProps["priority"]> }) {
+	const barCount = 4;
+	const activeBars =
+		priority === "urgent"
+			? 4
+			: priority === "high"
+				? 3
+				: priority === "medium"
+					? 2
+					: priority === "low"
+						? 1
+						: 0;
+
+	return (
+		<div className="flex items-end gap-[1.5px] h-3">
+			{Array.from({ length: barCount }, (_, i) => (
+				<div
+					key={i}
+					className={cn(
+						priorityBarVariants({
+							level: priority,
+							active: i < activeBars,
+						}),
+					)}
+					style={{ height: `${((i + 1) / barCount) * 100}%` }}
+				/>
+			))}
+		</div>
+	);
+}
+
+function KanbanItem({
+	id,
+	title,
+	priority = "none",
+	labels,
+	subtasksDone,
+	subtasksTotal,
+	assigneeInitials,
+	assigneeColor,
+	className,
+	onClick,
+}: KanbanItemProps) {
+	const hasSubtasks =
+		subtasksTotal !== undefined && subtasksTotal > 0 && subtasksDone !== undefined;
+	const subtaskPercent = hasSubtasks ? Math.round((subtasksDone / subtasksTotal) * 100) : 0;
+	const subtasksDoneAll = hasSubtasks && subtasksDone === subtasksTotal;
+
+	return (
+		<div
+			data-slot="kanban-item"
+			className={cn(kanbanItemVariants({ priority }), className)}
+			onClick={onClick}
+		>
+			{/* Top row: ID + priority */}
+			<div className="mb-1.5 flex items-center justify-between">
+				<span className="font-mono text-[11px] font-medium text-muted-foreground">{id}</span>
+				{priority !== "none" && <PriorityBars priority={priority} />}
+			</div>
+
+			{/* Title */}
+			<p className="mb-2 line-clamp-2 text-xs font-medium leading-relaxed text-foreground">
+				{title}
+			</p>
+
+			{/* Labels */}
+			{labels && labels.length > 0 && (
+				<div className="mb-2 flex flex-wrap gap-1">
+					{labels.map((label) => (
+						<span key={label.text} className={kanbanLabelVariants({ color: label.color })}>
+							{label.text}
+						</span>
+					))}
+				</div>
+			)}
+
+			{/* Bottom row: subtasks + assignee */}
+			<div className="flex items-center justify-between">
+				<div className="flex items-center gap-2">
+					{hasSubtasks && (
+						<div className="flex items-center gap-1">
+							<div className="h-2 w-8 overflow-hidden border border-border bg-muted">
+								<div
+									className={cn(
+										"h-full",
+										subtasksDoneAll ? "bg-green-500" : "bg-muted-foreground/60",
+									)}
+									style={{ width: `${subtaskPercent}%` }}
+								/>
+							</div>
+							<span className="text-[11px] text-muted-foreground">
+								{subtasksDone}/{subtasksTotal}
+							</span>
+						</div>
+					)}
+				</div>
+
+				{assigneeInitials && (
+					<div
+						className="flex size-5 shrink-0 items-center justify-center border border-border font-mono text-[9px] font-semibold text-white"
+						style={{
+							background: assigneeColor ?? "linear-gradient(135deg, var(--primary), var(--ring))",
+						}}
+					>
+						{assigneeInitials}
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
+export { KanbanItem, kanbanItemVariants, kanbanLabelVariants };
