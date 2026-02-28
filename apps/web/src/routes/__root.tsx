@@ -7,6 +7,7 @@ import {
 	Outlet,
 	Scripts,
 	createRootRouteWithContext,
+	useMatchRoute,
 	useRouteContext,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
@@ -65,6 +66,8 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 
 function RootDocument() {
 	const context = useRouteContext({ from: Route.id });
+	const matchRoute = useMatchRoute();
+	const isOffice = matchRoute({ to: "/office" });
 	return (
 		<ConvexBetterAuthProvider
 			client={context.convexQueryClient.convexClient}
@@ -75,15 +78,12 @@ function RootDocument() {
 				<head>
 					<HeadContent />
 					{import.meta.env.DEV && (
-						<script
-							src="//unpkg.com/react-grab/dist/index.global.js"
-							crossOrigin="anonymous"
-						/>
+						<script src="//unpkg.com/react-grab/dist/index.global.js" crossOrigin="anonymous" />
 					)}
 				</head>
 				<body>
-					<div className="grid h-svh grid-rows-[auto_1fr]">
-						<Header />
+					<div className={`grid h-svh ${isOffice ? "grid-rows-[1fr]" : "grid-rows-[auto_1fr]"}`}>
+						{!isOffice && <Header />}
 						<Outlet />
 					</div>
 					<Toaster richColors />

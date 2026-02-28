@@ -1,9 +1,14 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@mistral-hack/backend/convex/_generated/api";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
+	beforeLoad: ({ context }) => {
+		if (context.isAuthenticated) {
+			throw redirect({ to: "/office" });
+		}
+	},
 	component: HomeComponent,
 });
 

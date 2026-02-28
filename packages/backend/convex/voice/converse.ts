@@ -4,27 +4,22 @@ import { api, internal } from "../_generated/api";
 import { httpAction } from "../_generated/server";
 
 const MISTRAL_TRANSCRIPTION_URL = "https://api.mistral.ai/v1/audio/transcriptions";
-const ELEVENLABS_TTS_URL = "https://api.elevenlabs.io/v1/text-to-speech";
 
 /**
  * POST /voice/converse
  *
- * Unified voice conversation — goes through the same managerAgent + thread
- * system as text chat:
+ * Unified voice conversation pipeline:
  *   1. Accept user audio (base64 JSON or multipart form-data)
  *   2. Transcribe with Voxtral
  *   3. Save transcript to agent thread + messages table
- *   4. Run managerAgent.generateText → get reply
- *   5. TTS reply with ElevenLabs
- *   6. Return audio + metadata headers
+ *   4. Stream managerAgent response → ElevenLabs WebSocket TTS
+ *   5. Return MP3 audio + metadata headers
  *
- * Required query param: ?threadId=<id>
- * If no threadId, a new thread is created.
+ * Query params:
+ *   ?threadId=<id>  — reuse existing thread (created if omitted)
  */
 export const converse = httpAction(async (ctx, request) => {
 	const mistralKey = process.env.MISTRAL_API_KEY;
-	const elevenLabsKey = process.env.ELEVENLABS_API_KEY;
-	const voiceId = process.env.ELEVENLABS_VOICE_ID ?? "JBFqnCBsd6RMkjVDRZzb";
 
 	const cors: Record<string, string> = {
 		"Access-Control-Allow-Origin": "*",
@@ -36,12 +31,8 @@ export const converse = httpAction(async (ctx, request) => {
 		return new Response(null, { status: 204, headers: cors });
 	}
 
-	if (!mistralKey || !elevenLabsKey) {
-		return jsonResponse(
-			{ error: "MISTRAL_API_KEY and ELEVENLABS_API_KEY must be configured" },
-			500,
-			cors,
-		);
+	if (!mistralKey) {
+		return jsonResponse({ error: "MISTRAL_API_KEY not configured" }, 500, cors);
 	}
 
 	try {
@@ -71,16 +62,15 @@ export const converse = httpAction(async (ctx, request) => {
 			channel: "web",
 		});
 
-		// --- 5. Run managerAgent → get reply text ---
-		const reply: string = await ctx.runAction(internal.chat.generateTextResponse, {
+		// --- 5. Stream LLM → ElevenLabs WebSocket TTS → collect audio ---
+		const { text: reply, audioBase64 } = (await ctx.runAction(internal.chat.generateVoiceResponse, {
 			threadId,
 			promptMessageId: messageId,
-		});
+		})) as { text: string; audioBase64: string };
 
-		// --- 6. TTS with ElevenLabs ---
-		const audioBuffer = await textToSpeech(reply, elevenLabsKey, voiceId);
+		// --- 6. Return MP3 audio with metadata headers ---
+		const audioBuffer = Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0));
 
-		// --- 7. Return audio with metadata ---
 		return new Response(audioBuffer, {
 			status: 200,
 			headers: {
@@ -117,8 +107,12 @@ async function extractAudio(request: Request): Promise<Blob | null> {
 	};
 	if (!audio) return null;
 
-	const buffer = Buffer.from(audio, "base64");
-	return new Blob([buffer], { type: mimeType ?? "audio/webm" });
+	const binaryStr = atob(audio);
+	const bytes = new Uint8Array(binaryStr.length);
+	for (let i = 0; i < binaryStr.length; i++) {
+		bytes[i] = binaryStr.charCodeAt(i);
+	}
+	return new Blob([bytes], { type: mimeType ?? "audio/webm" });
 }
 
 async function transcribe(audio: Blob, apiKey: string): Promise<string> {
@@ -139,27 +133,6 @@ async function transcribe(audio: Blob, apiKey: string): Promise<string> {
 
 	const data = (await res.json()) as { text?: string };
 	return data.text ?? "";
-}
-
-async function textToSpeech(text: string, apiKey: string, voiceId: string): Promise<ArrayBuffer> {
-	const res = await fetch(`${ELEVENLABS_TTS_URL}/${voiceId}?output_format=mp3_44100_128`, {
-		method: "POST",
-		headers: {
-			"xi-api-key": apiKey,
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({
-			text,
-			model_id: "eleven_multilingual_v2",
-		}),
-	});
-
-	if (!res.ok) {
-		const err = await res.text();
-		throw new Error(`TTS failed (${res.status}): ${err}`);
-	}
-
-	return res.arrayBuffer();
 }
 
 function jsonResponse(data: Record<string, unknown>, status: number, cors: Record<string, string>) {
