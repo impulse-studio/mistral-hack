@@ -1,10 +1,13 @@
 import { Link } from "@tanstack/react-router";
+import { Authenticated, Unauthenticated } from "convex/react";
+
+import { Button } from "./ui/button";
+import { UserMenu } from "./UserMenu";
 
 export function Header() {
 	const links = [
 		{ to: "/", label: "Home" },
 		{ to: "/office", label: "Office" },
-		{ to: "/dashboard", label: "Dashboard" },
 		{ to: "/ai", label: "AI Chat" },
 	] as const;
 
@@ -20,7 +23,18 @@ export function Header() {
 						);
 					})}
 				</nav>
-				<div className="flex items-center gap-2"></div>
+				<div className="flex items-center gap-2">
+					<Authenticated>
+						<UserMenu />
+					</Authenticated>
+					<Unauthenticated>
+						<Link to="/sign-in">
+							<Button variant="outline" className="font-mono text-xs uppercase tracking-widest">
+								Log in
+							</Button>
+						</Link>
+					</Unauthenticated>
+				</div>
 			</div>
 			<hr />
 		</div>

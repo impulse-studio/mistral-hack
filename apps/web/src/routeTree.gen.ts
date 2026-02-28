@@ -10,10 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TestRouteImport } from './routes/test'
+import { Route as SignUpRouteImport } from './routes/sign-up'
+import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as OfficeRouteImport } from './routes/office'
 import { Route as ManagerRouteImport } from './routes/manager'
 import { Route as KanbanRouteImport } from './routes/kanban'
-import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AiRouteImport } from './routes/ai'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProtoV9RouteImport } from './routes/proto/v9'
@@ -29,6 +30,16 @@ const TestRoute = TestRouteImport.update({
   path: '/test',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignUpRoute = SignUpRouteImport.update({
+  id: '/sign-up',
+  path: '/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignInRoute = SignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OfficeRoute = OfficeRouteImport.update({
   id: '/office',
   path: '/office',
@@ -42,11 +53,6 @@ const ManagerRoute = ManagerRouteImport.update({
 const KanbanRoute = KanbanRouteImport.update({
   id: '/kanban',
   path: '/kanban',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AiRoute = AiRouteImport.update({
@@ -98,10 +104,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
-  '/dashboard': typeof DashboardRoute
   '/kanban': typeof KanbanRoute
   '/manager': typeof ManagerRoute
   '/office': typeof OfficeRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
   '/test': typeof TestRoute
   '/proto/v2': typeof ProtoV2Route
   '/proto/v3': typeof ProtoV3Route
@@ -114,10 +121,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
-  '/dashboard': typeof DashboardRoute
   '/kanban': typeof KanbanRoute
   '/manager': typeof ManagerRoute
   '/office': typeof OfficeRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
   '/test': typeof TestRoute
   '/proto/v2': typeof ProtoV2Route
   '/proto/v3': typeof ProtoV3Route
@@ -131,10 +139,11 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
-  '/dashboard': typeof DashboardRoute
   '/kanban': typeof KanbanRoute
   '/manager': typeof ManagerRoute
   '/office': typeof OfficeRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
   '/test': typeof TestRoute
   '/proto/v2': typeof ProtoV2Route
   '/proto/v3': typeof ProtoV3Route
@@ -149,10 +158,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/ai'
-    | '/dashboard'
     | '/kanban'
     | '/manager'
     | '/office'
+    | '/sign-in'
+    | '/sign-up'
     | '/test'
     | '/proto/v2'
     | '/proto/v3'
@@ -165,10 +175,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/ai'
-    | '/dashboard'
     | '/kanban'
     | '/manager'
     | '/office'
+    | '/sign-in'
+    | '/sign-up'
     | '/test'
     | '/proto/v2'
     | '/proto/v3'
@@ -181,10 +192,11 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/ai'
-    | '/dashboard'
     | '/kanban'
     | '/manager'
     | '/office'
+    | '/sign-in'
+    | '/sign-up'
     | '/test'
     | '/proto/v2'
     | '/proto/v3'
@@ -198,10 +210,11 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AiRoute: typeof AiRoute
-  DashboardRoute: typeof DashboardRoute
   KanbanRoute: typeof KanbanRoute
   ManagerRoute: typeof ManagerRoute
   OfficeRoute: typeof OfficeRoute
+  SignInRoute: typeof SignInRoute
+  SignUpRoute: typeof SignUpRoute
   TestRoute: typeof TestRoute
   ProtoV2Route: typeof ProtoV2Route
   ProtoV3Route: typeof ProtoV3Route
@@ -219,6 +232,20 @@ declare module '@tanstack/react-router' {
       path: '/test'
       fullPath: '/test'
       preLoaderRoute: typeof TestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-up': {
+      id: '/sign-up'
+      path: '/sign-up'
+      fullPath: '/sign-up'
+      preLoaderRoute: typeof SignUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof SignInRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/office': {
@@ -240,13 +267,6 @@ declare module '@tanstack/react-router' {
       path: '/kanban'
       fullPath: '/kanban'
       preLoaderRoute: typeof KanbanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ai': {
@@ -318,10 +338,11 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AiRoute: AiRoute,
-  DashboardRoute: DashboardRoute,
   KanbanRoute: KanbanRoute,
   ManagerRoute: ManagerRoute,
   OfficeRoute: OfficeRoute,
+  SignInRoute: SignInRoute,
+  SignUpRoute: SignUpRoute,
   TestRoute: TestRoute,
   ProtoV2Route: ProtoV2Route,
   ProtoV3Route: ProtoV3Route,

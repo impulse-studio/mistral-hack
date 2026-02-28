@@ -1,6 +1,6 @@
 import { api } from "@mistral-hack/backend/convex/_generated/api";
-import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery } from "convex/react";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { Authenticated, AuthLoading, Unauthenticated, useMutation, useQuery } from "convex/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { OfficeAgentPanel } from "@/components/office/OfficeAgentPanel.component";
@@ -26,6 +26,24 @@ export const Route = createFileRoute("/office")({
 });
 
 function OfficePage() {
+	return (
+		<>
+			<Authenticated>
+				<OfficeContent />
+			</Authenticated>
+			<Unauthenticated>
+				<Navigate to="/sign-in" />
+			</Unauthenticated>
+			<AuthLoading>
+				<div className="flex h-full w-full items-center justify-center bg-background">
+					<span className="font-mono text-xs text-muted-foreground animate-pulse">Loading...</span>
+				</div>
+			</AuthLoading>
+		</>
+	);
+}
+
+function OfficeContent() {
 	const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 	const [isThinking, setIsThinking] = useState(false);
 	const [tilesetReady, setTilesetReady] = useState(false);

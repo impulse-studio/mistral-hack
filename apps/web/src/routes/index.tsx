@@ -1,51 +1,68 @@
-import { convexQuery } from "@convex-dev/react-query";
-import { api } from "@mistral-hack/backend/convex/_generated/api";
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
+
+import { HeroIllustration } from "@/components/HeroIllustration.component";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
 	component: HomeComponent,
 });
 
-const TITLE_TEXT = `
- ██████╗ ███████╗████████╗████████╗███████╗██████╗
- ██╔══██╗██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗
- ██████╔╝█████╗     ██║      ██║   █████╗  ██████╔╝
- ██╔══██╗██╔══╝     ██║      ██║   ██╔══╝  ██╔══██╗
- ██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║
- ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝
-
- ████████╗    ███████╗████████╗ █████╗  ██████╗██╗  ██╗
- ╚══██╔══╝    ██╔════╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝
-    ██║       ███████╗   ██║   ███████║██║     █████╔╝
-    ██║       ╚════██║   ██║   ██╔══██║██║     ██╔═██╗
-    ██║       ███████║   ██║   ██║  ██║╚██████╗██║  ██╗
-    ╚═╝       ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
- `;
-
 function HomeComponent() {
-	const healthCheck = useQuery(convexQuery(api.healthCheck.get, {}));
-
 	return (
-		<div className="container mx-auto max-w-3xl px-4 py-2">
-			<pre className="overflow-x-auto font-mono text-sm">{TITLE_TEXT}</pre>
-			<div className="grid gap-6">
-				<section className="rounded-lg border p-4">
-					<h2 className="mb-2 font-medium">API Status</h2>
-					<div className="flex items-center gap-2">
-						<div
-							className={`h-2 w-2 rounded-full ${healthCheck.data === "OK" ? "bg-green-500" : healthCheck.isLoading ? "bg-orange-400" : "bg-red-500"}`}
-						/>
-						<span className="text-muted-foreground text-sm">
-							{healthCheck.isLoading
-								? "Checking..."
-								: healthCheck.data === "OK"
-									? "Connected"
-									: "Error"}
-						</span>
+		<div className="flex flex-col">
+			{/* Hero Section */}
+			<section className="relative flex min-h-svh items-center overflow-hidden">
+				<div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-12 px-6 py-16">
+					{/* Left — Text Content */}
+					<div className="flex max-w-lg flex-col gap-8">
+						{/* Title */}
+						<h1 className="font-mono text-5xl leading-[1.1] font-bold uppercase tracking-tight text-foreground">
+							Your AI team,
+							<br />
+							<span className="text-brand-accent">one office</span>
+							<br />
+							away.
+						</h1>
+
+						{/* Subtitle */}
+						<p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+							A virtual pixel-art office where AI agents collaborate in real-time. Assign tasks,
+							watch them code, and ship faster — all orchestrated by a single manager.
+						</p>
+
+						{/* CTA */}
+						<Link to="/sign-in">
+							<Button
+								variant="default"
+								size="lg"
+								className="border-2 border-brand-accent bg-brand-accent px-5 font-mono text-xs font-semibold uppercase tracking-widest text-black shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:shadow-pixel-hover active:translate-x-px active:translate-y-px active:shadow-none"
+							>
+								Enter the office
+								<span className="ml-1">&rarr;</span>
+							</Button>
+						</Link>
 					</div>
-				</section>
-			</div>
+
+					{/* Right — Pixel Art Illustration */}
+					<div className="hidden lg:block">
+						<HeroIllustration />
+					</div>
+				</div>
+			</section>
+
+			{/* Tech strip */}
+			<section className="border-t-2 border-border bg-card/50">
+				<div className="mx-auto flex max-w-4xl items-center justify-center gap-10 px-6 py-4">
+					{["Mistral AI", "Convex", "Daytona", "React 19", "Pixel Art"].map((name) => (
+						<span
+							key={name}
+							className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground"
+						>
+							{name}
+						</span>
+					))}
+				</div>
+			</section>
 		</div>
 	);
 }

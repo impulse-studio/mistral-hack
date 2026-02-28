@@ -8,6 +8,7 @@ import {
 	Scripts,
 	createRootRouteWithContext,
 	useRouteContext,
+	useRouterState,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { createServerFn } from "@tanstack/react-start";
@@ -65,6 +66,12 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 
 function RootDocument() {
 	const context = useRouteContext({ from: Route.id });
+	const pathname = useRouterState({
+		select: (s) => s.location.pathname,
+	});
+	const hideHeaderRoutes = ["/", "/sign-in", "/sign-up"];
+	const showHeader = !hideHeaderRoutes.includes(pathname);
+
 	return (
 		<ConvexBetterAuthProvider
 			client={context.convexQueryClient.convexClient}
@@ -76,8 +83,8 @@ function RootDocument() {
 					<HeadContent />
 				</head>
 				<body>
-					<div className="grid h-svh grid-rows-[auto_1fr]">
-						<Header />
+					<div className={showHeader ? "grid h-svh grid-rows-[auto_1fr]" : "h-svh"}>
+						{showHeader && <Header />}
 						<Outlet />
 					</div>
 					<Toaster richColors />
