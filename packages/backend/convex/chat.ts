@@ -10,7 +10,7 @@ import { v } from "convex/values";
 
 import { components, internal } from "./_generated/api";
 import { internalAction, mutation, query } from "./_generated/server";
-import { chatAgent } from "./agent";
+import { managerAgent } from "./agent";
 
 export const createNewThread = mutation({
 	args: {},
@@ -37,12 +37,22 @@ export const sendMessage = mutation({
 	args: {
 		threadId: v.string(),
 		prompt: v.string(),
+		channel: v.optional(v.union(v.literal("web"), v.literal("telegram"))),
 	},
-	handler: async (ctx, { threadId, prompt }) => {
+	handler: async (ctx, { threadId, prompt, channel }) => {
 		const { messageId } = await saveMessage(ctx, components.agent, {
 			threadId,
 			prompt,
 		});
+
+		// Also save to our messages table for multi-channel history
+		await ctx.db.insert("messages", {
+			content: prompt,
+			role: "user",
+			channel: channel ?? "web",
+			createdAt: Date.now(),
+		});
+
 		await ctx.scheduler.runAfter(0, internal.chat.generateResponseAsync, {
 			threadId,
 			promptMessageId: messageId,
@@ -57,6 +67,11 @@ export const generateResponseAsync = internalAction({
 		promptMessageId: v.string(),
 	},
 	handler: async (ctx, { threadId, promptMessageId }) => {
-		await chatAgent.streamText(ctx, { threadId }, { promptMessageId }, { saveStreamDeltas: true });
+		await managerAgent.streamText(
+			ctx,
+			{ threadId },
+			{ promptMessageId },
+			{ saveStreamDeltas: true },
+		);
 	},
 });
