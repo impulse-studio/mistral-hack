@@ -11,6 +11,7 @@ import { ConvexError, v } from "convex/values";
 import { components, internal } from "./_generated/api";
 import { internalAction, internalMutation, mutation, query } from "./_generated/server";
 import { managerAgent } from "./agent";
+import { streamToSpeech } from "./voice/elevenLabsStream";
 
 export const createNewThread = mutation({
 	args: {},
