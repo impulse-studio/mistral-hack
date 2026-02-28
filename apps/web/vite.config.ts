@@ -8,7 +8,8 @@ export default defineConfig({
 	envDir: "../../",
 	plugins: [tsconfigPaths(), tailwindcss(), tanstackStart(), viteReact()],
 	server: {
-		port: 3001,
+		port: 3003,
+		host: "0.0.0.0",
 	},
 	ssr: {
 		noExternal: ["@convex-dev/better-auth"],
