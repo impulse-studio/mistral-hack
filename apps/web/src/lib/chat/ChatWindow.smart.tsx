@@ -3,18 +3,18 @@ import { api } from "@mistral-hack/backend/convex/_generated/api";
 import { useMutation, type UsePaginatedQueryResult } from "convex/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import type { KanbanDragData } from "@/lib/kanban/KanbanItem.component";
+
+import type { ChatWindowMessage } from "./ChatWindow.component";
+import { ChatWindow } from "./ChatWindow.component";
+import { chatUseVoiceConverse as useVoiceConverse } from "./useVoiceConverse";
+
 // Typed wrapper — @convex-dev/agent@0.6.0-alpha generic inference is broken
 const useUIMessages = useUIMessagesRaw as (
 	query: typeof api.chat.listMessages,
 	args: { threadId: string } | "skip",
 	options: { initialNumItems: number; stream?: boolean },
 ) => UsePaginatedQueryResult<UIMessage>;
-
-import type { KanbanDragData } from "@/lib/kanban/KanbanItem.component";
-
-import type { ChatWindowMessage } from "./ChatWindow.component";
-import { ChatWindow } from "./ChatWindow.component";
-import { chatUseVoiceConverse as useVoiceConverse } from "./useVoiceConverse";
 
 const THREAD_STORAGE_KEY = "chat-thread-id";
 
