@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixel Office — Game Boy Edition</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f380f;overflow:hidden;font-family:'Press Start 2P',monospace;width:100vw;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#wrap{position:relative;image-rendering:pixelated;image-rendering:crisp-edges}
+canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+#scanlines{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+#ui{position:absolute;bottom:0;left:0;width:100%;z-index:20;pointer-events:none}
+#menu{background:#0f380f;border-top:3px solid #306230;padding:6px 10px;display:flex;gap:12px;align-items:center;pointer-events:auto}
+#menu .item{color:#8bac0f;font-size:8px;cursor:pointer;padding:4px 8px;border:2px solid #306230;background:#0f380f;text-transform:uppercase;letter-spacing:1px;transition:none}
+#menu .item:hover,#menu .item.active{background:#306230;color:#9bbc0f;border-color:#8bac0f}
+#menu .item.orange{color:#FF7000;border-color:#FF7000}
+#menu .item.orange:hover{background:#FF7000;color:#0f380f}
+#stats{margin-left:auto;color:#8bac0f;font-size:7px;display:flex;gap:14px;align-items:center}
+#stats .dot{display:inline-block;width:6px;height:6px;background:#8bac0f;margin-right:4px}
+#stats .dot.orange{background:#FF7000}
+#bezel{position:absolute;top:-28px;left:0;width:100%;height:28px;background:#0f380f;border-bottom:3px solid #306230;display:flex;align-items:center;padding:0 10px}
+#bezel .title{color:#306230;font-size:7px;letter-spacing:2px;text-transform:uppercase}
+#bezel .logo{color:#FF7000;font-size:9px;margin-left:auto;font-weight:bold}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="bezel"><span class="title">DOT SCREEN</span><span class="logo">MISTRAL AI</span></div>
+  <canvas id="gb"></canvas>
+  <canvas id="scanlines"></canvas>
+  <div id="ui">
+    <div id="menu">
+      <div class="item active" onclick="setView('office')">OFFICE</div>
+      <div class="item" onclick="setView('tasks')">TASKS</div>
+      <div class="item orange" onclick="spawnAgent()">+AGENT</div>
+      <div class="item" onclick="toggleSpeed()">SPD:1x</div>
+      <div id="stats">
+        <span><span class="dot"></span>AGENTS: <span id="agentCount">0</span></span>
+        <span><span class="dot orange"></span>TASKS: <span id="taskCount">0</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// GAME BOY PIXEL OFFICE — RETRO VARIANT
+// Pure Canvas 2D engine, 4 green shades + Mistral orange
+// ============================================================
+
+// --- PALETTE ---
+const GB = {
+  darkest:  '#0f380f',
+  dark:     '#306230',
+  light:    '#8bac0f',
+  lightest: '#9bbc0f',
+  orange:   '#FF7000',
+  orangeDim:'#CC5A00'
+};
+
+// --- CONSTANTS ---
+const TILE = 16;
+const ZOOM = 6;
+const COLS = 12;
+const ROWS = 8;
+const PW = COLS * TILE;  // 192 pixel width
+const PH = ROWS * TILE;  // 128 pixel height
+const CW = PW * ZOOM;
+const CH = PH * ZOOM;
+
+// --- CANVAS SETUP ---
+const canvas = document.getElementById('gb');
+const ctx = canvas.getContext('2d');
+const dpr = window.devicePixelRatio || 1;
+canvas.width = CW * dpr;
+canvas.height = CH * dpr;
+canvas.style.width = CW + 'px';
+canvas.style.height = CH + 'px';
+ctx.scale(dpr, dpr);
+ctx.imageSmoothingEnabled = false;
+
+// Wrap sizing
+const wrap = document.getElementById('wrap');
+wrap.style.width = CW + 'px';
+wrap.style.height = CH + 'px';
+
+// Scanline overlay
+const scanCvs = document.getElementById('scanlines');
+scanCvs.width = CW * dpr;
+scanCvs.height = CH * dpr;
+scanCvs.style.width = CW + 'px';
+scanCvs.style.height = CH + 'px';
+const scanCtx = scanCvs.getContext('2d');
+scanCtx.scale(dpr, dpr);
+function drawScanlines() {
+  scanCtx.clearRect(0, 0, CW, CH);
+  for (let y = 0; y < CH; y += 2) {
+    scanCtx.fillStyle = 'rgba(0,0,0,0.12)';
+    scanCtx.fillRect(0, y, CW, 1);
+  }
+  // Subtle vignette
+  const grad = scanCtx.createRadialGradient(CW/2, CH/2, CW*0.3, CW/2, CH/2, CW*0.7);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.25)');
+  scanCtx.fillStyle = grad;
+  scanCtx.fillRect(0, 0, CW, CH);
+}
+drawScanlines();
+
+// --- SPRITE CACHE ---
+const spriteCache = new Map();
+function getSpriteCanvas(key, data, w, h) {
+  if (spriteCache.has(key)) return spriteCache.get(key);
+  const oc = document.createElement('canvas');
+  oc.width = w * ZOOM;
+  oc.height = h * ZOOM;
+  const octx = oc.getContext('2d');
+  octx.imageSmoothingEnabled = false;
+  for (let py = 0; py < h; py++) {
+    for (let px = 0; px < w; px++) {
+      const c = data[py]?.[px];
+      if (c && c !== '' && c !== '.') {
+        octx.fillStyle = c;
+        octx.fillRect(px * ZOOM, py * ZOOM, ZOOM, ZOOM);
+      }
+    }
+  }
+  spriteCache.set(key, oc);
+  return oc;
+}
+
+function drawSprite(key, data, w, h, x, y) {
+  const oc = getSpriteCanvas(key, data, w, h);
+  ctx.drawImage(oc, x * ZOOM, y * ZOOM);
+}
+
+// ============================================================
+// SPRITE DATA — All inline, Game Boy 4-shade palette
+// D = darkest, d = dark, l = light, L = lightest, O = orange
+// ============================================================
+
+const D = GB.darkest;
+const d = GB.dark;
+const l = GB.light;
+const L = GB.lightest;
+const O = GB.orange;
+const _ = '';
+
+// --- FLOOR TILE (16x16) ---
+const FLOOR_TILE = Array.from({length:16}, (_, y) =>
+  Array.from({length:16}, (_, x) => {
+    if (x === 0 || y === 0) return d;
+    if (x === 15 || y === 15) return D;
+    return ((x + y) % 7 === 0) ? d : D;
+  })
+);
+
+// --- WALL TILE (16x16) ---
+const WALL_TILE = Array.from({length:16}, (_, y) =>
+  Array.from({length:16}, (_, x) => {
+    if (y < 2) return l;
+    if (y === 2) return d;
+    if (y < 14) {
+      if (x === 0 || x === 15) return d;
+      return ((x + y) % 11 === 0) ? l : d;
+    }
+    if (y === 14) return l;
+    return d;
+  })
+);
+
+// --- DESK (32x16 — 2 tiles wide, 1 tile tall for top-down) ---
+function makeDesk(hasMonitor) {
+  const desk = Array.from({length:16}, () => Array(32).fill(_));
+  // Table top
+  for (let y = 2; y < 14; y++) {
+    for (let x = 1; x < 31; x++) {
+      desk[y][x] = (y === 2 || y === 13 || x === 1 || x === 30) ? d : l;
+    }
+  }
+  // Legs
+  for (let y = 14; y < 16; y++) {
+    desk[y][2] = d; desk[y][3] = d;
+    desk[y][28] = d; desk[y][29] = d;
+  }
+  // Dark edge
+  desk[3][2] = d; desk[3][29] = d;
+  // Monitor on desk
+  if (hasMonitor) {
+    // Monitor base
+    for (let x = 12; x < 20; x++) desk[1][x] = d;
+    // Screen
+    for (let y = -4; y < 1; y++) {
+      const row = y + 6; // offset into visible area
+      if (row >= 0 && row < 16) {
+        for (let x = 10; x < 22; x++) {
+          desk[row][x] = (y === -4 || y === 0 || x === 10 || x === 21) ? d : L;
+        }
+      }
+    }
+    // Screen content dots
+    if (desk[3]) { desk[3][13] = O; desk[3][15] = l; desk[3][17] = O; desk[3][19] = l; }
+    if (desk[4]) { desk[4][12] = l; desk[4][14] = d; desk[4][16] = l; desk[4][18] = d; desk[4][20] = l; }
+  }
+  return desk;
+}
+
+const DESK_ON = makeDesk(true);
+const DESK_OFF = makeDesk(false);
+
+// --- CHAIR (16x16) ---
+const CHAIR = (() => {
+  const c = Array.from({length:16}, () => Array(16).fill(_));
+  // Seat
+  for (let y = 6; y < 12; y++)
+    for (let x = 3; x < 13; x++)
+      c[y][x] = (y === 6 || y === 11 || x === 3 || x === 12) ? d : l;
+  // Back
+  for (let y = 2; y < 7; y++)
+    for (let x = 4; x < 12; x++)
+      c[y][x] = (y === 2 || x === 4 || x === 11) ? d : l;
+  // Legs
+  c[12][4] = d; c[12][11] = d;
+  c[13][4] = d; c[13][11] = d;
+  // Wheels
+  c[14][3] = d; c[14][5] = d; c[14][10] = d; c[14][12] = d;
+  return c;
+})();
+
+// --- PLANT (16x24) ---
+const PLANT = (() => {
+  const p = Array.from({length:24}, () => Array(16).fill(_));
+  // Pot
+  for (let y = 16; y < 23; y++)
+    for (let x = 4; x < 12; x++)
+      p[y][x] = (y === 16 || y === 22 || x === 4 || x === 11) ? d : l;
+  p[23][5] = d; p[23][6] = d; p[23][9] = d; p[23][10] = d;
+  // Leaves (Game Boy green)
+  const leaves = [[7,4],[8,3],[6,5],[7,6],[8,7],[5,6],[9,5],[7,8],[8,5],[6,7],[9,7],[8,9],[5,8],[10,6]];
+  leaves.forEach(([x,y]) => { if (y+8<16) p[y+8][x] = l; });
+  // Trunk
+  for (let y = 13; y < 17; y++) { p[y][7] = d; p[y][8] = d; }
+  // Leaf highlights
+  p[10][8] = L; p[11][6] = L; p[12][9] = L;
+  return p;
+})();
+
+// --- BOOKSHELF (16x32 — 1 tile wide, 2 tiles tall) ---
+const BOOKSHELF = (() => {
+  const b = Array.from({length:32}, () => Array(16).fill(_));
+  // Frame
+  for (let y = 0; y < 32; y++) {
+    b[y][0] = d; b[y][1] = d; b[y][14] = d; b[y][15] = d;
+  }
+  for (let x = 0; x < 16; x++) {
+    b[0][x] = d; b[31][x] = d; b[10][x] = d; b[20][x] = d;
+  }
+  // Books (using GB palette)
+  const bookColors = [l, L, d, l, L, l];
+  for (let shelf = 0; shelf < 3; shelf++) {
+    const sy = shelf * 10 + 2;
+    for (let bk = 0; bk < 5; bk++) {
+      const bx = 3 + bk * 2;
+      const color = bookColors[(shelf * 5 + bk) % bookColors.length];
+      for (let y = sy; y < sy + 7; y++) {
+        b[y][bx] = color;
+        b[y][bx+1] = color === L ? l : d;
+      }
+    }
+  }
+  // Orange accent book
+  b[3][5] = O; b[4][5] = O; b[5][5] = O; b[6][5] = O; b[7][5] = O;
+  b[13][9] = O; b[14][9] = O; b[15][9] = O; b[16][9] = O; b[17][9] = O;
+  return b;
+})();
+
+// --- WATER COOLER (16x24) ---
+const COOLER = (() => {
+  const c = Array.from({length:24}, () => Array(16).fill(_));
+  // Jug top
+  for (let y = 0; y < 8; y++)
+    for (let x = 5; x < 11; x++)
+      c[y][x] = (x === 5 || x === 10 || y === 0) ? d : L;
+  // Body
+  for (let y = 8; y < 20; y++)
+    for (let x = 4; x < 12; x++)
+      c[y][x] = (x === 4 || x === 11 || y === 8 || y === 19) ? d : l;
+  // Tap
+  c[13][12] = d; c[14][12] = d; c[14][13] = O;
+  // Legs
+  c[20][5] = d; c[21][5] = d; c[20][10] = d; c[21][10] = d;
+  c[22][4] = d; c[22][6] = d; c[22][9] = d; c[22][11] = d;
+  return c;
+})();
+
+// --- CHARACTER SPRITES (16x24 per frame) ---
+// Game Boy palette characters with distinct shading
+
+function makeCharFrame(skinTone, hairStyle, isWalk, frameNum, dir) {
+  // skinTone: 0=light(L), 1=medium(l)
+  // hairStyle: 0..3
+  const skin = skinTone === 0 ? L : l;
+  const skinSh = skinTone === 0 ? l : d;
+  const hair = [d, D, l, d][hairStyle % 4];
+  const hairHi = [l, d, L, l][hairStyle % 4];
+
+  const f = Array.from({length:24}, () => Array(16).fill(_));
+
+  // Hair top
+  for (let x = 5; x < 11; x++) f[2][x] = hair;
+  f[2][5] = hairHi;
+  for (let x = 4; x < 12; x++) f[3][x] = hair;
+  f[3][4] = hairHi;
+
+  // Head
+  for (let y = 4; y < 9; y++)
+    for (let x = 5; x < 11; x++)
+      f[y][x] = (x === 5 || x === 10) ? skinSh : skin;
+
+  // Eyes
+  f[5][6] = D; f[5][9] = D;
+  // Mouth
+  f[7][7] = d; f[7][8] = d;
+
+  // Body
+  for (let y = 9; y < 17; y++)
+    for (let x = 4; x < 12; x++)
+      f[y][x] = (x === 4 || x === 11 || y === 9) ? d : l;
+
+  // Orange badge/tie
+  f[10][7] = O; f[10][8] = O;
+  f[11][7] = O;
+
+  // Arms
+  for (let y = 10; y < 15; y++) {
+    f[y][3] = skinSh; f[y][12] = skinSh;
+  }
+  f[15][3] = skin; f[15][12] = skin;
+
+  // Legs
+  const bounce = isWalk ? Math.sin(frameNum * Math.PI * 0.5) * 1 : 0;
+  const legOff = Math.round(bounce);
+  for (let y = 17; y < 22; y++) {
+    f[y][5] = d; f[y][6] = d;
+    f[y][9] = d; f[y][10] = d;
+  }
+  // Feet
+  f[22][4] = D; f[22][5] = d; f[22][6] = d;
+  f[22][9] = d; f[22][10] = d; f[22][11] = D;
+
+  // Walk animation: shift legs
+  if (isWalk && frameNum % 2 === 1) {
+    // Left leg forward
+    f[21][5] = _; f[21][6] = _;
+    f[22][4] = _; f[22][5] = _; f[22][6] = _;
+    f[21][4] = d; f[21][3] = D;
+    f[22][9] = _; f[22][10] = _; f[22][11] = _;
+    f[21][10] = d; f[21][11] = D;
+  }
+  if (isWalk && frameNum % 4 === 2) {
+    f[22][4] = _; f[22][11] = _;
+    f[22][5] = D; f[22][10] = D;
+    // Bounce body up
+    f[1][7] = hair; f[1][8] = hair;
+  }
+  if (isWalk && frameNum % 4 === 3) {
+    f[21][9] = _; f[21][10] = _;
+    f[22][9] = _; f[22][10] = _; f[22][11] = _;
+    f[21][11] = d; f[21][12] = D;
+    f[22][4] = _; f[22][5] = _; f[22][6] = _;
+    f[21][4] = d; f[21][3] = D;
+  }
+
+  return f;
+}
+
+// Generate walk cycle frames for a character
+function makeCharWalkCycle(skinTone, hairStyle) {
+  return [0,1,2,3].map(f => makeCharFrame(skinTone, hairStyle, true, f, 0));
+}
+function makeCharIdle(skinTone, hairStyle) {
+  return makeCharFrame(skinTone, hairStyle, false, 0, 0);
+}
+function makeCharTyping(skinTone, hairStyle, frame) {
+  const f = makeCharFrame(skinTone, hairStyle, false, 0, 0);
+  // Typing: arms move
+  if (frame % 2 === 0) {
+    f[13][3] = skin0(skinTone); f[14][3] = _;
+    f[13][2] = skin0(skinTone);
+  } else {
+    f[13][12] = skin0(skinTone); f[14][12] = _;
+    f[13][13] = skin0(skinTone);
+  }
+  return f;
+}
+function skin0(t) { return t === 0 ? L : l; }
+
+// Pre-generate character appearances
+const CHAR_LOOKS = [
+  { skin: 0, hair: 0 },
+  { skin: 1, hair: 1 },
+  { skin: 0, hair: 2 },
+  { skin: 1, hair: 3 },
+  { skin: 0, hair: 1 },
+  { skin: 1, hair: 0 },
+];
+
+// --- TILE MAP (12x8) ---
+// 0 = void, 1 = floor, 2 = wall
+const TILEMAP = [
+  [2,2,2,2,2,2,2,2,2,2,2,2],
+  [1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1],
+];
+
+// --- FURNITURE LAYOUT ---
+const furniture = [
+  // 4 desks with monitors (2 tiles wide each)
+  { type: 'desk', x: 1, y: 2, on: false, id: 0 },
+  { type: 'desk', x: 1, y: 5, on: false, id: 1 },
+  { type: 'desk', x: 7, y: 2, on: false, id: 2 },
+  { type: 'desk', x: 7, y: 5, on: false, id: 3 },
+  // Chairs at desks
+  { type: 'chair', x: 1, y: 3, deskId: 0 },
+  { type: 'chair', x: 2, y: 3, deskId: 0 },
+  { type: 'chair', x: 1, y: 6, deskId: 1 },
+  { type: 'chair', x: 2, y: 6, deskId: 1 },
+  { type: 'chair', x: 7, y: 3, deskId: 2 },
+  { type: 'chair', x: 8, y: 3, deskId: 2 },
+  { type: 'chair', x: 7, y: 6, deskId: 3 },
+  { type: 'chair', x: 8, y: 6, deskId: 3 },
+  // Plants
+  { type: 'plant', x: 0, y: 1 },
+  { type: 'plant', x: 11, y: 1 },
+  { type: 'plant', x: 5, y: 4 },
+  // Bookshelf
+  { type: 'bookshelf', x: 4, y: 1 },
+  { type: 'bookshelf', x: 10, y: 1 },
+  // Water cooler
+  { type: 'cooler', x: 6, y: 1 },
+];
+
+// --- DESK SEAT POSITIONS (where agents sit) ---
+const SEATS = [
+  { deskId: 0, x: 1, y: 3 },
+  { deskId: 0, x: 2, y: 3 },
+  { deskId: 1, x: 1, y: 6 },
+  { deskId: 1, x: 2, y: 6 },
+  { deskId: 2, x: 7, y: 3 },
+  { deskId: 2, x: 8, y: 3 },
+  { deskId: 3, x: 7, y: 6 },
+  { deskId: 3, x: 8, y: 6 },
+];
+
+// --- AGENT STATE ---
+const agents = [];
+let agentIdCounter = 0;
+const AGENT_NAMES = ['CODER','DEBUG','ARCHI','TESTER','DEVOP','DOCER','FIXER','BUILD'];
+const TASKS_POOL = ['Fix auth bug','Add dark mode','Write tests','Refactor DB','Update API','Lint code','Add cache','Fix CSS'];
+
+function createAgent() {
+  const freeSeat = SEATS.find(s => !agents.some(a => a.seatX === s.x && a.seatY === s.y));
+  if (!freeSeat) return null;
+
+  const look = CHAR_LOOKS[agentIdCounter % CHAR_LOOKS.length];
+  const agent = {
+    id: agentIdCounter++,
+    name: AGENT_NAMES[agents.length % AGENT_NAMES.length],
+    x: freeSeat.x * TILE + TILE/2,
+    y: 7 * TILE,  // Start at bottom
+    targetX: freeSeat.x * TILE + TILE/2,
+    targetY: freeSeat.y * TILE + TILE/2,
+    seatX: freeSeat.x,
+    seatY: freeSeat.y,
+    deskId: freeSeat.deskId,
+    state: 'spawning', // spawning, walking, typing, idle, wandering
+    skin: look.skin,
+    hair: look.hair,
+    walkFrame: 0,
+    walkTimer: 0,
+    typeFrame: 0,
+    typeTimer: 0,
+    idleTimer: 0,
+    wanderTarget: null,
+    spawnProgress: 0,
+    spawnColumns: Array.from({length:16}, () => Math.random() * 0.4),
+    task: TASKS_POOL[Math.floor(Math.random() * TASKS_POOL.length)],
+    bubbleTimer: 0,
+    bubbleText: '',
+  };
+  agents.push(agent);
+  updateCounts();
+  return agent;
+}
+
+// --- PATHFINDING (simple direct movement) ---
+function moveToward(agent, tx, ty, speed) {
+  const dx = tx - agent.x;
+  const dy = ty - agent.y;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  if (dist < speed) {
+    agent.x = tx;
+    agent.y = ty;
+    return true;
+  }
+  agent.x += (dx / dist) * speed;
+  agent.y += (dy / dist) * speed;
+  return false;
+}
+
+// --- GAME STATE ---
+let time = 0;
+let lastTime = 0;
+let speedMult = 1;
+let currentView = 'office';
+let taskList = [];
+let nextTaskId = 0;
+
+function addTask(text) {
+  taskList.push({ id: nextTaskId++, text, status: 'pending', assignee: null });
+  updateCounts();
+}
+// Seed some tasks
+addTask('Fix login flow');
+addTask('Add unit tests');
+addTask('Update README');
+addTask('Optimize queries');
+
+// --- UPDATE ---
+function update(dt) {
+  dt *= speedMult;
+  time += dt;
+
+  agents.forEach(agent => {
+    switch (agent.state) {
+      case 'spawning': {
+        agent.spawnProgress += dt * 3.0;
+        if (agent.spawnProgress >= 1.5) {
+          agent.state = 'walking';
+          agent.bubbleText = agent.task;
+          agent.bubbleTimer = 3;
+        }
+        break;
+      }
+      case 'walking': {
+        const speed = 48 * dt;
+        agent.walkTimer += dt;
+        if (agent.walkTimer > 0.15) {
+          agent.walkFrame = (agent.walkFrame + 1) % 4;
+          agent.walkTimer = 0;
+        }
+        const arrived = moveToward(agent, agent.targetX, agent.targetY, speed);
+        if (arrived) {
+          if (agent.wanderTarget) {
+            agent.state = 'idle';
+            agent.idleTimer = 1 + Math.random() * 2;
+            agent.wanderTarget = null;
+          } else {
+            agent.state = 'typing';
+            agent.typeTimer = 0;
+            // Turn on desk
+            const desk = furniture.find(f => f.type === 'desk' && f.id === agent.deskId);
+            if (desk) desk.on = true;
+          }
+        }
+        break;
+      }
+      case 'typing': {
+        agent.typeTimer += dt;
+        if (agent.typeTimer > 0.3) {
+          agent.typeFrame = (agent.typeFrame + 1) % 2;
+          agent.typeTimer = 0;
+        }
+        agent.idleTimer += dt;
+        // After typing awhile, wander
+        if (agent.idleTimer > 8 + Math.random() * 6) {
+          agent.state = 'wandering';
+          agent.idleTimer = 0;
+          // Pick random walkable tile
+          const wx = (3 + Math.floor(Math.random() * 6)) * TILE + TILE/2;
+          const wy = (3 + Math.floor(Math.random() * 4)) * TILE + TILE/2;
+          agent.wanderTarget = { x: wx, y: wy };
+          agent.targetX = wx;
+          agent.targetY = wy;
+          agent.state = 'walking';
+          // Turn off desk
+          const desk = furniture.find(f => f.type === 'desk' && f.id === agent.deskId);
+          if (desk) desk.on = false;
+        }
+        break;
+      }
+      case 'idle': {
+        agent.idleTimer -= dt;
+        if (agent.idleTimer <= 0) {
+          // Return to seat
+          agent.targetX = agent.seatX * TILE + TILE/2;
+          agent.targetY = agent.seatY * TILE + TILE/2;
+          agent.state = 'walking';
+          // New task
+          agent.task = TASKS_POOL[Math.floor(Math.random() * TASKS_POOL.length)];
+          agent.bubbleText = agent.task;
+          agent.bubbleTimer = 2.5;
+        }
+        break;
+      }
+    }
+
+    // Bubble timer
+    if (agent.bubbleTimer > 0) {
+      agent.bubbleTimer -= dt;
+    }
+  });
+}
+
+// --- RENDER ---
+function render() {
+  ctx.fillStyle = GB.darkest;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Draw tile grid
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const t = TILEMAP[r][c];
+      if (t === 1) drawSprite(`floor`, FLOOR_TILE, 16, 16, c * TILE, r * TILE);
+      else if (t === 2) drawSprite(`wall`, WALL_TILE, 16, 16, c * TILE, r * TILE);
+    }
+  }
+
+  // Collect drawables for z-sorting
+  const drawables = [];
+
+  // Furniture
+  furniture.forEach((f, i) => {
+    let spriteData, sw, sh;
+    switch (f.type) {
+      case 'desk':
+        spriteData = f.on ? DESK_ON : DESK_OFF;
+        sw = 32; sh = 16;
+        drawables.push({ zY: f.y * TILE + sh, draw: () => drawSprite(`desk_${f.id}_${f.on}`, spriteData, sw, sh, f.x * TILE, f.y * TILE) });
+        break;
+      case 'chair':
+        drawables.push({ zY: f.y * TILE + 16, draw: () => drawSprite(`chair`, CHAIR, 16, 16, f.x * TILE, f.y * TILE) });
+        break;
+      case 'plant':
+        drawables.push({ zY: f.y * TILE + 24, draw: () => drawSprite(`plant`, PLANT, 16, 24, f.x * TILE, f.y * TILE - 8) });
+        break;
+      case 'bookshelf':
+        drawables.push({ zY: f.y * TILE + 32, draw: () => drawSprite(`bookshelf`, BOOKSHELF, 16, 32, f.x * TILE, f.y * TILE) });
+        break;
+      case 'cooler':
+        drawables.push({ zY: f.y * TILE + 24, draw: () => drawSprite(`cooler`, COOLER, 16, 24, f.x * TILE, f.y * TILE - 8) });
+        break;
+    }
+  });
+
+  // Characters
+  agents.forEach(agent => {
+    const charX = Math.round(agent.x - 8);
+    const charY = Math.round(agent.y - 16);
+
+    if (agent.state === 'spawning') {
+      // Tetris-block spawn animation!
+      drawables.push({ zY: agent.y + 8, draw: () => drawTetrisSpawn(agent, charX, charY) });
+    } else {
+      let frameData;
+      const cacheBase = `char_${agent.skin}_${agent.hair}`;
+      if (agent.state === 'walking') {
+        frameData = makeCharWalkCycle(agent.skin, agent.hair)[agent.walkFrame];
+        const cacheKey = `${cacheBase}_walk_${agent.walkFrame}`;
+        drawables.push({ zY: agent.y + 8, draw: () => {
+          // Bouncy walk: slight y offset
+          const bounceY = Math.abs(Math.sin(agent.walkFrame * Math.PI * 0.5)) * -2;
+          drawSprite(cacheKey, frameData, 16, 24, charX, charY + bounceY);
+        }});
+      } else if (agent.state === 'typing') {
+        frameData = makeCharTyping(agent.skin, agent.hair, agent.typeFrame);
+        const cacheKey = `${cacheBase}_type_${agent.typeFrame}`;
+        drawables.push({ zY: agent.y + 8, draw: () => drawSprite(cacheKey, frameData, 16, 24, charX, charY) });
+      } else {
+        frameData = makeCharIdle(agent.skin, agent.hair);
+        const cacheKey = `${cacheBase}_idle`;
+        drawables.push({ zY: agent.y + 8, draw: () => drawSprite(cacheKey, frameData, 16, 24, charX, charY) });
+      }
+
+      // Agent label
+      drawables.push({ zY: agent.y + 8.1, draw: () => drawAgentLabel(agent, charX, charY) });
+
+      // Speech bubble
+      if (agent.bubbleTimer > 0) {
+        drawables.push({ zY: agent.y + 8.2, draw: () => drawBubble(agent, charX, charY) });
+      }
+    }
+  });
+
+  // Z-sort and draw
+  drawables.sort((a, b) => a.zY - b.zY);
+  drawables.forEach(d => d.draw());
+
+  // Time indicator (blinking colon)
+  const clockX = CW - 48 * 1;
+  ctx.fillStyle = GB.light;
+  ctx.font = '10px "Press Start 2P"';
+  // No clock for cleaner look
+
+  // If tasks view, draw overlay
+  if (currentView === 'tasks') drawTaskOverlay();
+}
+
+// --- TETRIS BLOCK SPAWN ---
+function drawTetrisSpawn(agent, charX, charY) {
+  const progress = agent.spawnProgress;
+  const idleData = makeCharIdle(agent.skin, agent.hair);
+
+  // Tetris pieces in GB colors
+  const tetrisPieces = [
+    { color: GB.light, shape: [[0,0],[1,0],[0,1],[1,1]] }, // O
+    { color: GB.lightest, shape: [[0,0],[1,0],[2,0],[3,0]] }, // I
+    { color: GB.dark, shape: [[0,0],[1,0],[2,0],[1,1]] }, // T
+    { color: GB.orange, shape: [[0,0],[1,0],[1,1],[2,1]] }, // S
+    { color: GB.light, shape: [[1,0],[2,0],[0,1],[1,1]] }, // Z
+  ];
+
+  for (let col = 0; col < 16; col++) {
+    const colProgress = (progress - agent.spawnColumns[col]) / 0.8;
+    if (colProgress <= 0) continue;
+
+    const revealRow = Math.min(23, Math.floor(colProgress * 24));
+
+    for (let row = 0; row <= revealRow && row < 24; row++) {
+      const pixel = idleData[row]?.[col];
+      if (pixel && pixel !== '') {
+        ctx.fillStyle = pixel;
+        ctx.fillRect((charX + col) * ZOOM, (charY + row) * ZOOM, ZOOM, ZOOM);
+      }
+    }
+
+    // Tetris block falling at the edge
+    if (revealRow < 23 && colProgress < 1) {
+      const piece = tetrisPieces[col % tetrisPieces.length];
+      const blockY = charY + revealRow;
+      ctx.fillStyle = piece.color;
+      // Draw a small falling block
+      ctx.fillRect((charX + col) * ZOOM, (blockY) * ZOOM, ZOOM, ZOOM * 2);
+      // Trail
+      ctx.fillStyle = GB.darkest;
+      ctx.globalAlpha = 0.5;
+      ctx.fillRect((charX + col) * ZOOM, (blockY - 3) * ZOOM, ZOOM, ZOOM * 2);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Glowing header line
+  if (progress < 1.2) {
+    ctx.fillStyle = GB.orange;
+    ctx.globalAlpha = Math.max(0, 1 - progress);
+    for (let x = 0; x < 16; x++) {
+      const yLine = charY + Math.floor(progress * 16);
+      ctx.fillRect((charX + x) * ZOOM, yLine * ZOOM, ZOOM, ZOOM);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+// --- AGENT LABEL ---
+function drawAgentLabel(agent, charX, charY) {
+  const text = agent.name;
+  const textW = text.length * 5;
+  const lx = (charX + 8) * ZOOM - textW * ZOOM * 0.08;
+  const ly = (charY - 4) * ZOOM;
+
+  // Background
+  ctx.fillStyle = 'rgba(15,56,15,0.85)';
+  ctx.fillRect(lx - 2, ly - 2, textW + 6, 10);
+  ctx.strokeStyle = GB.dark;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(lx - 2, ly - 2, textW + 6, 10);
+
+  // Text
+  ctx.fillStyle = agent.state === 'typing' ? GB.orange : GB.light;
+  ctx.font = '5px "Press Start 2P"';
+  ctx.fillText(text, lx, ly + 6);
+
+  // Status dot
+  const dotColor = agent.state === 'typing' ? GB.orange :
+                   agent.state === 'walking' ? GB.lightest : GB.dark;
+  ctx.fillStyle = dotColor;
+  ctx.fillRect(lx - 6, ly + 1, 3, 3);
+}
+
+// --- SPEECH BUBBLE ---
+function drawBubble(agent, charX, charY) {
+  const text = agent.bubbleText;
+  if (!text) return;
+
+  const alpha = agent.bubbleTimer < 0.5 ? agent.bubbleTimer / 0.5 : 1;
+  ctx.globalAlpha = alpha;
+
+  const bw = Math.min(text.length * 5 + 8, 70);
+  const bx = (charX + 8) * ZOOM - bw / 2;
+  const by = (charY - 14) * ZOOM;
+
+  // Bubble box
+  ctx.fillStyle = GB.lightest;
+  ctx.fillRect(bx, by, bw, 12);
+  ctx.strokeStyle = GB.darkest;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bx, by, bw, 12);
+
+  // Pointer
+  ctx.fillStyle = GB.lightest;
+  ctx.fillRect(bx + bw/2 - 2, by + 12, 4, 3);
+
+  // Text
+  ctx.fillStyle = GB.darkest;
+  ctx.font = '4px "Press Start 2P"';
+  const displayText = text.length > 12 ? text.substring(0, 11) + '..' : text;
+  ctx.fillText(displayText, bx + 3, by + 8);
+
+  ctx.globalAlpha = 1;
+}
+
+// --- TASK OVERLAY ---
+function drawTaskOverlay() {
+  // Semi-transparent overlay
+  ctx.fillStyle = 'rgba(15,56,15,0.92)';
+  ctx.fillRect(CW * 0.1, CH * 0.05, CW * 0.8, CH * 0.8);
+
+  // Border (double line GB style)
+  ctx.strokeStyle = GB.light;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(CW * 0.1 + 3, CH * 0.05 + 3, CW * 0.8 - 6, CH * 0.8 - 6);
+  ctx.strokeStyle = GB.dark;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(CW * 0.1, CH * 0.05, CW * 0.8, CH * 0.8);
+
+  // Title
+  ctx.fillStyle = GB.orange;
+  ctx.font = '12px "Press Start 2P"';
+  ctx.fillText('TASK BOARD', CW * 0.1 + 20, CH * 0.05 + 28);
+
+  // Divider
+  ctx.fillStyle = GB.dark;
+  ctx.fillRect(CW * 0.1 + 10, CH * 0.05 + 36, CW * 0.8 - 20, 2);
+
+  // Tasks
+  ctx.font = '8px "Press Start 2P"';
+  taskList.forEach((task, i) => {
+    const ty = CH * 0.05 + 52 + i * 22;
+    if (ty > CH * 0.85 - 20) return;
+
+    const statusIcon = task.status === 'done' ? '[X]' : task.status === 'active' ? '[>]' : '[ ]';
+    const color = task.status === 'done' ? GB.dark : task.status === 'active' ? GB.orange : GB.light;
+
+    ctx.fillStyle = color;
+    ctx.fillText(`${statusIcon} ${task.text}`, CW * 0.1 + 20, ty);
+
+    if (task.assignee) {
+      ctx.fillStyle = GB.lightest;
+      ctx.font = '6px "Press Start 2P"';
+      ctx.fillText(`  -> ${task.assignee}`, CW * 0.1 + 20, ty + 12);
+      ctx.font = '8px "Press Start 2P"';
+    }
+  });
+
+  // Footer hint
+  ctx.fillStyle = GB.dark;
+  ctx.font = '6px "Press Start 2P"';
+  ctx.fillText('PRESS [OFFICE] TO RETURN', CW * 0.1 + 20, CH * 0.85 - 8);
+}
+
+// --- UI FUNCTIONS ---
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('#menu .item').forEach(el => {
+    el.classList.remove('active');
+    if (el.textContent.trim() === v.toUpperCase()) el.classList.add('active');
+  });
+}
+
+function spawnAgent() {
+  const agent = createAgent();
+  if (!agent) {
+    // Flash the button
+    const btn = document.querySelector('#menu .item.orange');
+    btn.style.background = GB.darkest;
+    btn.textContent = 'FULL!';
+    setTimeout(() => { btn.textContent = '+AGENT'; btn.style.background = ''; }, 1000);
+    return;
+  }
+  // Assign a pending task
+  const pending = taskList.find(t => t.status === 'pending');
+  if (pending) {
+    pending.status = 'active';
+    pending.assignee = agent.name;
+    agent.task = pending.text;
+    agent.bubbleText = pending.text;
+    agent.bubbleTimer = 3;
+  }
+  updateCounts();
+}
+
+function toggleSpeed() {
+  speedMult = speedMult === 1 ? 2 : speedMult === 2 ? 4 : 1;
+  const btn = document.querySelectorAll('#menu .item')[3];
+  btn.textContent = `SPD:${speedMult}x`;
+}
+
+function updateCounts() {
+  document.getElementById('agentCount').textContent = agents.length;
+  document.getElementById('taskCount').textContent = taskList.filter(t => t.status === 'active').length + '/' + taskList.length;
+}
+
+// --- GAME LOOP ---
+function gameLoop(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+  lastTime = timestamp;
+
+  update(dt);
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+// --- AUTO SPAWN ---
+function autoSpawn() {
+  if (agents.length < 4) {
+    spawnAgent();
+    if (agents.length < 4) {
+      setTimeout(autoSpawn, 800);
+    }
+  }
+}
+
+// --- COMPLETE TASKS OVER TIME ---
+function taskCycle() {
+  // Complete active tasks occasionally
+  const active = taskList.filter(t => t.status === 'active');
+  if (active.length > 0 && Math.random() < 0.3) {
+    const task = active[Math.floor(Math.random() * active.length)];
+    task.status = 'done';
+    // Give agent new bubble
+    const agent = agents.find(a => a.name === task.assignee);
+    if (agent) {
+      agent.bubbleText = 'Done!';
+      agent.bubbleTimer = 2;
+    }
+    // Add a new task
+    addTask(TASKS_POOL[Math.floor(Math.random() * TASKS_POOL.length)]);
+    updateCounts();
+  }
+  // Assign pending tasks to idle agents
+  const pendingTasks = taskList.filter(t => t.status === 'pending');
+  const typingAgents = agents.filter(a => a.state === 'typing' && !taskList.find(t => t.status === 'active' && t.assignee === a.name));
+  if (pendingTasks.length > 0 && typingAgents.length > 0) {
+    const task = pendingTasks[0];
+    const agent = typingAgents[0];
+    task.status = 'active';
+    task.assignee = agent.name;
+    agent.task = task.text;
+    agent.bubbleText = task.text;
+    agent.bubbleTimer = 2.5;
+    updateCounts();
+  }
+  setTimeout(taskCycle, 5000 + Math.random() * 5000);
+}
+
+// --- KICK OFF ---
+updateCounts();
+setTimeout(autoSpawn, 500);
+setTimeout(taskCycle, 8000);
+requestAnimationFrame(gameLoop);
+
+// --- AMBIENT BLINKING (on monitors of active desks) ---
+// We handle this via desk.on in the sprite rendering
+
+// --- RESPONSIVE ---
+function resizeWrap() {
+  const maxW = window.innerWidth * 0.95;
+  const maxH = (window.innerHeight - 80) * 0.95;
+  const scaleW = maxW / CW;
+  const scaleH = maxH / CH;
+  const scale = Math.min(scaleW, scaleH, 1);
+  wrap.style.transform = `scale(${scale})`;
+  wrap.style.transformOrigin = 'center center';
+}
+window.addEventListener('resize', resizeWrap);
+resizeWrap();
+</script>
+</body>
+</html>

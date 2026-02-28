@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Space Station AI Office</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#050510;font-family:'Press Start 2P',monospace}
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+canvas{display:block;width:100%;height:100%;cursor:grab;image-rendering:pixelated;image-rendering:crisp-edges}
+canvas:active{cursor:grabbing}
+#manager-bar{position:fixed;bottom:0;left:0;right:0;height:64px;background:rgba(10,10,20,0.92);border-top:3px solid #FF7000;display:flex;align-items:center;padding:0 20px;gap:16px;z-index:10;box-shadow:0 -4px 0 #0a0a14}
+#manager-bar .title{color:#FF7000;font-family:'Press Start 2P',monospace;font-size:11px;white-space:nowrap}
+#manager-bar .status{color:#5ac88c;font-family:'Press Start 2P',monospace;font-size:9px;margin-left:auto;white-space:nowrap}
+#manager-bar input{flex:1;background:#0a0a14;border:2px solid #4a4a6a;color:#ccc;font-family:'Press Start 2P',monospace;font-size:9px;padding:8px 12px;outline:none}
+#manager-bar input:focus{border-color:#FF7000}
+#manager-bar input::placeholder{color:#4a4a6a}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="manager-bar">
+<div class="title">⬡ COMMAND CENTER</div>
+<input type="text" placeholder="Issue a directive to the station crew..." readonly>
+<div class="status">CREW: 8/8 ● ORBIT STABLE</div>
+</div>
+<script>
+'use strict';
+// ============================================================
+// SPACE STATION AI OFFICE — Canvas 2D Pixel Engine
+// ============================================================
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const TILE = 16;
+const MAP_W = 24;
+const MAP_H = 20;
+
+// --- State ---
+let zoom = 3;
+let panX = 0, panY = 0;
+let dragging = false, dragStartX = 0, dragStartY = 0, panStartX = 0, panStartY = 0;
+let dpr = window.devicePixelRatio || 1;
+
+// Resize
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = (window.innerHeight - 64) * dpr;
+  canvas.style.height = (window.innerHeight - 64) + 'px';
+}
+resize();
+window.addEventListener('resize', resize);
+
+// --- Pan/Zoom Controls ---
+canvas.addEventListener('mousedown', e => { dragging = true; dragStartX = e.clientX; dragStartY = e.clientY; panStartX = panX; panStartY = panY; });
+window.addEventListener('mousemove', e => { if (dragging) { panX = panStartX + (e.clientX - dragStartX); panY = panStartY + (e.clientY - dragStartY); } });
+window.addEventListener('mouseup', () => { dragging = false; });
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const oldZoom = zoom;
+  zoom = Math.max(1, Math.min(8, zoom + (e.deltaY < 0 ? 1 : -1)));
+  if (zoom !== oldZoom) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    panX = mx - (mx - panX) * (zoom / oldZoom);
+    panY = my - (my - panY) * (zoom / oldZoom);
+  }
+}, { passive: false });
+
+// ============================================================
+// SPRITE DATA — All inline as 2D hex arrays
+// ============================================================
+
+// --- Floor tiles ---
+const FLOOR_METAL = [
+  ['#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c','#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c','#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c','#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c'],
+  ['#2e2e40','#323248','#2e2e40','#303044','#2e2e40','#323248','#2e2e40','#303044','#2e2e40','#323248','#2e2e40','#303044','#2e2e40','#323248','#2e2e40','#303044'],
+  ['#2a2a3a','#2e2e40','#343450','#2e2e40','#2a2a3a','#2e2e40','#343450','#2e2e40','#2a2a3a','#2e2e40','#343450','#2e2e40','#2a2a3a','#2e2e40','#343450','#2e2e40'],
+  ['#2c2c3c','#303044','#2e2e40','#363654','#2c2c3c','#303044','#2e2e40','#363654','#2c2c3c','#303044','#2e2e40','#363654','#2c2c3c','#303044','#2e2e40','#363654'],
+  ['#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c','#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c','#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c','#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c'],
+  ['#2e2e40','#323248','#2e2e40','#303044','#2e2e40','#323248','#2e2e40','#303044','#2e2e40','#323248','#2e2e40','#303044','#2e2e40','#323248','#2e2e40','#303044'],
+  ['#2a2a3a','#2e2e40','#343450','#2e2e40','#2a2a3a','#2e2e40','#343450','#2e2e40','#2a2a3a','#2e2e40','#343450','#2e2e40','#2a2a3a','#2e2e40','#343450','#2e2e40'],
+  ['#2c2c3c','#303044','#2e2e40','#363654','#2c2c3c','#303044','#2e2e40','#363654','#2c2c3c','#303044','#2e2e40','#363654','#2c2c3c','#303044','#2e2e40','#363654'],
+  ['#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c','#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c','#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c','#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c'],
+  ['#2e2e40','#323248','#2e2e40','#303044','#2e2e40','#323248','#2e2e40','#303044','#2e2e40','#323248','#2e2e40','#303044','#2e2e40','#323248','#2e2e40','#303044'],
+  ['#2a2a3a','#2e2e40','#343450','#2e2e40','#2a2a3a','#2e2e40','#343450','#2e2e40','#2a2a3a','#2e2e40','#343450','#2e2e40','#2a2a3a','#2e2e40','#343450','#2e2e40'],
+  ['#2c2c3c','#303044','#2e2e40','#363654','#2c2c3c','#303044','#2e2e40','#363654','#2c2c3c','#303044','#2e2e40','#363654','#2c2c3c','#303044','#2e2e40','#363654'],
+  ['#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c','#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c','#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c','#2a2a3a','#2e2e40','#2a2a3a','#2c2c3c'],
+  ['#2e2e40','#323248','#2e2e40','#303044','#2e2e40','#323248','#2e2e40','#303044','#2e2e40','#323248','#2e2e40','#303044','#2e2e40','#323248','#2e2e40','#303044'],
+  ['#2a2a3a','#2e2e40','#343450','#2e2e40','#2a2a3a','#2e2e40','#343450','#2e2e40','#2a2a3a','#2e2e40','#343450','#2e2e40','#2a2a3a','#2e2e40','#343450','#2e2e40'],
+  ['#2c2c3c','#303044','#2e2e40','#363654','#2c2c3c','#303044','#2e2e40','#363654','#2c2c3c','#303044','#2e2e40','#363654','#2c2c3c','#303044','#2e2e40','#363654'],
+];
+
+// Office layout: 1=floor, 0=void(space), 2=wall/hull, 3=viewport area, 4=orange light strip
+const MAP = [
+  [0,0,0,0,0,0,0,3,3,3,3,3,3,3,3,3,3,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,3,3,3,3,3,3,3,3,3,3,3,3,0,0,0,0,0,0],
+  [0,0,0,0,0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,0,0,0,0],
+  [0,0,0,0,2,4,1,1,1,1,1,1,1,1,1,1,1,1,4,2,0,0,0,0],
+  [0,0,0,2,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,2,0,0,0],
+  [0,0,2,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,2,0,0],
+  [0,0,2,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,2,0,0],
+  [0,0,2,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,2,0,0],
+  [0,0,2,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,2,0,0],
+  [0,0,2,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,2,0,0],
+  [0,0,2,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,2,0,0],
+  [0,0,2,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,2,0,0],
+  [0,0,2,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,2,0,0],
+  [0,0,2,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,2,0,0],
+  [0,0,2,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,2,0,0],
+  [0,0,0,2,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,2,0,0,0],
+  [0,0,0,0,2,4,1,1,1,1,1,1,1,1,1,1,1,1,4,2,0,0,0,0],
+  [0,0,0,0,0,2,2,2,4,4,4,4,4,4,4,4,2,2,2,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+];
+
+// --- Space Suit Characters (16x24) ---
+// 8 unique space suit color schemes
+const SUIT_COLORS = [
+  { helmet: '#e0e8f0', visor: '#40a0ff', suit: '#c8d0d8', accent: '#4488cc', boots: '#556677', skin: '#f0c8a0' },
+  { helmet: '#e8e0e0', visor: '#ff6040', suit: '#d0c8c8', accent: '#cc4444', boots: '#665555', skin: '#d4a878' },
+  { helmet: '#e0e8e0', visor: '#40ff80', suit: '#c8d0c8', accent: '#44aa66', boots: '#556655', skin: '#e8c098' },
+  { helmet: '#e8e0f0', visor: '#c040ff', suit: '#d0c8d8', accent: '#8844cc', boots: '#665577', skin: '#f0d0b0' },
+  { helmet: '#f0e8e0', visor: '#ffcc40', suit: '#d8d0c8', accent: '#ccaa44', boots: '#776655', skin: '#c09870' },
+  { helmet: '#e0f0f0', visor: '#40ffff', suit: '#c8d8d8', accent: '#44aaaa', boots: '#557777', skin: '#e0b890' },
+  { helmet: '#f0e0e0', visor: '#ff40a0', suit: '#d8c8c8', accent: '#cc4488', boots: '#775566', skin: '#f0c0a0' },
+  { helmet: '#e8e8e0', visor: '#80ff40', suit: '#d0d0c8', accent: '#88aa44', boots: '#667755', skin: '#d8b888' },
+];
+
+function makeSpaceSuitSprite(colors, frame, dir) {
+  const { helmet, visor, suit, accent, boots, skin } = colors;
+  const dark = '#1a1a2a';
+  const _ = '';
+  // Base facing-down idle sprite 16x24
+  // Simplified astronaut with round helmet, visor, bulky suit
+  const base = [
+    // Row 0-4: Helmet
+    [_,_,_,_,_,_,helmet,helmet,helmet,helmet,_,_,_,_,_,_],
+    [_,_,_,_,_,helmet,helmet,helmet,helmet,helmet,helmet,_,_,_,_,_],
+    [_,_,_,_,helmet,helmet,helmet,helmet,helmet,helmet,helmet,helmet,_,_,_,_],
+    [_,_,_,_,helmet,visor,visor,visor,visor,visor,visor,helmet,_,_,_,_],
+    [_,_,_,_,helmet,visor,visor,visor,visor,visor,visor,helmet,_,_,_,_],
+    // Row 5: Chin
+    [_,_,_,_,_,helmet,skin,skin,skin,skin,helmet,_,_,_,_,_],
+    // Row 6-7: Neck / collar
+    [_,_,_,_,_,_,accent,accent,accent,accent,_,_,_,_,_,_],
+    [_,_,_,_,_,accent,accent,accent,accent,accent,accent,_,_,_,_,_],
+    // Row 8-13: Torso (bulky space suit)
+    [_,_,_,_,suit,suit,suit,suit,suit,suit,suit,suit,_,_,_,_],
+    [_,_,_,suit,suit,suit,accent,accent,accent,accent,suit,suit,suit,_,_,_],
+    [_,_,_,suit,suit,suit,suit,suit,suit,suit,suit,suit,suit,_,_,_],
+    [_,_,_,suit,suit,suit,suit,suit,suit,suit,suit,suit,suit,_,_,_],
+    [_,_,_,suit,suit,suit,accent,accent,accent,accent,suit,suit,suit,_,_,_],
+    [_,_,_,_,suit,suit,suit,suit,suit,suit,suit,suit,_,_,_,_],
+    // Row 14-17: Arms & lower torso
+    [_,_,suit,suit,suit,suit,suit,suit,suit,suit,suit,suit,suit,suit,_,_],
+    [_,_,suit,suit,_,suit,suit,suit,suit,suit,suit,_,suit,suit,_,_],
+    [_,_,_,suit,_,_,suit,suit,suit,suit,_,_,suit,_,_,_],
+    [_,_,_,_,_,_,suit,suit,suit,suit,_,_,_,_,_,_],
+    // Row 18-20: Legs
+    [_,_,_,_,_,suit,suit,_,_,suit,suit,_,_,_,_,_],
+    [_,_,_,_,_,suit,suit,_,_,suit,suit,_,_,_,_,_],
+    [_,_,_,_,_,boots,boots,_,_,boots,boots,_,_,_,_,_],
+    // Row 21-23: Boots
+    [_,_,_,_,boots,boots,boots,_,_,boots,boots,boots,_,_,_,_],
+    [_,_,_,_,boots,boots,boots,_,_,boots,boots,boots,_,_,_,_],
+    [_,_,_,_,dark,dark,dark,_,_,dark,dark,dark,_,_,_,_],
+  ];
+  return base;
+}
+
+// Walk frames - slight leg animation
+function makeWalkFrame(colors, frame) {
+  const s = makeSpaceSuitSprite(colors, 0, 'down');
+  const { suit, boots } = colors;
+  const dark = '#1a1a2a';
+  const _ = '';
+  // Animate legs
+  if (frame === 0 || frame === 2) {
+    s[18] = [_,_,_,_,suit,suit,_,_,_,_,suit,suit,_,_,_,_];
+    s[19] = [_,_,_,suit,suit,_,_,_,_,_,_,suit,suit,_,_,_];
+    s[20] = [_,_,_,boots,boots,_,_,_,_,_,_,boots,boots,_,_,_];
+    s[21] = [_,_,boots,boots,boots,_,_,_,_,_,_,boots,boots,boots,_,_];
+    s[22] = [_,_,boots,boots,boots,_,_,_,_,_,_,boots,boots,boots,_,_];
+    s[23] = [_,_,dark,dark,dark,_,_,_,_,_,_,dark,dark,dark,_,_];
+  } else {
+    s[18] = [_,_,_,_,_,_,suit,suit,suit,suit,_,_,_,_,_,_];
+    s[19] = [_,_,_,_,_,suit,suit,_,_,suit,suit,_,_,_,_,_];
+    s[20] = [_,_,_,_,_,boots,boots,_,_,boots,boots,_,_,_,_,_];
+    s[21] = [_,_,_,_,boots,boots,boots,_,_,boots,boots,boots,_,_,_,_];
+    s[22] = [_,_,_,_,boots,boots,boots,_,_,boots,boots,boots,_,_,_,_];
+    s[23] = [_,_,_,_,dark,dark,dark,_,_,dark,dark,dark,_,_,_,_];
+  }
+  return s;
+}
+
+// Typing frame
+function makeTypeFrame(colors, frame) {
+  const s = makeSpaceSuitSprite(colors, 0, 'down');
+  const { suit } = colors;
+  const _ = '';
+  // Arms move
+  if (frame === 0) {
+    s[14] = [_,_,suit,suit,suit,suit,suit,suit,suit,suit,suit,suit,suit,suit,_,_];
+    s[15] = [_,suit,suit,_,_,suit,suit,suit,suit,suit,suit,_,_,suit,suit,_];
+  } else {
+    s[14] = [_,suit,suit,suit,suit,suit,suit,suit,suit,suit,suit,suit,suit,suit,suit,_];
+    s[15] = [suit,suit,_,_,_,suit,suit,suit,suit,suit,suit,_,_,_,suit,suit];
+  }
+  return s;
+}
+
+// --- Desk Sprite (32x32 - metal/tech desk) ---
+function makeDeskSprite() {
+  const d = '#3a3a4a', l = '#4a4a5a', t = '#505060', s = '#2a2a3a', g = '#FF7000', _ = '';
+  const rows = [];
+  for (let y = 0; y < 32; y++) {
+    const row = [];
+    for (let x = 0; x < 32; x++) {
+      if (y < 2) { row.push(x >= 2 && x < 30 ? t : _); }
+      else if (y < 4) { row.push(x >= 1 && x < 31 ? l : (x === 0 || x === 31 ? s : _)); }
+      else if (y === 4) { row.push(x >= 1 && x < 31 ? g : _); } // Orange strip
+      else if (y < 20) { row.push(x >= 1 && x < 31 ? d : (x === 0 || x === 31 ? s : _)); }
+      else if (y === 20) { row.push(x >= 1 && x < 31 ? g : _); } // Orange strip
+      else if (y < 28) {
+        // Legs
+        if ((x >= 2 && x < 5) || (x >= 27 && x < 30)) row.push(s);
+        else row.push(_);
+      } else {
+        if ((x >= 1 && x < 6) || (x >= 26 && x < 31)) row.push(s);
+        else row.push(_);
+      }
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+// --- Chair Sprite (16x16 metal chair) ---
+function makeChairSprite() {
+  const m = '#3a3a50', d = '#2a2a3a', s = '#4a4a60', o = '#FF7000', _ = '';
+  return [
+    [_,_,_,_,_,d,d,d,d,d,d,_,_,_,_,_],
+    [_,_,_,_,d,m,m,m,m,m,m,d,_,_,_,_],
+    [_,_,_,d,m,m,m,m,m,m,m,m,d,_,_,_],
+    [_,_,_,d,m,s,s,s,s,s,s,m,d,_,_,_],
+    [_,_,_,d,m,s,s,s,s,s,s,m,d,_,_,_],
+    [_,_,_,d,m,s,s,s,s,s,s,m,d,_,_,_],
+    [_,_,_,d,m,m,m,m,m,m,m,m,d,_,_,_],
+    [_,_,_,_,d,d,o,d,d,o,d,d,_,_,_,_],
+    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    [_,_,_,d,d,d,d,d,d,d,d,d,d,_,_,_],
+    [_,_,d,m,m,m,m,m,m,m,m,m,m,d,_,_],
+    [_,_,d,m,s,s,s,s,s,s,s,s,m,d,_,_],
+    [_,_,d,m,s,o,s,s,s,s,o,s,m,d,_,_],
+    [_,_,d,d,d,d,d,d,d,d,d,d,d,d,_,_],
+    [_,_,_,d,_,_,_,_,_,_,_,_,d,_,_,_],
+    [_,_,d,d,_,_,_,_,_,_,_,_,d,d,_,_],
+  ];
+}
+
+// --- Holographic Monitor (16x16, semi-transparent glow) ---
+function makeMonitorSprite(on) {
+  const f = '#3a3a4a', d = '#2a2a3a', _ = '';
+  const scr = on ? '#40c8ff' : '#1a1a2a';
+  const scrL = on ? '#60e0ff' : '#222233';
+  const scrD = on ? '#2090cc' : '#151525';
+  return [
+    [_,_,d,d,d,d,d,d,d,d,d,d,d,d,_,_],
+    [_,d,f,f,f,f,f,f,f,f,f,f,f,f,d,_],
+    [_,d,f,scr,scr,scr,scr,scr,scr,scr,scr,scr,scr,f,d,_],
+    [_,d,f,scr,scrL,scrL,scr,scr,scr,scrL,scrL,scr,scr,f,d,_],
+    [_,d,f,scr,scr,scr,scr,scrD,scrD,scr,scr,scr,scr,f,d,_],
+    [_,d,f,scr,scrL,scr,scrD,scr,scr,scrD,scr,scrL,scr,f,d,_],
+    [_,d,f,scr,scr,scr,scr,scr,scr,scr,scr,scr,scr,f,d,_],
+    [_,d,f,scr,scr,scrD,scrL,scrL,scrL,scrL,scrD,scr,scr,f,d,_],
+    [_,d,f,scr,scr,scr,scr,scr,scr,scr,scr,scr,scr,f,d,_],
+    [_,d,f,f,f,f,f,f,f,f,f,f,f,f,d,_],
+    [_,_,d,d,d,d,d,d,d,d,d,d,d,d,_,_],
+    [_,_,_,_,_,_,d,f,f,d,_,_,_,_,_,_],
+    [_,_,_,_,_,_,d,f,f,d,_,_,_,_,_,_],
+    [_,_,_,_,_,d,d,d,d,d,d,_,_,_,_,_],
+    [_,_,_,_,d,d,d,d,d,d,d,d,_,_,_,_],
+    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+  ];
+}
+
+// --- Plant Sprite (16x24 space plant in tech pot) ---
+function makePlantSprite() {
+  const g1='#40cc70',g2='#30aa50',g3='#20883a',p='#4a4a5a',pd='#3a3a4a',o='#FF7000',_='';
+  return [
+    [_,_,_,_,_,_,_,g1,g1,_,_,_,_,_,_,_],
+    [_,_,_,_,_,_,g1,g1,g1,g1,_,_,_,_,_,_],
+    [_,_,_,_,_,g2,g1,g1,g1,g1,g2,_,_,_,_,_],
+    [_,_,_,_,g2,g1,g2,g1,g1,g2,g1,g2,_,_,_,_],
+    [_,_,_,g3,g2,g1,g2,g1,g1,g2,g1,g2,g3,_,_,_],
+    [_,_,g3,g2,g2,g1,g1,g1,g1,g1,g1,g2,g2,g3,_,_],
+    [_,_,g3,g2,g2,g2,g1,g1,g1,g1,g2,g2,g2,g3,_,_],
+    [_,g3,g2,g2,g2,g2,g2,g1,g1,g2,g2,g2,g2,g2,g3,_],
+    [_,_,g3,g3,g2,g2,g2,g2,g2,g2,g2,g2,g3,g3,_,_],
+    [_,_,_,_,g3,g3,g2,g2,g2,g2,g3,g3,_,_,_,_],
+    [_,_,_,_,_,_,g3,g3,g3,g3,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,g3,g3,_,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,g3,g3,_,_,_,_,_,_,_],
+    [_,_,_,_,_,o,o,o,o,o,o,_,_,_,_,_],
+    [_,_,_,_,o,p,p,p,p,p,p,o,_,_,_,_],
+    [_,_,_,_,p,p,pd,pd,pd,pd,p,p,_,_,_,_],
+    [_,_,_,_,p,pd,pd,pd,pd,pd,pd,p,_,_,_,_],
+    [_,_,_,_,p,pd,pd,pd,pd,pd,pd,p,_,_,_,_],
+    [_,_,_,_,p,pd,pd,pd,pd,pd,pd,p,_,_,_,_],
+    [_,_,_,_,p,pd,pd,pd,pd,pd,pd,p,_,_,_,_],
+    [_,_,_,_,p,p,p,p,p,p,p,p,_,_,_,_],
+    [_,_,_,_,_,p,p,p,p,p,p,_,_,_,_,_],
+    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+  ];
+}
+
+// ============================================================
+// SPRITE CACHE — Render to offscreen canvas
+// ============================================================
+const spriteCache = new Map();
+function getCachedSprite(key, spriteData, z) {
+  const ck = key + '_' + z;
+  if (spriteCache.has(ck)) return spriteCache.get(ck);
+  const w = spriteData[0].length, h = spriteData.length;
+  const oc = document.createElement('canvas');
+  oc.width = w * z; oc.height = h * z;
+  const ox = oc.getContext('2d');
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const c = spriteData[y][x];
+      if (c) { ox.fillStyle = c; ox.fillRect(x * z, y * z, z, z); }
+    }
+  }
+  spriteCache.set(ck, oc);
+  return oc;
+}
+
+function clearSpriteCache() {
+  spriteCache.clear();
+}
+
+// ============================================================
+// FURNITURE & LAYOUT
+// ============================================================
+
+// 8 desks in circular command center arrangement
+// Center of the station roughly at (12, 10)
+const CX = 12, CY = 10;
+const DESK_POSITIONS = [];
+const CHAIR_POSITIONS = [];
+const MONITOR_POSITIONS = [];
+
+// Arrange 8 desks in a circle
+for (let i = 0; i < 8; i++) {
+  const angle = (i / 8) * Math.PI * 2 - Math.PI / 2;
+  const radius = 4.5;
+  const dx = Math.round(CX + Math.cos(angle) * radius - 1);
+  const dy = Math.round(CY + Math.sin(angle) * radius - 1);
+  DESK_POSITIONS.push({ x: dx, y: dy });
+  // Chair toward center
+  const cx = Math.round(CX + Math.cos(angle) * (radius - 1.8));
+  const cy = Math.round(CY + Math.sin(angle) * (radius - 1.8));
+  CHAIR_POSITIONS.push({ x: cx, y: cy });
+  // Monitor on desk (away from center)
+  const mx = Math.round(CX + Math.cos(angle) * (radius + 0.3));
+  const my = Math.round(CY + Math.sin(angle) * (radius + 0.3));
+  MONITOR_POSITIONS.push({ x: mx, y: my });
+}
+
+// Plants and decorations
+const PLANT_POSITIONS = [
+  { x: 5, y: 4 }, { x: 18, y: 4 },
+  { x: 4, y: 14 }, { x: 19, y: 14 },
+];
+
+// Build drawable list
+const deskSprite = makeDeskSprite();
+const chairSprite = makeChairSprite();
+const monOnSprite = makeMonitorSprite(true);
+const monOffSprite = makeMonitorSprite(false);
+const plantSprite = makePlantSprite();
+
+const furniture = [];
+DESK_POSITIONS.forEach((p, i) => {
+  furniture.push({ type: 'desk', x: p.x, y: p.y, sprite: deskSprite, w: 32, h: 32, zY: p.y * TILE + 32 });
+});
+CHAIR_POSITIONS.forEach((p, i) => {
+  furniture.push({ type: 'chair', x: p.x, y: p.y, sprite: chairSprite, w: 16, h: 16, zY: p.y * TILE + 16, deskIdx: i });
+});
+MONITOR_POSITIONS.forEach((p, i) => {
+  furniture.push({ type: 'monitor', x: p.x, y: p.y, spriteOn: monOnSprite, spriteOff: monOffSprite, w: 16, h: 16, zY: p.y * TILE + 16, deskIdx: i });
+});
+PLANT_POSITIONS.forEach(p => {
+  furniture.push({ type: 'plant', x: p.x, y: p.y, sprite: plantSprite, w: 16, h: 24, zY: p.y * TILE + 24 });
+});
+
+// ============================================================
+// CHARACTERS
+// ============================================================
+
+const NAMES = ['Cmdr. Nova','Lt. Orion','Eng. Pulse','Dr. Nebula','Sgt. Comet','Nav. Lyra','Sci. Quasar','Ops. Vega'];
+
+const characters = [];
+for (let i = 0; i < 8; i++) {
+  const seatPos = CHAIR_POSITIONS[i];
+  characters.push({
+    id: i,
+    name: NAMES[i],
+    colors: SUIT_COLORS[i],
+    x: seatPos.x * TILE + TILE/2,
+    y: seatPos.y * TILE + TILE/2,
+    targetX: seatPos.x * TILE + TILE/2,
+    targetY: seatPos.y * TILE + TILE/2,
+    seatX: seatPos.x,
+    seatY: seatPos.y,
+    state: 'IDLE', // IDLE, WALK, TYPE, SPAWN
+    stateTimer: Math.random() * 3 + 1,
+    walkFrame: 0,
+    walkFrameTimer: 0,
+    typeFrame: 0,
+    typeFrameTimer: 0,
+    path: [],
+    wanderTimer: Math.random() * 60 + 30,
+    isAtDesk: true,
+    // Spawn animation
+    spawnPhase: 'spawning', // 'spawning', 'alive', 'despawning'
+    spawnTimer: 0,
+    spawnDuration: 0.8,
+    spawnColumnOffsets: Array.from({length: 16}, () => Math.random() * 0.3),
+    dir: 'down',
+  });
+}
+
+// ============================================================
+// STARS — Twinkling background
+// ============================================================
+
+const stars = [];
+for (let i = 0; i < 300; i++) {
+  stars.push({
+    x: Math.random(),
+    y: Math.random(),
+    size: Math.random() < 0.1 ? 2 : 1,
+    brightness: Math.random(),
+    twinkleSpeed: 0.5 + Math.random() * 3,
+    twinkleOffset: Math.random() * Math.PI * 2,
+  });
+}
+
+// ============================================================
+// SPACE DUST — Floating particles
+// ============================================================
+
+const spaceDust = [];
+for (let i = 0; i < 60; i++) {
+  spaceDust.push({
+    x: Math.random() * MAP_W * TILE,
+    y: Math.random() * MAP_H * TILE,
+    vx: (Math.random() - 0.5) * 4,
+    vy: (Math.random() - 0.5) * 2,
+    size: Math.random() * 1.5 + 0.5,
+    alpha: Math.random() * 0.3 + 0.1,
+    color: Math.random() < 0.3 ? '#FF7000' : (Math.random() < 0.5 ? '#4488cc' : '#ffffff'),
+  });
+}
+
+// ============================================================
+// EARTH VIEWPORT — Pixel Earth at top
+// ============================================================
+
+function drawPixelEarth(ctx, x, y, w, h, z, time) {
+  // Draw a pixel-art Earth in the viewport area
+  const earthR = Math.min(w, h) * 0.35;
+  const cx = x + w / 2;
+  const cy = y + h / 2 + earthR * 0.15;
+
+  // Starfield behind
+  ctx.fillStyle = '#050510';
+  ctx.fillRect(x, y, w, h);
+
+  // Earth circle - draw pixel by pixel
+  const pixSize = z;
+  const gridR = Math.ceil(earthR / pixSize);
+
+  for (let py = -gridR; py <= gridR; py++) {
+    for (let px = -gridR; px <= gridR; px++) {
+      const dist = Math.sqrt(px * px + py * py);
+      if (dist > gridR) continue;
+
+      // Sphere mapping
+      const nx = px / gridR;
+      const ny = py / gridR;
+      const nz = Math.sqrt(Math.max(0, 1 - nx*nx - ny*ny));
+
+      // Longitude with rotation
+      const lon = Math.atan2(nx, nz) + time * 0.15;
+      const lat = Math.asin(ny);
+
+      // Simple continent generation
+      const landNoise = Math.sin(lon * 3) * Math.cos(lat * 2.5) + Math.sin(lon * 7 + 1) * Math.cos(lat * 5) * 0.3;
+      const isLand = landNoise > 0.1;
+      const isPole = Math.abs(lat) > 1.2;
+      const isCloud = Math.sin(lon * 5 + time * 0.3) * Math.cos(lat * 4 + time * 0.1) > 0.5;
+
+      let color;
+      if (isPole) color = '#e8f0ff';
+      else if (isCloud) color = '#d0e0f0';
+      else if (isLand) {
+        if (Math.abs(lat) < 0.4) color = '#208040';
+        else color = '#309050';
+      } else {
+        const depth = 0.5 + nz * 0.5;
+        if (depth > 0.7) color = '#2060c0';
+        else color = '#1848a0';
+      }
+
+      // Atmosphere edge glow
+      if (dist > gridR - 2) {
+        color = '#6090e0';
+      }
+
+      ctx.fillStyle = color;
+      ctx.fillRect(cx + px * pixSize, cy + py * pixSize, pixSize, pixSize);
+    }
+  }
+
+  // Atmosphere glow
+  const grad = ctx.createRadialGradient(cx, cy, earthR * 0.8, cx, cy, earthR * 1.3);
+  grad.addColorStop(0, 'rgba(80,140,255,0)');
+  grad.addColorStop(0.5, 'rgba(60,120,255,0.08)');
+  grad.addColorStop(1, 'rgba(40,80,255,0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, earthR * 1.3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ============================================================
+// PATHFINDING — Simple BFS on tile grid
+// ============================================================
+
+function isWalkable(tx, ty) {
+  if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return false;
+  return MAP[ty][tx] === 1;
+}
+
+function bfs(sx, sy, ex, ey) {
+  if (!isWalkable(ex, ey)) return [];
+  const key = (x, y) => x + ',' + y;
+  const visited = new Set();
+  const queue = [[sx, sy, []]];
+  visited.add(key(sx, sy));
+
+  while (queue.length > 0) {
+    const [cx, cy, path] = queue.shift();
+    if (cx === ex && cy === ey) return path;
+
+    for (const [dx, dy] of [[0,-1],[0,1],[-1,0],[1,0]]) {
+      const nx = cx + dx, ny = cy + dy;
+      const k = key(nx, ny);
+      if (!visited.has(k) && isWalkable(nx, ny)) {
+        visited.add(k);
+        queue.push([nx, ny, [...path, { x: nx * TILE + TILE/2, y: ny * TILE + TILE/2 }]]);
+      }
+    }
+  }
+  return [];
+}
+
+// ============================================================
+// CHARACTER UPDATE
+// ============================================================
+
+function updateCharacters(dt) {
+  for (const ch of characters) {
+    // Spawn animation
+    if (ch.spawnPhase === 'spawning') {
+      ch.spawnTimer += dt;
+      if (ch.spawnTimer >= ch.spawnDuration) {
+        ch.spawnPhase = 'alive';
+        ch.spawnTimer = 0;
+      }
+      continue;
+    }
+
+    switch (ch.state) {
+      case 'IDLE':
+        ch.stateTimer -= dt;
+        if (ch.stateTimer <= 0) {
+          if (ch.isAtDesk) {
+            ch.state = 'TYPE';
+            ch.stateTimer = 5 + Math.random() * 15;
+            ch.typeFrame = 0;
+            ch.typeFrameTimer = 0;
+          }
+        }
+        break;
+
+      case 'TYPE':
+        ch.typeFrameTimer += dt;
+        if (ch.typeFrameTimer >= 0.3) {
+          ch.typeFrameTimer = 0;
+          ch.typeFrame = (ch.typeFrame + 1) % 2;
+        }
+        ch.stateTimer -= dt;
+        if (ch.stateTimer <= 0) {
+          // Wander or idle
+          ch.wanderTimer -= 1;
+          if (ch.wanderTimer <= 0) {
+            // Start wandering
+            const wx = ch.seatX + Math.floor(Math.random() * 7) - 3;
+            const wy = ch.seatY + Math.floor(Math.random() * 7) - 3;
+            if (isWalkable(wx, wy)) {
+              const sx = Math.round((ch.x - TILE/2) / TILE);
+              const sy = Math.round((ch.y - TILE/2) / TILE);
+              ch.path = bfs(sx, sy, wx, wy);
+              if (ch.path.length > 0) {
+                ch.state = 'WALK';
+                ch.isAtDesk = false;
+                ch.walkFrame = 0;
+                ch.walkFrameTimer = 0;
+                ch.wanderTimer = 30 + Math.random() * 60;
+              } else {
+                ch.state = 'IDLE';
+                ch.stateTimer = 2 + Math.random() * 3;
+              }
+            } else {
+              ch.state = 'IDLE';
+              ch.stateTimer = 2 + Math.random() * 3;
+            }
+          } else {
+            ch.state = 'IDLE';
+            ch.stateTimer = 2 + Math.random() * 3;
+          }
+        }
+        break;
+
+      case 'WALK':
+        ch.walkFrameTimer += dt;
+        if (ch.walkFrameTimer >= 0.15) {
+          ch.walkFrameTimer = 0;
+          ch.walkFrame = (ch.walkFrame + 1) % 4;
+        }
+
+        if (ch.path.length > 0) {
+          const target = ch.path[0];
+          const dx = target.x - ch.x;
+          const dy = target.y - ch.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const speed = 48;
+
+          // Update direction
+          if (Math.abs(dx) > Math.abs(dy)) {
+            ch.dir = dx > 0 ? 'right' : 'left';
+          } else {
+            ch.dir = dy > 0 ? 'down' : 'up';
+          }
+
+          if (dist < speed * dt) {
+            ch.x = target.x;
+            ch.y = target.y;
+            ch.path.shift();
+          } else {
+            ch.x += (dx / dist) * speed * dt;
+            ch.y += (dy / dist) * speed * dt;
+          }
+        } else {
+          // Done walking, if not at desk, return
+          if (!ch.isAtDesk) {
+            ch.stateTimer = 1 + Math.random() * 2;
+            ch.state = 'IDLE';
+            // Plan return to desk
+            setTimeout(() => {
+              if (ch.state === 'IDLE' && !ch.isAtDesk) {
+                const sx = Math.round((ch.x - TILE/2) / TILE);
+                const sy = Math.round((ch.y - TILE/2) / TILE);
+                ch.path = bfs(sx, sy, ch.seatX, ch.seatY);
+                if (ch.path.length > 0) {
+                  ch.state = 'WALK';
+                  ch.walkFrame = 0;
+                } else {
+                  ch.x = ch.seatX * TILE + TILE/2;
+                  ch.y = ch.seatY * TILE + TILE/2;
+                  ch.isAtDesk = true;
+                }
+              }
+            }, (2 + Math.random() * 4) * 1000);
+          } else {
+            ch.state = 'IDLE';
+            ch.stateTimer = 1;
+          }
+          ch.isAtDesk = (Math.abs(ch.x - (ch.seatX * TILE + TILE/2)) < 2 && Math.abs(ch.y - (ch.seatY * TILE + TILE/2)) < 2);
+        }
+        break;
+    }
+  }
+}
+
+// ============================================================
+// MATRIX SPAWN EFFECT — Blue/White for space variant
+// ============================================================
+
+function drawMatrixSpawn(ctx, ch, spriteData, x, y, z, time) {
+  const progress = ch.spawnTimer / ch.spawnDuration;
+  const w = spriteData[0].length, h = spriteData.length;
+
+  for (let col = 0; col < w; col++) {
+    const colOffset = ch.spawnColumnOffsets[col];
+    const colProgress = (progress - colOffset) / (1 - colOffset);
+
+    for (let row = 0; row < h; row++) {
+      const rowProgress = row / h;
+      const revealed = colProgress > rowProgress;
+
+      if (revealed && spriteData[row][col]) {
+        // Draw character pixel
+        ctx.fillStyle = spriteData[row][col];
+        ctx.fillRect(x + col * z, y + row * z, z, z);
+      }
+
+      // Matrix rain effect
+      const rainPos = colProgress * h;
+      const distFromHead = rainPos - row;
+
+      if (distFromHead >= 0 && distFromHead < 6 && colProgress > 0 && colProgress < 1) {
+        // Hash-based flicker
+        const hash = (col * 7 + row * 13 + Math.floor(time * 10)) % 10;
+        if (hash < 7) {
+          if (distFromHead < 1) {
+            ctx.fillStyle = '#ccddff'; // White head (blue-white for space)
+          } else if (distFromHead < 2) {
+            ctx.fillStyle = '#6699ff'; // Bright blue
+          } else if (distFromHead < 4) {
+            ctx.fillStyle = '#3366cc'; // Medium blue
+          } else {
+            ctx.fillStyle = '#1a3366'; // Dim blue
+          }
+          ctx.fillRect(x + col * z, y + row * z, z, z);
+        }
+      }
+    }
+  }
+}
+
+// ============================================================
+// HOLOGRAPHIC GLOW EFFECT
+// ============================================================
+
+function drawHoloGlow(ctx, x, y, w, h, time) {
+  const pulse = 0.3 + Math.sin(time * 2) * 0.1;
+  ctx.save();
+  ctx.globalAlpha = pulse;
+  ctx.shadowColor = '#40c8ff';
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = 'rgba(64, 200, 255, 0.05)';
+  ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
+  ctx.restore();
+}
+
+// ============================================================
+// MAIN RENDER
+// ============================================================
+
+let gameTime = 0;
+
+function render(time) {
+  const dt = Math.min(0.05, (time - (render.lastTime || time)) / 1000);
+  render.lastTime = time;
+  gameTime += dt;
+
+  // Update
+  updateCharacters(dt);
+  updateSpaceDust(dt);
+
+  // Clear
+  ctx.imageSmoothingEnabled = false;
+  const cw = canvas.width, ch = canvas.height;
+  ctx.fillStyle = '#050510';
+  ctx.fillRect(0, 0, cw, ch);
+
+  // Draw stars (screen space)
+  drawStars(ctx, cw, ch, gameTime);
+
+  // Compute offset
+  const mapPxW = MAP_W * TILE * zoom;
+  const mapPxH = MAP_H * TILE * zoom;
+  const ox = (cw / dpr - mapPxW) / 2 + panX;
+  const oy = (ch / dpr - mapPxH) / 2 + panY;
+
+  ctx.save();
+  ctx.scale(dpr, dpr);
+
+  // Draw Earth viewport
+  const vpX = ox + 7 * TILE * zoom;
+  const vpY = oy;
+  const vpW = 10 * TILE * zoom;
+  const vpH = 2.5 * TILE * zoom;
+  drawPixelEarth(ctx, vpX, vpY, vpW, vpH, zoom, gameTime);
+
+  // Draw viewport frame
+  ctx.strokeStyle = '#4a4a6a';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(vpX, vpY, vpW, vpH);
+  // Orange corners
+  const cr = 6 * zoom;
+  ctx.fillStyle = '#FF7000';
+  ctx.fillRect(vpX-1, vpY-1, cr, 2);
+  ctx.fillRect(vpX-1, vpY-1, 2, cr);
+  ctx.fillRect(vpX+vpW-cr+1, vpY-1, cr, 2);
+  ctx.fillRect(vpX+vpW-1, vpY-1, 2, cr);
+  ctx.fillRect(vpX-1, vpY+vpH-1, cr, 2);
+  ctx.fillRect(vpX-1, vpY+vpH-cr+1, 2, cr);
+  ctx.fillRect(vpX+vpW-cr+1, vpY+vpH-1, cr, 2);
+  ctx.fillRect(vpX+vpW-1, vpY+vpH-cr+1, 2, cr);
+
+  // Draw tile map
+  for (let ty = 0; ty < MAP_H; ty++) {
+    for (let tx = 0; tx < MAP_W; tx++) {
+      const tile = MAP[ty][tx];
+      const px = ox + tx * TILE * zoom;
+      const py = oy + ty * TILE * zoom;
+
+      if (tile === 1) {
+        // Metal floor
+        const floorCanvas = getCachedSprite('floor', FLOOR_METAL, zoom);
+        ctx.drawImage(floorCanvas, px, py);
+      } else if (tile === 2) {
+        // Hull wall
+        ctx.fillStyle = '#1a1a2a';
+        ctx.fillRect(px, py, TILE * zoom, TILE * zoom);
+        // Rivet details
+        ctx.fillStyle = '#252538';
+        ctx.fillRect(px + 2*zoom, py + 2*zoom, 2*zoom, 2*zoom);
+        ctx.fillRect(px + TILE*zoom - 4*zoom, py + 2*zoom, 2*zoom, 2*zoom);
+        ctx.fillRect(px + 2*zoom, py + TILE*zoom - 4*zoom, 2*zoom, 2*zoom);
+        ctx.fillRect(px + TILE*zoom - 4*zoom, py + TILE*zoom - 4*zoom, 2*zoom, 2*zoom);
+      } else if (tile === 4) {
+        // Orange lighting strip
+        const pulse = 0.6 + Math.sin(gameTime * 1.5 + tx * 0.3 + ty * 0.5) * 0.4;
+        ctx.fillStyle = '#1a1a2a';
+        ctx.fillRect(px, py, TILE * zoom, TILE * zoom);
+        ctx.fillStyle = `rgba(255, 112, 0, ${pulse})`;
+        ctx.fillRect(px + 2*zoom, py + 4*zoom, TILE*zoom - 4*zoom, TILE*zoom - 8*zoom);
+        // Glow
+        ctx.fillStyle = `rgba(255, 112, 0, ${pulse * 0.15})`;
+        ctx.fillRect(px - 2*zoom, py, TILE*zoom + 4*zoom, TILE*zoom);
+      } else if (tile === 3) {
+        // Viewport area handled above
+      }
+    }
+  }
+
+  // Orange ambient glow on floors near strips
+  for (let ty = 0; ty < MAP_H; ty++) {
+    for (let tx = 0; tx < MAP_W; tx++) {
+      if (MAP[ty][tx] === 1) {
+        // Check adjacent for light strips
+        let nearStrip = false;
+        for (const [dx, dy] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+          const nx = tx+dx, ny = ty+dy;
+          if (nx >= 0 && ny >= 0 && nx < MAP_W && ny < MAP_H && MAP[ny][nx] === 4) nearStrip = true;
+        }
+        if (nearStrip) {
+          const pulse = 0.03 + Math.sin(gameTime * 1.5 + tx * 0.3) * 0.02;
+          ctx.fillStyle = `rgba(255, 112, 0, ${pulse})`;
+          ctx.fillRect(ox + tx * TILE * zoom, oy + ty * TILE * zoom, TILE * zoom, TILE * zoom);
+        }
+      }
+    }
+  }
+
+  // Collect drawables for z-sort
+  const drawables = [];
+
+  // Furniture
+  for (const f of furniture) {
+    const px = ox + f.x * TILE * zoom;
+    const py = oy + f.y * TILE * zoom;
+    if (f.type === 'monitor') {
+      // Check if associated character is at desk and typing
+      const charAtDesk = characters[f.deskIdx];
+      const isOn = charAtDesk && charAtDesk.isAtDesk && (charAtDesk.state === 'TYPE');
+      drawables.push({ zY: f.zY, draw: () => {
+        const spr = getCachedSprite('mon_' + (isOn ? 'on' : 'off'), isOn ? f.spriteOn : f.spriteOff, zoom);
+        ctx.drawImage(spr, px, py);
+        if (isOn) drawHoloGlow(ctx, px, py, 16 * zoom, 16 * zoom, gameTime);
+      }});
+    } else {
+      const sprKey = f.type + '_' + (f.type === 'desk' ? 'main' : 'main');
+      drawables.push({ zY: f.zY, draw: () => {
+        const spr = getCachedSprite(sprKey, f.sprite, zoom);
+        ctx.drawImage(spr, px, py);
+      }});
+    }
+  }
+
+  // Characters
+  for (const c of characters) {
+    const spriteData = c.state === 'WALK' ? makeWalkFrame(c.colors, c.walkFrame) :
+                       c.state === 'TYPE' ? makeTypeFrame(c.colors, c.typeFrame) :
+                       makeSpaceSuitSprite(c.colors, 0, c.dir);
+    const px = ox + (c.x - 8) * zoom;
+    const py = oy + (c.y - 20) * zoom;
+    const zy = c.y + TILE/2 + 0.5;
+
+    drawables.push({ zY: zy, draw: () => {
+      if (c.spawnPhase === 'spawning') {
+        drawMatrixSpawn(ctx, c, spriteData, px, py, zoom, gameTime);
+      } else {
+        const sprKey = `char_${c.id}_${c.state}_${c.walkFrame}_${c.typeFrame}`;
+        const spr = getCachedSprite(sprKey, spriteData, zoom);
+        ctx.drawImage(spr, px, py);
+      }
+    }});
+
+    // Name label (drawn after character)
+    if (c.spawnPhase === 'alive') {
+      drawables.push({ zY: zy + 0.1, draw: () => {
+        drawNameLabel(ctx, c, px, py, zoom);
+      }});
+    }
+  }
+
+  // Z-sort and draw
+  drawables.sort((a, b) => a.zY - b.zY);
+  for (const d of drawables) d.draw();
+
+  // Space dust particles (on top of everything inside station)
+  drawSpaceDustParticles(ctx, ox, oy, zoom);
+
+  // Speech bubbles (above characters)
+  for (const c of characters) {
+    if (c.state === 'TYPE' && c.spawnPhase === 'alive') {
+      const px = ox + c.x * zoom;
+      const py = oy + (c.y - 26) * zoom;
+      drawSpeechBubble(ctx, c, px, py, zoom);
+    }
+  }
+
+  ctx.restore();
+
+  requestAnimationFrame(render);
+}
+
+// ============================================================
+// STARS RENDERING
+// ============================================================
+
+function drawStars(ctx, cw, ch, time) {
+  for (const star of stars) {
+    const brightness = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(time * star.twinkleSpeed + star.twinkleOffset));
+    const alpha = star.brightness * brightness;
+    const r = Math.floor(200 + 55 * brightness);
+    ctx.fillStyle = `rgba(${r}, ${r}, 255, ${alpha})`;
+    ctx.fillRect(star.x * cw / dpr, star.y * ch / dpr, star.size, star.size);
+  }
+}
+
+// ============================================================
+// SPACE DUST
+// ============================================================
+
+function updateSpaceDust(dt) {
+  for (const d of spaceDust) {
+    d.x += d.vx * dt;
+    d.y += d.vy * dt;
+    // Wrap
+    if (d.x < 0) d.x += MAP_W * TILE;
+    if (d.x > MAP_W * TILE) d.x -= MAP_W * TILE;
+    if (d.y < 0) d.y += MAP_H * TILE;
+    if (d.y > MAP_H * TILE) d.y -= MAP_H * TILE;
+  }
+}
+
+function drawSpaceDustParticles(ctx, ox, oy, z) {
+  for (const d of spaceDust) {
+    const px = ox + d.x * z;
+    const py = oy + d.y * z;
+    const pulse = d.alpha + Math.sin(gameTime * 2 + d.x) * 0.05;
+    ctx.fillStyle = d.color;
+    ctx.globalAlpha = Math.max(0, pulse);
+    ctx.fillRect(px, py, d.size * z, d.size * z);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ============================================================
+// NAME LABELS
+// ============================================================
+
+function drawNameLabel(ctx, ch, px, py, z) {
+  const text = ch.name;
+  ctx.font = `${Math.max(8, 8 * z / 3)}px 'Press Start 2P', monospace`;
+  const tw = ctx.measureText(text).width;
+  const lx = px + 8 * z - tw / 2;
+  const ly = py - 6 * z / 3;
+
+  // Status dot color
+  const dotColor = ch.state === 'TYPE' ? '#40c8ff' : (ch.state === 'WALK' ? '#FFCB00' : '#5ac88c');
+
+  // Background
+  ctx.fillStyle = 'rgba(10, 10, 20, 0.8)';
+  ctx.fillRect(lx - 4, ly - 10 * z / 3, tw + 14, 12 * z / 3);
+  // Border
+  ctx.strokeStyle = '#4a4a6a';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(lx - 4, ly - 10 * z / 3, tw + 14, 12 * z / 3);
+
+  // Dot
+  ctx.fillStyle = dotColor;
+  ctx.fillRect(lx, ly - 6 * z / 3, 4, 4);
+
+  // Name
+  ctx.fillStyle = '#c8d0e0';
+  ctx.fillText(text, lx + 8, ly);
+}
+
+// ============================================================
+// SPEECH BUBBLES — For typing characters
+// ============================================================
+
+const SPEECH_TEXTS = [
+  'Analyzing data...',
+  'Running tests...',
+  'Compiling...',
+  'Deploying code...',
+  'Scanning orbit...',
+  'Fixing bugs...',
+  'AI processing...',
+  'Systems check...',
+];
+
+function drawSpeechBubble(ctx, ch, px, py, z) {
+  // Only show occasionally
+  const showPhase = Math.floor(gameTime / 6 + ch.id * 1.5) % 3;
+  if (showPhase !== 0) return;
+
+  const text = SPEECH_TEXTS[ch.id % SPEECH_TEXTS.length];
+  ctx.font = `${Math.max(7, 7 * z / 3)}px 'Press Start 2P', monospace`;
+  const tw = ctx.measureText(text).width;
+
+  const bx = px - tw / 2 - 6;
+  const by = py - 16 * z / 3;
+  const bw = tw + 12;
+  const bh = 14 * z / 3;
+
+  // Bubble bg
+  ctx.fillStyle = 'rgba(10, 10, 20, 0.9)';
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.strokeStyle = '#FF7000';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bx, by, bw, bh);
+
+  // Tail
+  ctx.fillStyle = 'rgba(10, 10, 20, 0.9)';
+  ctx.fillRect(px - 2, by + bh, 4, 4);
+
+  // Text
+  ctx.fillStyle = '#FF7000';
+  ctx.fillText(text, bx + 6, by + bh - 5 * z / 3);
+}
+
+// ============================================================
+// Start staggered spawn animations
+// ============================================================
+characters.forEach((ch, i) => {
+  ch.spawnTimer = 0;
+  ch.spawnDuration = 0.8;
+  // Stagger spawns
+  setTimeout(() => {
+    ch.spawnPhase = 'spawning';
+    ch.spawnTimer = 0;
+  }, i * 300);
+});
+
+// Initialize all characters as pre-spawn (invisible until their spawn starts)
+characters.forEach(ch => {
+  ch.spawnPhase = 'waiting';
+});
+
+// Override render to handle 'waiting' state
+const origDrawMatrixSpawn = drawMatrixSpawn;
+
+// ============================================================
+// GAME LOOP START
+// ============================================================
+
+// Start spawns
+characters.forEach((ch, i) => {
+  setTimeout(() => {
+    ch.spawnPhase = 'spawning';
+    ch.spawnTimer = 0;
+  }, 500 + i * 400);
+});
+
+requestAnimationFrame(render);
+
+// ============================================================
+// CENTER VIEW INDICATOR / HUD
+// ============================================================
+
+// Station name HUD - drawn as overlay
+function drawHUD(ctx, cw, ch, time) {
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  const w = cw / dpr;
+
+  // Top HUD bar
+  ctx.fillStyle = 'rgba(10, 10, 20, 0.6)';
+  ctx.fillRect(0, 0, w, 28);
+  ctx.fillStyle = '#FF7000';
+  ctx.font = "11px 'Press Start 2P', monospace";
+  ctx.fillText('⬡ ORBITAL STATION ALPHA', 12, 18);
+
+  // Right side status
+  const statusText = 'ALT: 408km  |  ORB: STABLE  |  O₂: 98%';
+  const stw = ctx.measureText(statusText).width;
+  ctx.fillStyle = '#5ac88c';
+  ctx.font = "9px 'Press Start 2P', monospace";
+  ctx.fillText(statusText, w - stw - 12, 18);
+
+  // Blinking status dot
+  const blink = Math.sin(time * 3) > 0;
+  if (blink) {
+    ctx.fillStyle = '#5ac88c';
+    ctx.fillRect(w - stw - 22, 13, 6, 6);
+  }
+
+  ctx.restore();
+}
+
+// Inject HUD into render loop
+const _origRender = render;
+function renderWithHUD(time) {
+  // The original render already calls requestAnimationFrame(render),
+  // so we just need to draw HUD after
+}
+
+// Add HUD drawing to the render function by patching
+const origRAF = window.requestAnimationFrame;
+let hudDrawn = false;
+const renderOrig = render;
+
+// Simpler approach: use a second RAF that draws HUD on top
+function hudLoop(time) {
+  drawHUD(ctx, canvas.width, canvas.height, gameTime);
+  requestAnimationFrame(hudLoop);
+}
+requestAnimationFrame(hudLoop);
+
+</script>
+</body>
+</html>
