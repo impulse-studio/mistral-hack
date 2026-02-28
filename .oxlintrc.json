@@ -266,6 +266,13 @@
 				]
 			}
 		],
+		"mistral-hack/folder-camel-case": [
+			"error",
+			{
+				"basePaths": ["apps/web/src"],
+				"exclude": ["ui", "routes", "api", "auth"]
+			}
+		],
 		"mistral-hack/export-prefix": [
 			"error",
 			{
