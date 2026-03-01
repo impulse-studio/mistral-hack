@@ -442,7 +442,7 @@ export function createDefaultLayout(): OfficeLayout {
 
 		// Kitchen appliances
 		{ uid: "cooler-k", type: FurnitureType.COOLER, col: 22, row: 10 },
-		{ uid: "dispenser-k", type: FurnitureType.WATER_DISPENSER, col: 24, row: 10 },
+		{ uid: "dispenser-k", type: FurnitureType.WATER_DISPENSER, col: 23, row: 13 },
 		{ uid: "coffee-k", type: FurnitureType.COFFEE_MACHINE, col: 25, row: 10 },
 
 		// Kitchen decor

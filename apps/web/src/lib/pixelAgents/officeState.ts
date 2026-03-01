@@ -898,21 +898,7 @@ export class OfficeState {
 			return;
 		}
 
-		// Find idle, inactive, non-sub-agent characters that could game
-		const candidates: Character[] = [];
-		for (const ch of this.characters.values()) {
-			if (
-				!ch.isActive &&
-				!ch.isSubagent &&
-				!ch.isLeaving &&
-				!ch.isGaming &&
-				ch.state === CharacterState.IDLE &&
-				ch.path.length === 0 &&
-				!ch.matrixEffect
-			) {
-				candidates.push(ch);
-			}
-		}
+		const candidates = this.getIdleCandidates();
 		if (candidates.length === 0) {
 			console.log("[gaming] no idle candidates");
 			return;
@@ -1011,27 +997,14 @@ export class OfficeState {
 
 	// ── Nuzzle Cat logic ─────────────────────────────────────
 
-	/** Find the position of the MISTRAL_CAT furniture in the current layout */
-	private findCatPosition(): { col: number; row: number } | null {
-		for (const item of this.layout.furniture) {
-			if (item.type === FurnitureType.MISTRAL_CAT) {
-				return { col: item.col, row: item.row };
-			}
-		}
-		return null;
-	}
-
-	/** Find a walkable tile adjacent to the cat and the direction to face it */
+	/** Find a walkable tile adjacent to the walking cat's current tile position */
 	private findCatAdjacentTile(): { col: number; row: number; facingDir: 0 | 1 | 2 | 3 } | null {
-		const catPos = this.findCatPosition();
-		if (!catPos) return null;
-
-		// Check all 4 neighbors of the cat tile
+		const cat = this.walkingCat;
 		const neighbors: Array<{ col: number; row: number; facingDir: 0 | 1 | 2 | 3 }> = [
-			{ col: catPos.col, row: catPos.row + 1, facingDir: Direction.UP as 0 | 1 | 2 | 3 },
-			{ col: catPos.col, row: catPos.row - 1, facingDir: Direction.DOWN as 0 | 1 | 2 | 3 },
-			{ col: catPos.col - 1, row: catPos.row, facingDir: Direction.RIGHT as 0 | 1 | 2 | 3 },
-			{ col: catPos.col + 1, row: catPos.row, facingDir: Direction.LEFT as 0 | 1 | 2 | 3 },
+			{ col: cat.tileCol, row: cat.tileRow + 1, facingDir: Direction.UP as 0 | 1 | 2 | 3 },
+			{ col: cat.tileCol, row: cat.tileRow - 1, facingDir: Direction.DOWN as 0 | 1 | 2 | 3 },
+			{ col: cat.tileCol - 1, row: cat.tileRow, facingDir: Direction.RIGHT as 0 | 1 | 2 | 3 },
+			{ col: cat.tileCol + 1, row: cat.tileRow, facingDir: Direction.LEFT as 0 | 1 | 2 | 3 },
 		];
 
 		for (const n of neighbors) {
@@ -1049,22 +1022,7 @@ export class OfficeState {
 		const adjacent = this.findCatAdjacentTile();
 		if (!adjacent) return;
 
-		// Find idle, inactive, non-sub-agent characters that could nuzzle
-		const candidates: Character[] = [];
-		for (const ch of this.characters.values()) {
-			if (
-				!ch.isActive &&
-				!ch.isSubagent &&
-				!ch.isLeaving &&
-				!ch.isGaming &&
-				!ch.isNuzzling &&
-				ch.state === CharacterState.IDLE &&
-				ch.path.length === 0 &&
-				!ch.matrixEffect
-			) {
-				candidates.push(ch);
-			}
-		}
+		const candidates = this.getIdleCandidates();
 		if (candidates.length === 0) return;
 
 		if (Math.random() > NUZZLE_CHANCE) return;
@@ -1472,26 +1430,50 @@ export class OfficeState {
 				this.gamingAgentId = null;
 				this.rebuildFurnitureInstances();
 			} else if (gamingCh.isGaming) {
-				// Check if gaming agent has arrived at the gaming position
-				if (
-					gamingCh.state === CharacterState.IDLE &&
-					gamingCh.path.length === 0 &&
-					gamingCh.tileCol === GAMING_STAND_COL &&
-					gamingCh.tileRow === GAMING_STAND_ROW
-				) {
-					// Arrived — sit down and play
-					console.log(
-						"[gaming] agent %d: arrived at game table, playing for %.0fs",
-						gamingCh.id,
-						gamingCh.gamingTimer,
-					);
-					gamingCh.state = CharacterState.TYPE;
-					gamingCh.dir = GAMING_FACE_DIR as 0 | 1 | 2 | 3;
-					gamingCh.frame = 0;
-					gamingCh.frameTimer = 0;
-					gamingCh.bubbleType = "gaming";
-					gamingCh.bubbleTimer = 0;
-					this.rebuildFurnitureInstances();
+				if (gamingCh.state === CharacterState.IDLE && gamingCh.path.length === 0) {
+					if (gamingCh.tileCol === GAMING_STAND_COL && gamingCh.tileRow === GAMING_STAND_ROW) {
+						// Arrived — sit down and play
+						console.log(
+							"[gaming] agent %d: arrived at game table, playing for %.0fs",
+							gamingCh.id,
+							gamingCh.gamingTimer,
+						);
+						gamingCh.state = CharacterState.TYPE;
+						gamingCh.dir = GAMING_FACE_DIR as 0 | 1 | 2 | 3;
+						gamingCh.frame = 0;
+						gamingCh.frameTimer = 0;
+						gamingCh.bubbleType = "gaming";
+						gamingCh.bubbleTimer = 0;
+						this.rebuildFurnitureInstances();
+					} else if (!gamingCh.bubbleType) {
+						// Stuck — not at target, re-pathfind or cancel
+						console.log(
+							"[gaming] agent %d: stuck at (%d,%d), re-pathfinding",
+							gamingCh.id,
+							gamingCh.tileCol,
+							gamingCh.tileRow,
+						);
+						const newPath = this.withOwnSeatUnblocked(gamingCh, () =>
+							findPath(
+								gamingCh.tileCol,
+								gamingCh.tileRow,
+								GAMING_STAND_COL,
+								GAMING_STAND_ROW,
+								this.tileMap,
+								this.blockedTiles,
+							),
+						);
+						if (newPath.length > 0) {
+							gamingCh.path = newPath;
+							gamingCh.moveProgress = 0;
+							gamingCh.state = CharacterState.WALK;
+							gamingCh.frame = 0;
+							gamingCh.frameTimer = 0;
+						} else {
+							console.log("[gaming] agent %d: can't reach game table, cancelling", gamingCh.id);
+							this.cancelGaming(this.gamingAgentId);
+						}
+					}
 				}
 				// Tick gaming timer while playing (TYPE state at gaming position)
 				if (gamingCh.state === CharacterState.TYPE && gamingCh.isGaming) {
@@ -1524,20 +1506,48 @@ export class OfficeState {
 				this.nuzzleAgentId = null;
 			} else if (nuzzleCh.isNuzzling) {
 				const adjacent = this.findCatAdjacentTile();
-				// Check if agent arrived at the cat-adjacent tile
-				if (
-					nuzzleCh.state === CharacterState.IDLE &&
-					nuzzleCh.path.length === 0 &&
-					adjacent &&
-					nuzzleCh.tileCol === adjacent.col &&
-					nuzzleCh.tileRow === adjacent.row
-				) {
-					// Arrived — face the cat and show hand bubble if not already showing
-					if (!nuzzleCh.bubbleType) {
-						nuzzleCh.dir = adjacent.facingDir;
-						nuzzleCh.bubbleType = "hand";
-						nuzzleCh.bubbleTimer = 0;
-						nuzzleCh.nuzzleTimer = NUZZLE_HAND_DURATION_SEC + NUZZLE_HEART_DURATION_SEC;
+				const isAdjacentToCat =
+					adjacent && nuzzleCh.tileCol === adjacent.col && nuzzleCh.tileRow === adjacent.row;
+
+				if (nuzzleCh.state === CharacterState.IDLE && nuzzleCh.path.length === 0) {
+					if (isAdjacentToCat) {
+						// Arrived next to the cat — face it and show hand bubble
+						if (!nuzzleCh.bubbleType) {
+							nuzzleCh.dir = adjacent.facingDir;
+							nuzzleCh.bubbleType = "hand";
+							nuzzleCh.bubbleTimer = 0;
+							nuzzleCh.nuzzleTimer = NUZZLE_HAND_DURATION_SEC + NUZZLE_HEART_DURATION_SEC;
+							// Pause the cat so it stays while being nuzzled
+							this.walkingCat.path = [];
+							this.walkingCat.pauseTimer = NUZZLE_HAND_DURATION_SEC + NUZZLE_HEART_DURATION_SEC + 1;
+						}
+					} else if (!nuzzleCh.bubbleType) {
+						// Agent arrived at destination but cat has moved — re-pathfind
+						if (adjacent) {
+							const newPath = this.withOwnSeatUnblocked(nuzzleCh, () =>
+								findPath(
+									nuzzleCh.tileCol,
+									nuzzleCh.tileRow,
+									adjacent.col,
+									adjacent.row,
+									this.tileMap,
+									this.blockedTiles,
+								),
+							);
+							if (newPath.length > 0) {
+								nuzzleCh.path = newPath;
+								nuzzleCh.moveProgress = 0;
+								nuzzleCh.state = CharacterState.WALK;
+								nuzzleCh.frame = 0;
+								nuzzleCh.frameTimer = 0;
+							} else {
+								// Can't reach cat — cancel
+								this.cancelNuzzle(this.nuzzleAgentId);
+							}
+						} else {
+							// No walkable tile near cat — cancel
+							this.cancelNuzzle(this.nuzzleAgentId);
+						}
 					}
 				}
 				// Tick nuzzle timer while standing at cat
@@ -1576,22 +1586,46 @@ export class OfficeState {
 				this.drinkAgentId = null;
 			} else if (drinkCh.isDrinking) {
 				const adjacent = this.findAdjacentTile(FurnitureType.WATER_DISPENSER);
-				if (
-					drinkCh.state === CharacterState.IDLE &&
-					drinkCh.path.length === 0 &&
-					adjacent &&
-					drinkCh.tileCol === adjacent.col &&
-					drinkCh.tileRow === adjacent.row
-				) {
-					if (!drinkCh.bubbleType) {
-						console.log(
-							"[drink] agent %d: arrived at dispenser, drinking for %.0fs",
-							drinkCh.id,
-							drinkCh.drinkTimer,
-						);
-						drinkCh.dir = adjacent.facingDir;
-						drinkCh.bubbleType = "drink";
-						drinkCh.bubbleTimer = 0;
+				if (drinkCh.state === CharacterState.IDLE && drinkCh.path.length === 0) {
+					if (adjacent && drinkCh.tileCol === adjacent.col && drinkCh.tileRow === adjacent.row) {
+						if (!drinkCh.bubbleType) {
+							console.log(
+								"[drink] agent %d: arrived at dispenser, drinking for %.0fs",
+								drinkCh.id,
+								drinkCh.drinkTimer,
+							);
+							drinkCh.dir = adjacent.facingDir;
+							drinkCh.bubbleType = "drink";
+							drinkCh.bubbleTimer = 0;
+						}
+					} else if (!drinkCh.bubbleType) {
+						// Stuck — not at target, re-pathfind or cancel
+						if (adjacent) {
+							console.log("[drink] agent %d: stuck, re-pathfinding to dispenser", drinkCh.id);
+							const newPath = this.withOwnSeatUnblocked(drinkCh, () =>
+								findPath(
+									drinkCh.tileCol,
+									drinkCh.tileRow,
+									adjacent.col,
+									adjacent.row,
+									this.tileMap,
+									this.blockedTiles,
+								),
+							);
+							if (newPath.length > 0) {
+								drinkCh.path = newPath;
+								drinkCh.moveProgress = 0;
+								drinkCh.state = CharacterState.WALK;
+								drinkCh.frame = 0;
+								drinkCh.frameTimer = 0;
+							} else {
+								console.log("[drink] agent %d: can't reach dispenser, cancelling", drinkCh.id);
+								this.cancelDrink(this.drinkAgentId!);
+							}
+						} else {
+							console.log("[drink] agent %d: no dispenser found, cancelling", drinkCh.id);
+							this.cancelDrink(this.drinkAgentId!);
+						}
 					}
 				}
 				if (drinkCh.bubbleType === "drink") {
@@ -1623,22 +1657,46 @@ export class OfficeState {
 				this.foodAgentId = null;
 			} else if (foodCh.isEating) {
 				const adjacent = this.findAdjacentTile(FurnitureType.COOLER);
-				if (
-					foodCh.state === CharacterState.IDLE &&
-					foodCh.path.length === 0 &&
-					adjacent &&
-					foodCh.tileCol === adjacent.col &&
-					foodCh.tileRow === adjacent.row
-				) {
-					if (!foodCh.bubbleType) {
-						console.log(
-							"[food] agent %d: arrived at fridge, eating for %.0fs",
-							foodCh.id,
-							foodCh.eatTimer,
-						);
-						foodCh.dir = adjacent.facingDir;
-						foodCh.bubbleType = "food";
-						foodCh.bubbleTimer = 0;
+				if (foodCh.state === CharacterState.IDLE && foodCh.path.length === 0) {
+					if (adjacent && foodCh.tileCol === adjacent.col && foodCh.tileRow === adjacent.row) {
+						if (!foodCh.bubbleType) {
+							console.log(
+								"[food] agent %d: arrived at fridge, eating for %.0fs",
+								foodCh.id,
+								foodCh.eatTimer,
+							);
+							foodCh.dir = adjacent.facingDir;
+							foodCh.bubbleType = "food";
+							foodCh.bubbleTimer = 0;
+						}
+					} else if (!foodCh.bubbleType) {
+						// Stuck — not at target, re-pathfind or cancel
+						if (adjacent) {
+							console.log("[food] agent %d: stuck, re-pathfinding to fridge", foodCh.id);
+							const newPath = this.withOwnSeatUnblocked(foodCh, () =>
+								findPath(
+									foodCh.tileCol,
+									foodCh.tileRow,
+									adjacent.col,
+									adjacent.row,
+									this.tileMap,
+									this.blockedTiles,
+								),
+							);
+							if (newPath.length > 0) {
+								foodCh.path = newPath;
+								foodCh.moveProgress = 0;
+								foodCh.state = CharacterState.WALK;
+								foodCh.frame = 0;
+								foodCh.frameTimer = 0;
+							} else {
+								console.log("[food] agent %d: can't reach fridge, cancelling", foodCh.id);
+								this.cancelFood(this.foodAgentId!);
+							}
+						} else {
+							console.log("[food] agent %d: no fridge found, cancelling", foodCh.id);
+							this.cancelFood(this.foodAgentId!);
+						}
 					}
 				}
 				if (foodCh.bubbleType === "food") {
