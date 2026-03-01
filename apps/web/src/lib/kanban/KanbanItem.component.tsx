@@ -92,6 +92,7 @@ export interface KanbanItemProps {
 	assigneeInitials?: string;
 	assigneeColor?: string;
 	blocked?: boolean;
+	cancelled?: boolean;
 	draggable?: boolean;
 	sourceStatus?: string;
 	className?: string;
@@ -151,6 +152,7 @@ function KanbanItem({
 	assigneeInitials,
 	assigneeColor,
 	blocked = false,
+	cancelled = false,
 	draggable = false,
 	sourceStatus,
 	className,
@@ -173,17 +175,28 @@ function KanbanItem({
 						}
 					: undefined
 			}
-			className={cn(kanbanItemVariants({ priority }), className)}
+			className={cn(kanbanItemVariants({ priority }), cancelled && "opacity-50", className)}
 			onClick={onClick}
 		>
 			{/* Top row: ID + priority */}
 			<div className="mb-1.5 flex items-center justify-between">
 				<span className="font-mono text-[11px] font-medium text-muted-foreground">{id}</span>
-				{priority !== "none" && <PriorityBars priority={priority} />}
+				{cancelled ? (
+					<PixelBadge color="muted" size="sm">
+						Cancelled
+					</PixelBadge>
+				) : (
+					priority !== "none" && <PriorityBars priority={priority} />
+				)}
 			</div>
 
 			{/* Title */}
-			<p className="mb-2 line-clamp-2 text-xs font-medium leading-relaxed text-foreground">
+			<p
+				className={cn(
+					"mb-2 line-clamp-2 text-xs font-medium leading-relaxed text-foreground",
+					cancelled && "line-through text-muted-foreground",
+				)}
+			>
 				{title}
 			</p>
 

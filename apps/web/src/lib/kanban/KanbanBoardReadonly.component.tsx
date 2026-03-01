@@ -16,7 +16,8 @@ type KanbanTaskStatus =
 	| "in_progress"
 	| "review"
 	| "done"
-	| "failed";
+	| "failed"
+	| "cancelled";
 type KanbanTaskPriority = NonNullable<KanbanItemProps["priority"]>;
 
 interface KanbanBoardTask {

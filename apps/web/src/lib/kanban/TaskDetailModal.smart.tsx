@@ -81,6 +81,7 @@ function KanbanTaskDetailSmart({
 					id: s._id,
 					title: s.title,
 					done: s.status === "done",
+					cancelled: s.status === "cancelled",
 				}))
 			: undefined;
 

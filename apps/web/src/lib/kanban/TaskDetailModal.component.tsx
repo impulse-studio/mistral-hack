@@ -17,6 +17,7 @@ export interface KanbanTaskSubtaskItem {
 	id: string;
 	title: string;
 	done: boolean;
+	cancelled?: boolean;
 }
 
 export interface KanbanTaskComment {
@@ -58,7 +59,15 @@ export interface KanbanTaskDetailProps {
 	onClose: () => void;
 	id: string;
 	title: string;
-	status: "backlog" | "todo" | "waiting" | "in_progress" | "review" | "done" | "failed";
+	status:
+		| "backlog"
+		| "todo"
+		| "waiting"
+		| "in_progress"
+		| "review"
+		| "done"
+		| "failed"
+		| "cancelled";
 	description?: string;
 	priority?: Priority;
 	labels?: Array<{ text: string; color: LabelColor }>;
@@ -104,6 +113,7 @@ const STATUS_DISPLAY = {
 	review: { label: "Review", color: "yellow" },
 	done: { label: "Done", color: "green" },
 	failed: { label: "Failed", color: "red" },
+	cancelled: { label: "Cancelled", color: "muted" },
 } as const;
 
 const COMMENT_AUTHOR_LABEL = {
@@ -329,22 +339,32 @@ function KanbanTaskDetail({
 							/>
 							<ul className="flex flex-col gap-1">
 								{subtasks.map((subtask) => (
-									<li key={subtask.id} className="flex items-center gap-2">
+									<li
+										key={subtask.id}
+										className={cn("flex items-center gap-2", subtask.cancelled && "opacity-50")}
+									>
 										<div
 											className={cn(
 												"flex size-3.5 shrink-0 items-center justify-center border-2 border-border font-mono text-[8px]",
 												subtask.done && "border-green-500 bg-green-500/20 text-green-500",
+												subtask.cancelled &&
+													"border-muted-foreground/40 bg-muted-foreground/10 text-muted-foreground",
 											)}
 										>
-											{subtask.done ? "\u2713" : ""}
+											{subtask.cancelled ? "\u2715" : subtask.done ? "\u2713" : ""}
 										</div>
 										<PixelText
 											variant="body"
-											color={subtask.done ? "muted" : "default"}
-											className={cn(subtask.done && "line-through")}
+											color={subtask.done || subtask.cancelled ? "muted" : "default"}
+											className={cn((subtask.done || subtask.cancelled) && "line-through")}
 										>
 											{subtask.title}
 										</PixelText>
+										{subtask.cancelled && (
+											<PixelBadge color="muted" size="sm">
+												cancelled
+											</PixelBadge>
+										)}
 									</li>
 								))}
 							</ul>

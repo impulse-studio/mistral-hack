@@ -156,8 +156,10 @@ export const updateTaskStatusTool = createTool({
 			.string()
 			.describe("The task ID returned by createTask. Must be a task ID, NOT an agent ID."),
 		status: z
-			.enum(["backlog", "todo", "waiting", "in_progress", "review", "done", "failed"])
-			.describe("New status. Use 'waiting' when the task needs user input before it can continue."),
+			.enum(["backlog", "todo", "waiting", "in_progress", "review", "done", "failed", "cancelled"])
+			.describe(
+				"New status. Use 'waiting' when the task needs user input before it can continue. Use 'cancelled' to cancel a task that is no longer needed.",
+			),
 	}),
 	execute: async (ctx: ToolCtx, { taskId, status }) => {
 		try {
