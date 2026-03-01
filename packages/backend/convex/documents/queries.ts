@@ -77,6 +77,15 @@ export const listByTask = query({
 	},
 });
 
+export const count = query({
+	args: {},
+	returns: v.number(),
+	handler: async (ctx) => {
+		const docs = await ctx.db.query("documents").collect();
+		return docs.length;
+	},
+});
+
 // ── Internal queries (for agent tools) ─────────────────
 
 export const getInternal = internalQuery({

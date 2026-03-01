@@ -107,6 +107,7 @@ function OfficeContent() {
 
 	// ── Convex subscriptions ──
 	const convexOffice = useQuery(api.office.queries.getOfficeState);
+	const documentCount = useQuery(api.documents.queries.count) ?? 0;
 
 	// Initialize tileset (floor patterns + wall sprites) before creating OfficeState
 	useEffect(() => {
@@ -377,6 +378,7 @@ function OfficeContent() {
 					officeState={officeState}
 					onClickAgent={handleClickAgent}
 					onClickFurniture={handleClickFurniture}
+					documentCount={documentCount}
 				/>
 			</div>
 
