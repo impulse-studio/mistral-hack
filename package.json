@@ -1,6 +1,17 @@
 {
 	"name": "mistral-hack",
 	"private": true,
+	"description": "AI Office — A visual AI agent orchestration platform with a pixel-art office UI. Manager agent decomposes tasks, spawns specialized workers, and streams their progress in real-time. Built with Mistral AI, Convex, and React.",
+	"license": "MIT",
+	"contributors": [
+		"Aykut Akgun",
+		"Leonard Roussard",
+		"Matteo Marchelli"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/impulse-studio/mistral-hack"
+	},
 	"workspaces": {
 		"packages": [
 			"apps/*",

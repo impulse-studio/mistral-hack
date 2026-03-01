@@ -97,6 +97,7 @@ export const FurnitureType = {
 	PC_OFF: "pc_off",
 	LAPTOP_OFF: "laptop_off",
 	COFFEE_MACHINE: "coffee_machine",
+	WATER_DISPENSER: "water_dispenser",
 	MISTRAL_CAT: "mistral_cat",
 } as const;
 export type FurnitureType = (typeof FurnitureType)[keyof typeof FurnitureType];
@@ -185,7 +186,16 @@ export interface Character {
 	/** Assigned seat uid, or null if no seat */
 	seatId: string | null;
 	/** Active speech bubble type, or null if none showing */
-	bubbleType: "permission" | "waiting" | "coffee" | null;
+	bubbleType:
+		| "permission"
+		| "waiting"
+		| "coffee"
+		| "gaming"
+		| "hand"
+		| "heart"
+		| "drink"
+		| "food"
+		| null;
 	/** Countdown timer for bubble (waiting: 2→0, permission: unused) */
 	bubbleTimer: number;
 	/** Timer to stay seated while inactive after seat reassignment (counts down to 0) */
@@ -200,6 +210,22 @@ export interface Character {
 	matrixEffectTimer: number;
 	/** Per-column random seeds (16 values) for staggered rain timing */
 	matrixEffectSeeds: number[];
+	/** Whether this character is currently using the gaming table */
+	isGaming: boolean;
+	/** Countdown timer for gaming duration (seconds) */
+	gamingTimer: number;
+	/** Whether this character is currently nuzzling the cat */
+	isNuzzling: boolean;
+	/** Countdown timer for nuzzle duration (seconds) */
+	nuzzleTimer: number;
+	/** Whether this character is currently getting a drink at the cooler */
+	isDrinking: boolean;
+	/** Countdown timer for drink duration (seconds) */
+	drinkTimer: number;
+	/** Whether this character is currently getting food from the fridge */
+	isEating: boolean;
+	/** Countdown timer for eating duration (seconds) */
+	eatTimer: number;
 	/** Whether this character is walking toward exit before despawning */
 	isLeaving: boolean;
 	/** Workspace folder name (only set for multi-root workspaces) */

@@ -79,6 +79,14 @@ export function createCharacter(
 		seatTimer: 0,
 		isSubagent: false,
 		parentAgentId: null,
+		isGaming: false,
+		gamingTimer: 0,
+		isNuzzling: false,
+		nuzzleTimer: 0,
+		isDrinking: false,
+		drinkTimer: 0,
+		isEating: false,
+		eatTimer: 0,
 		isLeaving: false,
 		matrixEffect: null,
 		matrixEffectTimer: 0,
@@ -103,6 +111,8 @@ export function updateCharacter(
 				ch.frameTimer -= TYPE_FRAME_DURATION_SEC;
 				ch.frame = (ch.frame + 1) % 2;
 			}
+			// Skip seat-leave logic while gaming — OfficeState manages the timer
+			if (ch.isGaming) break;
 			// If no longer active, stand up and start wandering (after seatTimer expires)
 			if (!ch.isActive) {
 				if (ch.seatTimer > 0) {
@@ -126,6 +136,14 @@ export function updateCharacter(
 			if (ch.seatTimer < 0) ch.seatTimer = 0; // clear turn-end sentinel
 			// Skip seat-seeking when leaving — just stay idle until path is set
 			if (ch.isLeaving) break;
+			// Skip wander logic when gaming — OfficeState manages gaming state
+			if (ch.isGaming) break;
+			// Skip wander logic when nuzzling — OfficeState manages nuzzle state
+			if (ch.isNuzzling) break;
+			// Skip wander logic when drinking — OfficeState manages drink state
+			if (ch.isDrinking) break;
+			// Skip wander logic when eating — OfficeState manages eat state
+			if (ch.isEating) break;
 			// If became active, clear coffee bubble and pathfind to seat
 			if (ch.isActive) {
 				if (ch.bubbleType === "coffee") {

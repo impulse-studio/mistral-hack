@@ -430,7 +430,7 @@ export function createDefaultLayout(): OfficeLayout {
 
 		// Game table in the lounge (near the entrance door)
 		{ uid: "game-table", type: FurnitureType.DESK, col: 8, row: 12 },
-		{ uid: "game-laptop", type: FurnitureType.LAPTOP, col: 9, row: 12 },
+		{ uid: "game-laptop", type: FurnitureType.LAPTOP_OFF, col: 9, row: 12 },
 
 		// Lounge decor
 		{ uid: "plant-lg-1", type: FurnitureType.PLANT, col: 18, row: 10 },
@@ -442,6 +442,7 @@ export function createDefaultLayout(): OfficeLayout {
 
 		// Kitchen appliances
 		{ uid: "cooler-k", type: FurnitureType.COOLER, col: 22, row: 10 },
+		{ uid: "dispenser-k", type: FurnitureType.WATER_DISPENSER, col: 24, row: 10 },
 		{ uid: "coffee-k", type: FurnitureType.COFFEE_MACHINE, col: 25, row: 10 },
 
 		// Kitchen decor

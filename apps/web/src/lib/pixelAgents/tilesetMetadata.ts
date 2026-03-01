@@ -126,18 +126,19 @@ const TILESET_REPLACEMENTS: TilesetAssetMeta[] = [
 		backgroundTiles: 1,
 	},
 
-	// Plant: ASSET_129 — small green bush (actual 13×15 at (66,449))
+	// Plant: potted plant — foliage (32,448) + pot (32,464) (1×2)
 	{
 		id: "plant",
 		label: "Plant",
 		category: "decor",
-		sx: 64,
+		sx: 32,
 		sy: 448,
 		sw: 16,
-		sh: 16,
+		sh: 32,
 		footprintW: 1,
-		footprintH: 1,
+		footprintH: 2,
 		isDesk: false,
+		backgroundTiles: 1,
 	},
 
 	// PC: ASSET_75 — monitor screen ON (actual 16×15 at (224,360))
@@ -398,6 +399,21 @@ const TILESET_EXTRAS: TilesetAssetMeta[] = [
 		footprintW: 3,
 		footprintH: 2,
 		isDesk: true,
+		backgroundTiles: 1,
+	},
+
+	// Water dispenser: ASSET_40 — tall water cooler with blue jug (1×2)
+	{
+		id: "water_dispenser",
+		label: "Water Dispenser",
+		category: "misc",
+		sx: 144,
+		sy: 256,
+		sw: 16,
+		sh: 32,
+		footprintW: 1,
+		footprintH: 2,
+		isDesk: false,
 		backgroundTiles: 1,
 	},
 
