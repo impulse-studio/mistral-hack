@@ -50,6 +50,7 @@ import {
 	SELECTION_HIGHLIGHT_COLOR,
 	DELETE_BUTTON_BG,
 	ROTATE_BUTTON_BG,
+	CAT_RENDER_WIDTH,
 } from "./constants";
 
 // ── Render functions ────────────────────────────────────────────
@@ -105,6 +106,13 @@ interface ZDrawable {
 	draw: (ctx: CanvasRenderingContext2D) => void;
 }
 
+export interface WalkingCatRenderData {
+	x: number;
+	y: number;
+	facingLeft: boolean;
+	image: HTMLImageElement;
+}
+
 export function renderScene(
 	ctx: CanvasRenderingContext2D,
 	furniture: FurnitureInstance[],
@@ -114,6 +122,7 @@ export function renderScene(
 	zoom: number,
 	selectedAgentId: number | null,
 	hoveredAgentId: number | null,
+	walkingCat?: WalkingCatRenderData,
 ): void {
 	const drawables: ZDrawable[] = [];
 
@@ -198,6 +207,34 @@ export function renderScene(
 			zY: charZY,
 			draw: (c) => {
 				c.drawImage(cached, drawX, drawY);
+			},
+		});
+	}
+
+	// Walking cat
+	if (walkingCat?.image.complete && walkingCat.image.naturalWidth > 0) {
+		const catWorldW = CAT_RENDER_WIDTH;
+		const catWorldH = (walkingCat.image.naturalHeight / walkingCat.image.naturalWidth) * catWorldW;
+		const catScreenW = catWorldW * zoom;
+		const catScreenH = catWorldH * zoom;
+		const catDrawX = offsetX + walkingCat.x * zoom - catScreenW / 2;
+		const catDrawY = offsetY + walkingCat.y * zoom - catScreenH;
+		const catZY = walkingCat.y + TILE_SIZE / 2;
+		const catImg = walkingCat.image;
+		const fl = walkingCat.facingLeft;
+
+		drawables.push({
+			zY: catZY,
+			draw: (c) => {
+				c.save();
+				if (fl) {
+					c.translate(catDrawX + catScreenW, catDrawY);
+					c.scale(-1, 1);
+					c.drawImage(catImg, 0, 0, catScreenW, catScreenH);
+				} else {
+					c.drawImage(catImg, catDrawX, catDrawY, catScreenW, catScreenH);
+				}
+				c.restore();
 			},
 		});
 	}
@@ -570,6 +607,7 @@ export function renderFrame(
 	tileColors?: Array<FloorColor | null>,
 	layoutCols?: number,
 	layoutRows?: number,
+	walkingCat?: WalkingCatRenderData,
 ): { offsetX: number; offsetY: number } {
 	// Clear
 	ctx.clearRect(0, 0, canvasWidth, canvasHeight);
@@ -608,7 +646,17 @@ export function renderFrame(
 	// Draw walls + furniture + characters (z-sorted)
 	const selectedId = selection?.selectedAgentId ?? null;
 	const hoveredId = selection?.hoveredAgentId ?? null;
-	renderScene(ctx, allFurniture, characters, offsetX, offsetY, zoom, selectedId, hoveredId);
+	renderScene(
+		ctx,
+		allFurniture,
+		characters,
+		offsetX,
+		offsetY,
+		zoom,
+		selectedId,
+		hoveredId,
+		walkingCat,
+	);
 
 	// Speech bubbles (always on top of characters)
 	renderBubbles(ctx, characters, offsetX, offsetY, zoom);

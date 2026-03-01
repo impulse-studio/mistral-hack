@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { ZOOM_MAX, ZOOM_MIN } from "@/lib/pixelAgents/constants";
+import { ZOOM_MAX, ZOOM_MIN, CAT_RENDER_WIDTH } from "@/lib/pixelAgents/constants";
 import { startGameLoop } from "@/lib/pixelAgents/gameLoop";
 import type { OfficeState } from "@/lib/pixelAgents/officeState";
 import { renderFrame } from "@/lib/pixelAgents/renderer";
@@ -143,6 +143,11 @@ export function OfficeCanvas({
 	const initialZoomSet = useRef(false);
 	const docCountRef = useRef(0);
 
+	// Cat overlay: two DOM imgs so the browser natively animates GIF/WebP
+	const catWalkRef = useRef<HTMLImageElement>(null);
+	const catSitRef = useRef<HTMLImageElement>(null);
+	const catPrevWalkingRef = useRef(false);
+
 	useEffect(() => {
 		zoomRef.current = zoom;
 	}, [zoom]);
@@ -222,6 +227,36 @@ export function OfficeCanvas({
 				}
 
 				ctx.restore();
+
+				// ── Position the cat HTML overlay ──
+				const cat = officeState.walkingCat;
+				const isWalking = cat.path.length > 0;
+				const walkEl = catWalkRef.current;
+				const sitEl = catSitRef.current;
+
+				// Toggle which img is visible
+				if (isWalking !== catPrevWalkingRef.current) {
+					catPrevWalkingRef.current = isWalking;
+					if (walkEl) walkEl.style.display = isWalking ? "block" : "none";
+					if (sitEl) sitEl.style.display = isWalking ? "none" : "block";
+				}
+
+				const activeEl = isWalking ? walkEl : sitEl;
+				if (activeEl) {
+					const z = zoomRef.current;
+					const catScreenW = CAT_RENDER_WIDTH * z;
+					const ratio =
+						activeEl.naturalWidth > 0 ? activeEl.naturalHeight / activeEl.naturalWidth : 0.8;
+					const catScreenH = catScreenW * ratio;
+					const screenX = offsetX + cat.x * z - catScreenW / 2;
+					const screenY = offsetY + cat.y * z - catScreenH;
+
+					activeEl.style.left = `${screenX}px`;
+					activeEl.style.top = `${screenY}px`;
+					activeEl.style.width = `${catScreenW}px`;
+					activeEl.style.height = `${catScreenH}px`;
+					activeEl.style.transform = cat.facingLeft ? "scaleX(-1)" : "none";
+				}
 			},
 		});
 
@@ -264,6 +299,8 @@ export function OfficeCanvas({
 			if (agentId !== null) {
 				officeState.selectedAgentId = agentId;
 				onClickAgent(agentId);
+			} else if (officeState.isCatAt(worldX, worldY) && onClickFurniture) {
+				onClickFurniture("mistral-cat");
 			} else {
 				// Check if clicked on furniture
 				const furnitureUid = officeState.getFurnitureUidAt(worldX, worldY);
@@ -329,6 +366,10 @@ export function OfficeCanvas({
 				canvas.style.cursor = "pointer";
 				return;
 			}
+			if (officeState.isCatAt(wx, wy)) {
+				canvas.style.cursor = "pointer";
+				return;
+			}
 			const hitFurn = officeState.getFurnitureUidAt(wx, wy);
 			if (hitFurn && (hitFurn === "pc-mgr" || CLICKABLE_FURNITURE.has(hitFurn))) {
 				canvas.style.cursor = "pointer";
@@ -354,6 +395,22 @@ export function OfficeCanvas({
 				onPointerUp={handlePointerUp}
 				onContextMenu={(e) => e.preventDefault()}
 				className="absolute inset-0 cursor-default"
+			/>
+
+			{/* Cat overlay — real DOM imgs so the browser natively animates GIF/WebP */}
+			<img
+				ref={catWalkRef}
+				src="/assets/cat-walking-white.gif"
+				alt=""
+				className="pointer-events-none absolute"
+				style={{ imageRendering: "pixelated" }}
+			/>
+			<img
+				ref={catSitRef}
+				src="/assets/animated-sitting-cat.webp"
+				alt=""
+				className="pointer-events-none absolute"
+				style={{ imageRendering: "pixelated", display: "none" }}
 			/>
 
 			{/* Zoom controls */}

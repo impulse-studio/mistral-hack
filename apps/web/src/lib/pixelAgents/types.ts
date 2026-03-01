@@ -205,3 +205,15 @@ export interface Character {
 	/** Workspace folder name (only set for multi-root workspaces) */
 	folderName?: string;
 }
+
+export interface WalkingCat {
+	x: number;
+	y: number;
+	tileCol: number;
+	tileRow: number;
+	path: Array<{ col: number; row: number }>;
+	moveProgress: number;
+	facingLeft: boolean;
+	pauseTimer: number;
+	waypointIndex: number;
+}

@@ -119,3 +119,19 @@ export const CHARACTER_HIT_HALF_WIDTH = 8;
 export const CHARACTER_HIT_HEIGHT = 24;
 export const TOOL_OVERLAY_VERTICAL_OFFSET = 32;
 export const PULSE_ANIMATION_DURATION_SEC = 1.5;
+
+// ── Walking Cat ─────────────────────────────────────────────
+export const CAT_WALK_SPEED_PX_PER_SEC = 30;
+export const CAT_PAUSE_MIN_SEC = 2.0;
+export const CAT_PAUSE_MAX_SEC = 6.0;
+export const CAT_RENDER_WIDTH = 25; // world pixels (~2.5 tiles)
+export const CAT_WAYPOINTS: ReadonlyArray<{ col: number; row: number }> = [
+	{ col: 26, row: 13 },
+	{ col: 23, row: 12 },
+	{ col: 14, row: 14 },
+	{ col: 5, row: 14 },
+	{ col: 3, row: 13 },
+	{ col: 7, row: 14 },
+	{ col: 14, row: 13 },
+	{ col: 24, row: 13 },
+];
