@@ -4,9 +4,10 @@ import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { runCoderTask } from "./coder/runner";
-import { runCopywriterTask } from "./copywriter/runner";
 import { runComputerUseTask } from "./browser/runner";
+import { runCopywriterTask } from "./copywriter/runner";
 import { runGeneralTask } from "./general/runner";
+import { runResearcherTask } from "./researcher/runner";
 import { roleHas } from "./shared/capabilities";
 
 // Sub-agent runner — executed by the workpool for each sub-agent
@@ -100,12 +101,12 @@ export const runSubAgent = internalAction({
 			let result: string;
 			if (agent.role === "coder") {
 				result = await runCoderTask(ctx, agentId, task);
+			} else if (agent.role === "researcher") {
+				result = await runResearcherTask(ctx, agentId, task);
 			} else if (agent.role === "copywriter") {
 				result = await runCopywriterTask(ctx, agentId, task);
 			} else if (agent.role === "browser" || agent.role === "designer") {
 				result = await runComputerUseTask(ctx, agentId, task);
-			} else if (agent.role === "copywriter") {
-				result = await runCopywriterTask(ctx, agentId, task);
 			} else {
 				result = await runGeneralTask(ctx, agentId, task, agent.role);
 			}

@@ -8,10 +8,12 @@
  * @module
  */
 
+import type * as agents_browser_agent from "../agents/browser/agent.js";
 import type * as agents_browser_runner from "../agents/browser/runner.js";
 import type * as agents_coder_agent from "../agents/coder/agent.js";
 import type * as agents_coder_runner from "../agents/coder/runner.js";
 import type * as agents_copywriter_agent from "../agents/copywriter/agent.js";
+import type * as agents_copywriter_runner from "../agents/copywriter/runner.js";
 import type * as agents_general_agent from "../agents/general/agent.js";
 import type * as agents_general_runner from "../agents/general/runner.js";
 import type * as agents_manager_agent from "../agents/manager/agent.js";
@@ -21,6 +23,8 @@ import type * as agents_onComplete from "../agents/onComplete.js";
 import type * as agents_onCompleteActions from "../agents/onCompleteActions.js";
 import type * as agents_queries from "../agents/queries.js";
 import type * as agents_registry from "../agents/registry.js";
+import type * as agents_researcher_agent from "../agents/researcher/agent.js";
+import type * as agents_researcher_runner from "../agents/researcher/runner.js";
 import type * as agents_respondToComment from "../agents/respondToComment.js";
 import type * as agents_runner from "../agents/runner.js";
 import type * as agents_shared_capabilities from "../agents/shared/capabilities.js";
@@ -84,10 +88,12 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "agents/browser/agent": typeof agents_browser_agent;
   "agents/browser/runner": typeof agents_browser_runner;
   "agents/coder/agent": typeof agents_coder_agent;
   "agents/coder/runner": typeof agents_coder_runner;
   "agents/copywriter/agent": typeof agents_copywriter_agent;
+  "agents/copywriter/runner": typeof agents_copywriter_runner;
   "agents/general/agent": typeof agents_general_agent;
   "agents/general/runner": typeof agents_general_runner;
   "agents/manager/agent": typeof agents_manager_agent;
@@ -97,6 +103,8 @@ declare const fullApi: ApiFromModules<{
   "agents/onCompleteActions": typeof agents_onCompleteActions;
   "agents/queries": typeof agents_queries;
   "agents/registry": typeof agents_registry;
+  "agents/researcher/agent": typeof agents_researcher_agent;
+  "agents/researcher/runner": typeof agents_researcher_runner;
   "agents/respondToComment": typeof agents_respondToComment;
   "agents/runner": typeof agents_runner;
   "agents/shared/capabilities": typeof agents_shared_capabilities;

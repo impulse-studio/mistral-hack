@@ -3,6 +3,7 @@ import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import { internal } from "../../_generated/api";
 import type { RunnerCtx } from "../shared/types";
+import { MANAGER_MODEL } from "../models";
 
 const MAX_RETRIES_PER_STEP = 2;
 
@@ -32,8 +33,9 @@ export async function runGeneralTask(
 		content: `[${role}] Planning steps for: ${task.title}`,
 	});
 
+	// Use mistral-large for structured output (magistral doesn't support generateObject)
 	const { object: plan } = await generateObject({
-		model: mistralClient("magistral-medium-latest"),
+		model: mistralClient(MANAGER_MODEL),
 		schema: planSchema,
 		messages: [
 			{
