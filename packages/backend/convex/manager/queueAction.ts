@@ -61,12 +61,11 @@ export const processManagerMailbox = internalAction({
 			const startTime = Date.now();
 
 			// Run manager agent on the internal thread (invisible to user)
-			const result = await managerAgent.streamText(
-				ctx,
-				{ threadId },
-				{ promptMessageId },
-				{ saveStreamDeltas: true },
-			);
+			// NOTE: saveStreamDeltas disabled — the manager thread is internal
+			// (not rendered to the user). Enabling it caused $schema crashes
+			// because Convex forbids $-prefixed field names in documents and
+			// the Mistral model occasionally returns providerMetadata with $schema.
+			const result = await managerAgent.streamText(ctx, { threadId }, { promptMessageId });
 
 			// Ensure user gets a response for user_message types.
 			// The agent SHOULD call sendToUser during streamText, but if it didn't,

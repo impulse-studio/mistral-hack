@@ -7,7 +7,7 @@ import { MANAGER_MODEL } from "../models";
 
 type TaskRecord = { title: string; description?: string };
 
-const MAX_ITERATIONS = 15;
+const MAX_ITERATIONS = 200;
 const ACTION_DELAY_MS = 1000;
 
 // Structured action schema — the model picks one action per step

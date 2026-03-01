@@ -53,6 +53,16 @@ export async function getRunning(
 	return { sandbox, sandboxRecord };
 }
 
+/**
+ * Get a running sandbox directly by its Daytona ID.
+ * Used by the viewer/template sandbox flow (no agent association needed).
+ */
+export async function getRunningByDaytonaId(daytonaId: string): Promise<{ sandbox: Sandbox }> {
+	const daytona = getDaytona();
+	const sandbox = await withRetry(() => daytona.findOne({ idOrName: daytonaId }));
+	return { sandbox };
+}
+
 // ---------------------------------------------------------------------------
 // Activity tracking + logging
 // ---------------------------------------------------------------------------

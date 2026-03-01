@@ -1005,6 +1005,30 @@ export const BUBBLE_WAITING_SPRITE: SpriteData = (() => {
 	];
 })();
 
+/** Coffee break bubble: white square with coffee cup icon, and a tail pointer (11x13) */
+export const BUBBLE_COFFEE_SPRITE: SpriteData = (() => {
+	const B = "#555566"; // border
+	const F = "#EEEEFF"; // fill
+	const C = "#8B5A2B"; // coffee brown
+	const W = "#FFFFFF"; // cup white
+	const S = "#AAAAAA"; // steam grey
+	return [
+		[_, B, B, B, B, B, B, B, B, B, _],
+		[B, F, F, F, F, S, F, F, F, F, B],
+		[B, F, F, F, S, F, S, F, F, F, B],
+		[B, F, F, F, F, S, F, F, F, F, B],
+		[B, F, F, F, W, W, W, F, F, F, B],
+		[B, F, F, F, W, C, W, W, F, F, B],
+		[B, F, F, F, W, C, W, F, F, F, B],
+		[B, F, F, F, W, W, W, F, F, F, B],
+		[B, F, F, F, F, F, F, F, F, F, B],
+		[_, B, B, B, B, B, B, B, B, B, _],
+		[_, _, _, _, B, B, B, _, _, _, _],
+		[_, _, _, _, _, B, _, _, _, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _],
+	];
+})();
+
 // ── Character Sprites ───────────────────────────────────────────
 // 16x24 characters with palette substitution
 

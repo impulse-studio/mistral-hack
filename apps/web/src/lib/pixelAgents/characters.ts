@@ -10,8 +10,7 @@ import {
 	WANDER_PAUSE_MAX_SEC,
 	WANDER_MOVES_BEFORE_REST_MIN,
 	WANDER_MOVES_BEFORE_REST_MAX,
-	SEAT_REST_MIN_SEC,
-	SEAT_REST_MAX_SEC,
+	LOUNGE_ROW_START,
 } from "./constants";
 
 /** Tools that show reading animation instead of typing */
@@ -127,8 +126,12 @@ export function updateCharacter(
 			if (ch.seatTimer < 0) ch.seatTimer = 0; // clear turn-end sentinel
 			// Skip seat-seeking when leaving — just stay idle until path is set
 			if (ch.isLeaving) break;
-			// If became active, pathfind to seat
+			// If became active, clear coffee bubble and pathfind to seat
 			if (ch.isActive) {
+				if (ch.bubbleType === "coffee") {
+					ch.bubbleType = null;
+					ch.bubbleTimer = 0;
+				}
 				if (!ch.seatId) {
 					// No seat assigned — type in place
 					ch.state = CharacterState.TYPE;
@@ -162,31 +165,19 @@ export function updateCharacter(
 				}
 				break;
 			}
+			// Show coffee bubble when in the break area (lounge or kitchen)
+			const inBreakArea = ch.tileRow >= LOUNGE_ROW_START;
+			if (inBreakArea && !ch.bubbleType) {
+				ch.bubbleType = "coffee";
+				ch.bubbleTimer = 0;
+			} else if (!inBreakArea && ch.bubbleType === "coffee") {
+				ch.bubbleType = null;
+				ch.bubbleTimer = 0;
+			}
 			// Countdown wander timer
 			ch.wanderTimer -= dt;
 			if (ch.wanderTimer <= 0) {
-				// Check if we've wandered enough — return to seat for a rest
-				if (ch.wanderCount >= ch.wanderLimit && ch.seatId) {
-					const seat = seats.get(ch.seatId);
-					if (seat) {
-						const path = findPath(
-							ch.tileCol,
-							ch.tileRow,
-							seat.seatCol,
-							seat.seatRow,
-							tileMap,
-							blockedTiles,
-						);
-						if (path.length > 0) {
-							ch.path = path;
-							ch.moveProgress = 0;
-							ch.state = CharacterState.WALK;
-							ch.frame = 0;
-							ch.frameTimer = 0;
-							break;
-						}
-					}
-				}
+				// Coffee break: always wander in lounge/kitchen, never return to seat
 				const wanderPool =
 					loungeWalkableTiles && loungeWalkableTiles.length > 0
 						? loungeWalkableTiles
@@ -242,29 +233,7 @@ export function updateCharacter(
 						}
 					}
 				} else {
-					// Check if arrived at assigned seat — sit down for a rest before wandering again
-					if (ch.seatId) {
-						const seat = seats.get(ch.seatId);
-						if (seat && ch.tileCol === seat.seatCol && ch.tileRow === seat.seatRow) {
-							ch.state = CharacterState.TYPE;
-							ch.dir = seat.facingDir;
-							// seatTimer < 0 is a sentinel from setAgentActive(false) meaning
-							// "turn just ended" — skip the long rest so idle transition is immediate
-							if (ch.seatTimer < 0) {
-								ch.seatTimer = 0;
-							} else {
-								ch.seatTimer = randomRange(SEAT_REST_MIN_SEC, SEAT_REST_MAX_SEC);
-							}
-							ch.wanderCount = 0;
-							ch.wanderLimit = randomInt(
-								WANDER_MOVES_BEFORE_REST_MIN,
-								WANDER_MOVES_BEFORE_REST_MAX,
-							);
-							ch.frame = 0;
-							ch.frameTimer = 0;
-							break;
-						}
-					}
+					// Inactive — go to IDLE (will wander to break area)
 					ch.state = CharacterState.IDLE;
 					ch.wanderTimer = randomRange(WANDER_PAUSE_MIN_SEC, WANDER_PAUSE_MAX_SEC);
 				}

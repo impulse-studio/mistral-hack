@@ -15,6 +15,11 @@ import {
 	LOUNGE_ROW_START,
 	LOUNGE_COL_MAX,
 	EXIT_TILES,
+	CAT_WALK_SPEED_PX_PER_SEC,
+	CAT_PAUSE_MIN_SEC,
+	CAT_PAUSE_MAX_SEC,
+	CAT_RENDER_WIDTH,
+	CAT_WAYPOINTS,
 } from "./constants";
 import type {
 	Character,
@@ -23,6 +28,7 @@ import type {
 	TileType as TileTypeVal,
 	OfficeLayout,
 	PlacedFurniture,
+	WalkingCat,
 } from "./types";
 import { createCharacter, updateCharacter } from "./characters";
 import { matrixEffectSeeds } from "./matrixEffect";
@@ -55,6 +61,9 @@ export class OfficeState {
 	subagentMeta: Map<number, { parentAgentId: number; parentToolId: string }> = new Map();
 	private nextSubagentId = -1;
 
+	/** Walking cat that patrols between kitchen and lounge */
+	walkingCat: WalkingCat;
+
 	constructor(layout?: OfficeLayout) {
 		this.layout = layout || createDefaultLayout();
 		this.tileMap = layoutToTileMap(this.layout);
@@ -65,6 +74,20 @@ export class OfficeState {
 		this.loungeWalkableTiles = this.walkableTiles.filter(
 			(t) => t.row >= LOUNGE_ROW_START && t.col <= LOUNGE_COL_MAX,
 		);
+
+		// Initialize walking cat in the kitchen
+		const catStart = CAT_WAYPOINTS[0];
+		this.walkingCat = {
+			x: catStart.col * TILE_SIZE + TILE_SIZE / 2,
+			y: catStart.row * TILE_SIZE + TILE_SIZE / 2,
+			tileCol: catStart.col,
+			tileRow: catStart.row,
+			path: [],
+			moveProgress: 0,
+			facingLeft: false,
+			pauseTimer: CAT_PAUSE_MIN_SEC + Math.random() * (CAT_PAUSE_MAX_SEC - CAT_PAUSE_MIN_SEC),
+			waypointIndex: 0,
+		};
 	}
 
 	/** Rebuild all derived state from a new layout. Reassigns existing characters.
@@ -701,7 +724,61 @@ export class OfficeState {
 		}
 	}
 
+	private updateWalkingCat(dt: number): void {
+		const cat = this.walkingCat;
+
+		if (cat.path.length === 0) {
+			// Pausing — wait before picking next waypoint
+			cat.pauseTimer -= dt;
+			if (cat.pauseTimer <= 0) {
+				cat.waypointIndex = (cat.waypointIndex + 1) % CAT_WAYPOINTS.length;
+				const target = CAT_WAYPOINTS[cat.waypointIndex];
+				const path = findPath(
+					cat.tileCol,
+					cat.tileRow,
+					target.col,
+					target.row,
+					this.tileMap,
+					this.blockedTiles,
+				);
+				if (path.length > 0) {
+					cat.path = path;
+					cat.moveProgress = 0;
+				}
+				cat.pauseTimer =
+					CAT_PAUSE_MIN_SEC + Math.random() * (CAT_PAUSE_MAX_SEC - CAT_PAUSE_MIN_SEC);
+			}
+			return;
+		}
+
+		// Walking along path
+		const nextTile = cat.path[0];
+		const dc = nextTile.col - cat.tileCol;
+		if (dc < 0) cat.facingLeft = true;
+		else if (dc > 0) cat.facingLeft = false;
+
+		cat.moveProgress += (CAT_WALK_SPEED_PX_PER_SEC / TILE_SIZE) * dt;
+
+		const fromX = cat.tileCol * TILE_SIZE + TILE_SIZE / 2;
+		const fromY = cat.tileRow * TILE_SIZE + TILE_SIZE / 2;
+		const toX = nextTile.col * TILE_SIZE + TILE_SIZE / 2;
+		const toY = nextTile.row * TILE_SIZE + TILE_SIZE / 2;
+		const t = Math.min(cat.moveProgress, 1);
+		cat.x = fromX + (toX - fromX) * t;
+		cat.y = fromY + (toY - fromY) * t;
+
+		if (cat.moveProgress >= 1) {
+			cat.tileCol = nextTile.col;
+			cat.tileRow = nextTile.row;
+			cat.x = toX;
+			cat.y = toY;
+			cat.path.shift();
+			cat.moveProgress = 0;
+		}
+	}
+
 	update(dt: number): void {
+		this.updateWalkingCat(dt);
 		const toDelete: number[] = [];
 		for (const ch of this.characters.values()) {
 			// Handle matrix effect animation
@@ -778,6 +855,19 @@ export class OfficeState {
 			}
 		}
 		return null;
+	}
+
+	/** Hit-test the walking cat (approximate bounding box, anchored bottom-center). */
+	isCatAt(worldX: number, worldY: number): boolean {
+		const cat = this.walkingCat;
+		const halfW = CAT_RENDER_WIDTH / 2;
+		const catH = CAT_RENDER_WIDTH * 0.8;
+		return (
+			worldX >= cat.x - halfW &&
+			worldX <= cat.x + halfW &&
+			worldY >= cat.y - catH &&
+			worldY <= cat.y
+		);
 	}
 
 	/** Get character at pixel position (for hit testing). Returns id or null. */

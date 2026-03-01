@@ -34,6 +34,7 @@ function ChatWindowSmart({
 
 	const ensureSharedThread = useMutation(api.chat.ensureSharedThread);
 	const sendMessage = useMutation(api.chat.sendMessage);
+	const fullStopMutation = useMutation(api.manager.queue.fullStop);
 
 	// Read user-visible messages from the messages table (replaces useUIMessages)
 	const rawMessages = useQuery(api.chat.getUserVisibleMessages, { limit: 50 });
@@ -54,6 +55,10 @@ function ChatWindowSmart({
 	// Loading state: sending mutation OR manager is processing a user request
 	const isLoading = isSending || managerStatus === "processing_user_request";
 
+	// Whether the manager is actively working (for cue/full-stop button states)
+	const isManagerWorking =
+		managerStatus === "processing_user_request" || managerStatus === "background_work";
+
 	// ── Pending user question ────────────────────────────
 	const pendingQuestionRaw = useQuery(
 		api.userQuestions.queries.getPendingForThread,
@@ -67,6 +72,11 @@ function ChatWindowSmart({
 			questions: pendingQuestionRaw.questions,
 		};
 	}, [pendingQuestionRaw]);
+
+	// ── Full stop ────────────────────────────────────────
+	async function handleFullStop() {
+		await fullStopMutation({});
+	}
 
 	// ── Text send ────────────────────────────────────────
 	async function handleChatSmartSend(text: string) {
@@ -141,6 +151,8 @@ function ChatWindowSmart({
 			onSend={handleChatSmartSend}
 			isLoading={isLoading}
 			managerStatus={managerStatus ?? "idle"}
+			isManagerWorking={isManagerWorking}
+			onFullStop={handleFullStop}
 			onTaskDrop={acceptTaskDrop ? handleTaskDrop : undefined}
 			pendingQuestion={pendingQuestion}
 			variant={variant}

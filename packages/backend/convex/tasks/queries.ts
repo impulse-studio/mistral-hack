@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, internalQuery } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
 import { taskDoc, taskStatusValidator } from "../schema";
 
 export const list = query({
@@ -54,6 +55,36 @@ export const listSubTasks = query({
 			.query("tasks")
 			.withIndex("by_parent", (q) => q.eq("parentTaskId", parentTaskId))
 			.collect();
+	},
+});
+
+// Resolve an array of task references (IDs or titles) into valid task IDs.
+// Silently skips refs that can't be resolved.
+export const resolveTaskRefs = internalQuery({
+	args: { refs: v.array(v.string()) },
+	returns: v.array(v.id("tasks")),
+	handler: async (ctx, { refs }) => {
+		const resolved: Id<"tasks">[] = [];
+		for (const ref of refs) {
+			// Try as direct Convex ID first
+			const normalized = ctx.db.normalizeId("tasks", ref);
+			if (normalized) {
+				const task = await ctx.db.get(normalized);
+				if (task) {
+					resolved.push(normalized);
+					continue;
+				}
+			}
+			// Try exact title match
+			const byTitle = await ctx.db
+				.query("tasks")
+				.filter((q) => q.eq(q.field("title"), ref))
+				.first();
+			if (byTitle) {
+				resolved.push(byTitle._id);
+			}
+		}
+		return resolved;
 	},
 });
 

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { internal } from "../../_generated/api";
 import type { RunnerCtx, RunnerResult } from "../shared/types";
 import { MANAGER_MODEL } from "../models";
+import { SANDBOX_WORK_DIR, SHARED_WORKSPACE, SHARED_OUTPUTS } from "../../sandbox/constants";
 
 const MAX_RETRIES_PER_STEP = 2;
 
@@ -43,8 +44,7 @@ export async function runGeneralTask(
 		messages: [
 			{
 				role: "system",
-				content:
-					"You are a task planner. Given a task, produce a sequence of shell commands to accomplish it. Each step should have a description and a shell command. The working directory is /home/user. The shared workspace is /home/company/. Save outputs to /home/company/outputs/. IMPORTANT: Each command runs in an independent shell — `cd` does NOT persist between steps. Use `cd /path && command` to run in a specific directory. Prefer fewer steps that combine related operations.",
+				content: `You are a task planner. Given a task, produce a sequence of shell commands to accomplish it. Each step should have a description and a shell command. The working directory is ${SANDBOX_WORK_DIR}. The shared workspace is ${SHARED_WORKSPACE}/. Save outputs to ${SHARED_OUTPUTS}/. IMPORTANT: Each command runs in an independent shell — \`cd\` does NOT persist between steps. Use \`cd /path && command\` to run in a specific directory. Prefer fewer steps that combine related operations.`,
 			},
 			{
 				role: "user",

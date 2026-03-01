@@ -29,5 +29,5 @@ Document Hub — shared knowledge base:
 		getDocument: getDocumentTool,
 		listDocuments: listDocumentsTool,
 	},
-	maxSteps: 15,
+	maxSteps: 200,
 });

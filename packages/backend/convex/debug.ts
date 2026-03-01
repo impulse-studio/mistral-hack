@@ -291,6 +291,112 @@ export const createDocument = action({
 	},
 });
 
+// === Viewer / Template Sandbox ===
+
+export const createTemplateSandbox = action({
+	args: { snapshotName: v.optional(v.string()) },
+	handler: async (ctx, { snapshotName }): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.lifecycle.createSandbox, {
+			name: "template-viewer",
+			snapshotOverride: snapshotName,
+		});
+	},
+});
+
+export const destroyTemplateSandbox = action({
+	args: { daytonaId: v.string() },
+	handler: async (ctx, { daytonaId }) => {
+		await ctx.runAction(internal.sandbox.lifecycle.destroySandboxByDaytonaId, { daytonaId });
+		return { success: true };
+	},
+});
+
+export const viewerStartComputerUse = action({
+	args: { daytonaId: v.string() },
+	handler: async (ctx, { daytonaId }): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.computerUse.startComputerUseByDaytonaId, {
+			daytonaId,
+		});
+	},
+});
+
+export const viewerTakeScreenshot = action({
+	args: {
+		daytonaId: v.string(),
+		quality: v.optional(v.number()),
+		scale: v.optional(v.number()),
+	},
+	handler: async (ctx, { daytonaId, quality, scale }): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.computerUse.takeScreenshotByDaytonaId, {
+			daytonaId,
+			format: "jpeg",
+			quality: quality ?? 60,
+			scale: scale ?? 1,
+			showCursor: true,
+		});
+	},
+});
+
+export const viewerMouseClick = action({
+	args: {
+		daytonaId: v.string(),
+		x: v.number(),
+		y: v.number(),
+		button: v.optional(v.string()),
+		double: v.optional(v.boolean()),
+	},
+	handler: async (ctx, args): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.computerUse.mouseClickByDaytonaId, args);
+	},
+});
+
+export const viewerMouseMove = action({
+	args: { daytonaId: v.string(), x: v.number(), y: v.number() },
+	handler: async (ctx, args): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.computerUse.mouseMoveByDaytonaId, args);
+	},
+});
+
+export const viewerMouseScroll = action({
+	args: {
+		daytonaId: v.string(),
+		x: v.number(),
+		y: v.number(),
+		direction: v.union(v.literal("up"), v.literal("down")),
+		amount: v.optional(v.number()),
+	},
+	handler: async (ctx, args): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.computerUse.mouseScrollByDaytonaId, args);
+	},
+});
+
+export const viewerKeyboardType = action({
+	args: { daytonaId: v.string(), text: v.string() },
+	handler: async (ctx, args): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.computerUse.keyboardTypeByDaytonaId, args);
+	},
+});
+
+export const viewerKeyboardPress = action({
+	args: {
+		daytonaId: v.string(),
+		key: v.string(),
+		modifiers: v.optional(v.array(v.string())),
+	},
+	handler: async (ctx, args): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.computerUse.keyboardPressByDaytonaId, args);
+	},
+});
+
+export const viewerGetDisplayInfo = action({
+	args: { daytonaId: v.string() },
+	handler: async (ctx, { daytonaId }): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.computerUse.getDisplayInfoByDaytonaId, {
+			daytonaId,
+		});
+	},
+});
+
 // === Agent Runner ===
 
 export const runSubAgent = action({

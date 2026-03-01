@@ -149,26 +149,41 @@ export const listDocumentsTool = createTool({
 // ── Shared Tools (used by multiple agent types) ────────────────
 
 export const updateTaskStatusTool = createTool({
-	description: "Update the status of an existing task.",
+	description:
+		"Update the status of an existing task. IMPORTANT: taskId must be a task ID (from createTask), NOT an agent ID.",
 	inputSchema: z.object({
-		taskId: z.string().describe("Task ID"),
+		taskId: z
+			.string()
+			.describe("The task ID returned by createTask. Must be a task ID, NOT an agent ID."),
 		status: z
 			.enum(["backlog", "todo", "waiting", "in_progress", "review", "done", "failed"])
 			.describe("New status. Use 'waiting' when the task needs user input before it can continue."),
 	}),
 	execute: async (ctx: ToolCtx, { taskId, status }) => {
-		await ctx.runMutation(internal.tasks.mutations.updateStatusInternal, {
-			taskId: taskId as Id<"tasks">,
-			status,
-		});
-		return { taskId, status, message: `Task updated to "${status}".` };
+		try {
+			await ctx.runMutation(internal.tasks.mutations.updateStatusInternal, {
+				taskId: taskId as Id<"tasks">,
+				status,
+			});
+			return { taskId, status, message: `Task updated to "${status}".` };
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return {
+				taskId,
+				status,
+				message: `Failed to update task: ${error}. Make sure you're using a task ID, not an agent ID.`,
+			};
+		}
 	},
 });
 
 export const checkAgentProgressTool = createTool({
-	description: "Check the current status, task assignment, and recent logs of a sub-agent.",
+	description:
+		"Check the current status, task assignment, and recent logs of a sub-agent. IMPORTANT: agentId must be an agent ID (from spawnAgent), NOT a task ID.",
 	inputSchema: z.object({
-		agentId: z.string().describe("Agent ID to check"),
+		agentId: z
+			.string()
+			.describe("The agent ID returned by spawnAgent. Must be an agent ID, NOT a task ID."),
 	}),
 	execute: async (
 		ctx: ToolCtx,
@@ -182,58 +197,77 @@ export const checkAgentProgressTool = createTool({
 		recentLogs?: Array<{ type: string; content: string; timestamp: number }>;
 		message: string;
 	}> => {
-		const typedAgentId = agentId as Id<"agents">;
-		const agent = await ctx.runQuery(internal.office.queries.getAgentInternal, {
-			agentId: typedAgentId,
-		});
-		if (!agent) {
-			return { agentId, status: "not_found", message: `Agent ${agentId} not found.` };
-		}
-
-		let currentTask: { title: string; status: string } | null = null;
-		if (agent.currentTaskId) {
-			const task = await ctx.runQuery(internal.tasks.queries.getInternal, {
-				taskId: agent.currentTaskId,
-			});
-			if (task) currentTask = { title: task.title, status: task.status };
-		}
-
-		const logs: Array<{ type: string; content: string; timestamp: number }> = await ctx.runQuery(
-			internal.agents.queries.getRecentLogs,
-			{
+		try {
+			const typedAgentId = agentId as Id<"agents">;
+			const agent = await ctx.runQuery(internal.office.queries.getAgentInternal, {
 				agentId: typedAgentId,
-				limit: 10,
-			},
-		);
+			});
+			if (!agent) {
+				return { agentId, status: "not_found", message: `Agent ${agentId} not found.` };
+			}
 
-		return {
-			agentId,
-			status: agent.status,
-			name: agent.name,
-			role: agent.role,
-			currentTask,
-			recentLogs: logs,
-			message: `Agent "${agent.name}" is ${agent.status}.${currentTask ? ` Working on: ${currentTask.title} (${currentTask.status})` : ""}`,
-		};
+			let currentTask: { title: string; status: string } | null = null;
+			if (agent.currentTaskId) {
+				const task = await ctx.runQuery(internal.tasks.queries.getInternal, {
+					taskId: agent.currentTaskId,
+				});
+				if (task) currentTask = { title: task.title, status: task.status };
+			}
+
+			const logs: Array<{ type: string; content: string; timestamp: number }> = await ctx.runQuery(
+				internal.agents.queries.getRecentLogs,
+				{
+					agentId: typedAgentId,
+					limit: 10,
+				},
+			);
+
+			return {
+				agentId,
+				status: agent.status,
+				name: agent.name,
+				role: agent.role,
+				currentTask,
+				recentLogs: logs,
+				message: `Agent "${agent.name}" is ${agent.status}.${currentTask ? ` Working on: ${currentTask.title} (${currentTask.status})` : ""}`,
+			};
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return {
+				agentId,
+				status: "error",
+				message: `Failed to check agent: ${error}. Make sure you're using an agent ID, not a task ID.`,
+			};
+		}
 	},
 });
 
 export const commentOnTaskTool = createTool({
 	description:
-		"Add a comment to a task. Use this to leave notes, progress updates, feedback, or context on any task.",
+		"Add a comment to a task. Use this to leave notes, progress updates, feedback, or context on any task. IMPORTANT: taskId must be a task ID, NOT an agent ID.",
 	inputSchema: z.object({
-		taskId: z.string().describe("Task ID to comment on"),
+		taskId: z
+			.string()
+			.describe("The task ID returned by createTask. Must be a task ID, NOT an agent ID."),
 		content: z.string().describe("Comment text"),
 	}),
 	execute: async (
 		ctx: ToolCtx,
 		{ taskId, content },
 	): Promise<{ commentId: string; message: string }> => {
-		const commentId = await ctx.runMutation(internal.tasks.comments.addInternal, {
-			taskId: taskId as Id<"tasks">,
-			content,
-			author: "manager" as const,
-		});
-		return { commentId, message: `Comment added to task.` };
+		try {
+			const commentId = await ctx.runMutation(internal.tasks.comments.addInternal, {
+				taskId: taskId as Id<"tasks">,
+				content,
+				author: "manager" as const,
+			});
+			return { commentId, message: `Comment added to task.` };
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return {
+				commentId: "",
+				message: `Failed to comment on task: ${error}. Make sure you're using a task ID, not an agent ID.`,
+			};
+		}
 	},
 });

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery, query } from "../_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
 
 // ── Processing lock mutations ────────────────────────────────
@@ -71,6 +71,53 @@ export const getStatus = query({
 			.withIndex("by_key", (q) => q.eq("key", "manager-status"))
 			.unique();
 		return config?.value ?? "idle";
+	},
+});
+
+// ── Full stop ────────────────────────────────────────────────
+
+/** Public mutation: hard-stop the manager — dead-letter pending mail, reset status. */
+export const fullStop = mutation({
+	args: {},
+	returns: v.null(),
+	handler: async (ctx) => {
+		// 1. Find manager agent
+		const manager = await ctx.db
+			.query("agents")
+			.withIndex("by_type", (q) => q.eq("type", "manager"))
+			.first();
+
+		if (manager) {
+			// 2. Reset processing lock
+			await ctx.db.patch(manager._id, { status: "idle" });
+
+			// 3. Dead-letter all pending + processing mailbox messages
+			for (const mailboxStatus of ["pending", "processing"] as const) {
+				const msgs = await ctx.db
+					.query("agentMailbox")
+					.withIndex("by_recipient_status", (q) =>
+						q.eq("recipientId", manager._id).eq("status", mailboxStatus),
+					)
+					.collect();
+				for (const msg of msgs) {
+					await ctx.db.patch(msg._id, {
+						status: "dead_letter",
+						processedAt: Date.now(),
+					});
+				}
+			}
+		}
+
+		// 4. Reset display status
+		const statusConfig = await ctx.db
+			.query("systemConfig")
+			.withIndex("by_key", (q) => q.eq("key", "manager-status"))
+			.first();
+		if (statusConfig) {
+			await ctx.db.patch(statusConfig._id, { value: "idle" });
+		}
+
+		return null;
 	},
 });
 

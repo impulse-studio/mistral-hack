@@ -73,9 +73,17 @@ export const onSubAgentComplete = internalMutation({
 			}
 		}
 
-		// Schedule mailbox check only on success — failed agents shouldn't pick up new work
+		// Schedule mailbox check on success — agent may have follow-up work
 		if (success) {
 			await ctx.scheduler.runAfter(0, internal.mailbox.process.processMailbox, { agentId });
+		} else {
+			// Failed agents should not pick up new work, but they must still be
+			// cleaned up after a grace period so the manager can see the failure.
+			await ctx.scheduler.runAfter(
+				120_000, // 2 minutes — gives manager time to inspect the failure
+				internal.mailbox.process.idleTimeoutCheck,
+				{ agentId },
+			);
 		}
 
 		// Build notification message for the manager

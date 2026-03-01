@@ -5,15 +5,16 @@ export type SandboxCapability =
 	| "deploy"
 	| "computerUse"
 	| "github"
-	| "filesystem";
+	| "filesystem"
+	| "web";
 
 export const roleCapabilities: Record<string, SandboxCapability[]> = {
 	coder: ["shell", "vibe", "git", "deploy", "github", "filesystem"],
 	browser: ["shell", "computerUse", "filesystem"],
 	designer: ["shell", "computerUse", "filesystem"],
-	researcher: ["shell", "git", "filesystem"],
-	copywriter: ["shell", "filesystem"],
-	general: ["shell", "git", "deploy", "github", "filesystem"],
+	researcher: ["shell", "git", "filesystem", "web"],
+	copywriter: ["shell", "filesystem", "web"],
+	general: ["shell", "git", "deploy", "github", "filesystem", "web"],
 };
 
 /** Check if a role has a specific capability */

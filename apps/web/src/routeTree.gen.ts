@@ -20,6 +20,7 @@ import { Route as ProtoV4RouteImport } from './routes/proto/v4'
 import { Route as ProtoV3RouteImport } from './routes/proto/v3'
 import { Route as ProtoV2RouteImport } from './routes/proto/v2'
 import { Route as AuthenticatedTestRouteImport } from './routes/_authenticated/test'
+import { Route as AuthenticatedSnapshotsRouteImport } from './routes/_authenticated/snapshots'
 import { Route as AuthenticatedOfficeRouteImport } from './routes/_authenticated/office'
 import { Route as AuthenticatedManagerRouteImport } from './routes/_authenticated/manager'
 import { Route as AuthenticatedKanbanRouteImport } from './routes/_authenticated/kanban'
@@ -81,6 +82,11 @@ const AuthenticatedTestRoute = AuthenticatedTestRouteImport.update({
   path: '/test',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSnapshotsRoute = AuthenticatedSnapshotsRouteImport.update({
+  id: '/snapshots',
+  path: '/snapshots',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedOfficeRoute = AuthenticatedOfficeRouteImport.update({
   id: '/office',
   path: '/office',
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/kanban': typeof AuthenticatedKanbanRoute
   '/manager': typeof AuthenticatedManagerRoute
   '/office': typeof AuthenticatedOfficeRoute
+  '/snapshots': typeof AuthenticatedSnapshotsRoute
   '/test': typeof AuthenticatedTestRoute
   '/proto/v2': typeof ProtoV2Route
   '/proto/v3': typeof ProtoV3Route
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/kanban': typeof AuthenticatedKanbanRoute
   '/manager': typeof AuthenticatedManagerRoute
   '/office': typeof AuthenticatedOfficeRoute
+  '/snapshots': typeof AuthenticatedSnapshotsRoute
   '/test': typeof AuthenticatedTestRoute
   '/proto/v2': typeof ProtoV2Route
   '/proto/v3': typeof ProtoV3Route
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/_authenticated/kanban': typeof AuthenticatedKanbanRoute
   '/_authenticated/manager': typeof AuthenticatedManagerRoute
   '/_authenticated/office': typeof AuthenticatedOfficeRoute
+  '/_authenticated/snapshots': typeof AuthenticatedSnapshotsRoute
   '/_authenticated/test': typeof AuthenticatedTestRoute
   '/proto/v2': typeof ProtoV2Route
   '/proto/v3': typeof ProtoV3Route
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/manager'
     | '/office'
+    | '/snapshots'
     | '/test'
     | '/proto/v2'
     | '/proto/v3'
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/manager'
     | '/office'
+    | '/snapshots'
     | '/test'
     | '/proto/v2'
     | '/proto/v3'
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '/_authenticated/kanban'
     | '/_authenticated/manager'
     | '/_authenticated/office'
+    | '/_authenticated/snapshots'
     | '/_authenticated/test'
     | '/proto/v2'
     | '/proto/v3'
@@ -319,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTestRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/snapshots': {
+      id: '/_authenticated/snapshots'
+      path: '/snapshots'
+      fullPath: '/snapshots'
+      preLoaderRoute: typeof AuthenticatedSnapshotsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/office': {
       id: '/_authenticated/office'
       path: '/office'
@@ -370,6 +389,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedKanbanRoute: typeof AuthenticatedKanbanRoute
   AuthenticatedManagerRoute: typeof AuthenticatedManagerRoute
   AuthenticatedOfficeRoute: typeof AuthenticatedOfficeRoute
+  AuthenticatedSnapshotsRoute: typeof AuthenticatedSnapshotsRoute
   AuthenticatedTestRoute: typeof AuthenticatedTestRoute
 }
 
@@ -379,6 +399,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedKanbanRoute: AuthenticatedKanbanRoute,
   AuthenticatedManagerRoute: AuthenticatedManagerRoute,
   AuthenticatedOfficeRoute: AuthenticatedOfficeRoute,
+  AuthenticatedSnapshotsRoute: AuthenticatedSnapshotsRoute,
   AuthenticatedTestRoute: AuthenticatedTestRoute,
 }
 

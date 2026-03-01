@@ -4,11 +4,11 @@ import { mistral, MANAGER_MODEL } from "../models";
 import {
 	createTaskTool,
 	spawnAgentTool,
+	dismissAgentTool,
 	sendToUserTool,
 	askUserTool,
 	sendMessageToAgentTool,
 	registerDeliverableTool,
-	webScreenshotTool,
 	gitCloneTool,
 	gitPushTool,
 	createPullRequestTool,
@@ -53,17 +53,11 @@ Your responsibilities:
 
 Agent roles and capabilities:
 - coder: Uses Mistral Vibe headless CLI for code generation in a dedicated sandbox
-- browser: DISABLED — no outbound internet on current Daytona plan
-- designer: DISABLED — no outbound internet on current Daytona plan
+- browser: Computer Use agent — browses the web, interacts with pages, takes screenshots
+- designer: Computer Use agent — designs in GUI apps, takes screenshots
 - researcher: Uses shell commands for research and analysis
 - copywriter: Uses shell commands for writing and content tasks
 - general: Uses shell commands for miscellaneous tasks
-
-IMPORTANT — Screenshots:
-- You have a webScreenshot tool that captures screenshots of ANY URL directly from the server — no agent needed.
-- For ANY screenshot request: call webScreenshot(url) directly. NEVER spawn a coder, browser, or any other agent for screenshots.
-- webScreenshot works server-side with full internet access — it does NOT run in a Daytona sandbox.
-- Pass a taskId to auto-register the screenshot as an image deliverable.
 
 Workflow:
 1. Create a task with createTask (returns a taskId)
@@ -119,10 +113,12 @@ Worker escalation:
 - Once the user responds, send a directive to the worker via sendMessageToAgent
 - The worker's task will resume automatically when the directive arrives
 
-Agent reuse — idle agents stay alive after completing a task:
-- Use sendMessageToAgent to send follow-up work to idle agents instead of spawning new ones
-- Send type "task" with a taskId to assign a new task to an idle agent
-- Agents auto-despawn after 60s idle with no queued messages
+Agent lifecycle — cleanup is your responsibility:
+- After a worker completes a task, either reuse it with sendMessageToAgent (type "task") or dismiss it with dismissAgent
+- ALWAYS dismiss agents you no longer need — idle agents block desks for new workers
+- Failed agents should be dismissed after you've noted the failure
+- dismissAgent frees the desk, stops the sandbox, and clears the mailbox
+- Agents auto-despawn after 60s idle as a safety net, but don't rely on this — dismiss proactively
 - Prefer reusing idle agents over spawning new ones when possible
 
 Git & GitHub workflow:
@@ -140,7 +136,7 @@ Code-to-GitHub example flow:
 3. gitClone("coder-1-agentId", "https://github.com/org/repo") — clone into coder's sandbox
 4. Wait for [WORKER COMPLETE] — coder generates code, verifies it, auto-commits on feature branch
 5. gitPush(agentId) — push the feature branch
-6. createPullRequest(agentId, "/home/user", "feat: X", "Description of changes")
+6. createPullRequest(agentId, "/home/daytona", "feat: X", "Description of changes")
 7. sendToUser with the PR URL from the result
 
 Document Hub — shared knowledge base:
@@ -156,11 +152,11 @@ Always create the task FIRST, then spawn an agent with the taskId.`,
 		sendToUser: sendToUserTool,
 		createTask: createTaskTool,
 		spawnAgent: spawnAgentTool,
+		dismissAgent: dismissAgentTool,
 		updateTaskStatus: updateTaskStatusTool,
 		checkAgentProgress: checkAgentProgressTool,
 		commentOnTask: commentOnTaskTool,
 		registerDeliverable: registerDeliverableTool,
-		webScreenshot: webScreenshotTool,
 		sendMessageToAgent: sendMessageToAgentTool,
 		askUser: askUserTool,
 		gitClone: gitCloneTool,
@@ -173,5 +169,5 @@ Always create the task FIRST, then spawn an agent with the taskId.`,
 		getDocument: getDocumentTool,
 		listDocuments: listDocumentsTool,
 	},
-	maxSteps: 10,
+	maxSteps: 200,
 });

@@ -10,6 +10,16 @@ import type {
 import { getCatalogEntry } from "./furnitureCatalog";
 import { getColorizedSprite } from "./colorize";
 
+let cachedCatImage: HTMLImageElement | null = null;
+function getCatImage(): HTMLImageElement | null {
+	if (cachedCatImage) return cachedCatImage;
+	if (typeof window === "undefined") return null;
+	const img = new Image();
+	img.src = "/assets/animated-sitting-cat.webp";
+	cachedCatImage = img;
+	return img;
+}
+
 /** Convert flat tile array from layout into 2D grid */
 export function layoutToTileMap(layout: OfficeLayout): TileTypeVal[][] {
 	const map: TileTypeVal[][] = [];
@@ -83,7 +93,12 @@ export function layoutToFurnitureInstances(furniture: PlacedFurniture[]): Furnit
 			);
 		}
 
-		instances.push({ sprite, x, y, zY });
+		const inst: FurnitureInstance = { sprite, x, y, zY };
+		if (item.type === FurnitureType.MISTRAL_CAT) {
+			const catImg = getCatImage();
+			if (catImg) inst.image = catImg;
+		}
+		instances.push(inst);
 	}
 	return instances;
 }
@@ -432,9 +447,6 @@ export function createDefaultLayout(): OfficeLayout {
 		// Kitchen decor
 		{ uid: "plant-k", type: FurnitureType.PLANT, col: 28, row: 10 },
 		{ uid: "lamp-k", type: FurnitureType.LAMP, col: 27, row: 14 },
-
-		// ═══ MISTRAL CAT (kitchen corner) ═══
-		{ uid: "mistral-cat", type: FurnitureType.MISTRAL_CAT, col: 28, row: 14 },
 	];
 
 	return { version: 1, cols: COLS, rows: ROWS, tiles, tileColors, furniture };

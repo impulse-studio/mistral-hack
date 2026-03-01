@@ -92,7 +92,28 @@ export const getDesks = query({
 	},
 });
 
-// Get available desk count
+// Get worker agents that are idle or failed past a staleness cutoff
+export const getStaleAgents = internalQuery({
+	args: { cutoff: v.number() },
+	returns: v.array(agentDoc),
+	handler: async (ctx, { cutoff }) => {
+		const [idle, failed] = await Promise.all([
+			ctx.db
+				.query("agents")
+				.withIndex("by_status", (q) => q.eq("status", "idle"))
+				.collect(),
+			ctx.db
+				.query("agents")
+				.withIndex("by_status", (q) => q.eq("status", "failed"))
+				.collect(),
+		]);
+		return [...idle, ...failed].filter(
+			(a) => a.type === "worker" && a.completedAt !== undefined && a.completedAt < cutoff,
+		);
+	},
+});
+
+// Get available desk count (public)
 export const getAvailableDeskCount = query({
 	args: {},
 	returns: v.number(),

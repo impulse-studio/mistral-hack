@@ -29,6 +29,10 @@ interface ChatWindowProps {
 	isLoading?: boolean;
 	/** Manager processing status: "idle" | "processing_user_request" | "background_work" */
 	managerStatus?: string;
+	/** Whether the manager is actively working (processing or background). */
+	isManagerWorking?: boolean;
+	/** Called to hard-stop the manager and clear pending work. */
+	onFullStop?: () => void;
 	/** Called when a kanban task is dropped onto the chat message list. */
 	onTaskDrop?: (data: KanbanDragData) => void;
 	/** Pending structured question from the manager. */
@@ -50,6 +54,8 @@ function ChatWindow({
 	onSend,
 	isLoading = false,
 	managerStatus = "idle",
+	isManagerWorking = false,
+	onFullStop,
 	onTaskDrop,
 	pendingQuestion,
 	variant = "standalone",
@@ -97,10 +103,12 @@ function ChatWindow({
 				/>
 			)}
 
-			{/* Input — disabled while a question card is pending */}
+			{/* Input — disabled only while a question card is pending */}
 			<ChatInput
 				onSend={onSend}
-				disabled={isLoading || !!pendingQuestion}
+				disabled={!!pendingQuestion}
+				isManagerWorking={isManagerWorking}
+				onFullStop={onFullStop}
 				voiceRecording={voiceRecording}
 				voiceProcessing={voiceProcessing}
 				voiceAnalyser={voiceAnalyser}

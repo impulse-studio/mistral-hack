@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { getRunning, recordAndLog } from "./helpers";
+import { SANDBOX_WORK_DIR } from "./constants";
 
 // --- Vercel Deploy (CLI inside sandbox) ---
 
@@ -13,20 +14,26 @@ async function ensureVercelCli(
 	sandboxRecordId: string,
 	agentId?: string,
 ): Promise<void> {
-	const check: { result: string; exitCode: number } = await ctx.runAction(internal.sandbox.execute.runCommand, {
-		command: "which vercel || true",
-		agentId,
-		stream: false,
-	});
+	const check: { result: string; exitCode: number } = await ctx.runAction(
+		internal.sandbox.execute.runCommand,
+		{
+			command: "which vercel || true",
+			agentId,
+			stream: false,
+		},
+	);
 
 	if (check.result?.includes("/vercel")) return;
 
 	await recordAndLog(ctx, sandboxRecordId, agentId, "status", "Installing Vercel CLI...");
 
-	const install: { result: string; exitCode: number } = await ctx.runAction(internal.sandbox.execute.runCommand, {
-		command: "npm install -g vercel@latest",
-		agentId,
-	});
+	const install: { result: string; exitCode: number } = await ctx.runAction(
+		internal.sandbox.execute.runCommand,
+		{
+			command: "npm install -g vercel@latest",
+			agentId,
+		},
+	);
 
 	if (install.exitCode !== 0) {
 		throw new Error(`Failed to install Vercel CLI: ${install.result}`);
@@ -53,11 +60,18 @@ export const linkVercelProject = internalAction({
 		scope: v.optional(v.string()),
 		agentId: v.optional(v.id("agents")),
 	},
-	handler: async (ctx, { path, project, scope, agentId }): Promise<{ success: boolean; output: string }> => {
+	handler: async (
+		ctx,
+		{ path, project, scope, agentId },
+	): Promise<{ success: boolean; output: string }> => {
+		// Ensure sandbox is running
+		if (agentId) {
+			await ctx.runAction(internal.sandbox.lifecycle.ensureRunning, { agentId });
+		}
 		const { sandboxRecord } = await getRunning(ctx, agentId);
 		await ensureVercelCli(ctx, sandboxRecord._id, agentId);
 
-		let cmd = `cd ${path ?? "/home/user"} && vercel link --yes --token=$VERCEL_TOKEN`;
+		let cmd = `cd ${path ?? SANDBOX_WORK_DIR} && vercel link --yes --token=$VERCEL_TOKEN`;
 		if (scope) cmd += ` --scope=${scope}`;
 		if (project) cmd += ` --project=${project}`;
 
@@ -69,10 +83,13 @@ export const linkVercelProject = internalAction({
 			`vercel link${project ? ` --project=${project}` : ""}`,
 		);
 
-		const result: { result: string; exitCode: number } = await ctx.runAction(internal.sandbox.execute.runCommand, {
-			command: cmd,
-			agentId,
-		});
+		const result: { result: string; exitCode: number } = await ctx.runAction(
+			internal.sandbox.execute.runCommand,
+			{
+				command: cmd,
+				agentId,
+			},
+		);
 
 		return {
 			success: result.exitCode === 0,
@@ -87,11 +104,18 @@ export const deployToVercel = internalAction({
 		prod: v.optional(v.boolean()),
 		agentId: v.optional(v.id("agents")),
 	},
-	handler: async (ctx, { path, prod, agentId }): Promise<{ success: boolean; output: string; deployUrl: string | null }> => {
+	handler: async (
+		ctx,
+		{ path, prod, agentId },
+	): Promise<{ success: boolean; output: string; deployUrl: string | null }> => {
+		// Ensure sandbox is running (may have been stopped after task completion)
+		if (agentId) {
+			await ctx.runAction(internal.sandbox.lifecycle.ensureRunning, { agentId });
+		}
 		const { sandboxRecord } = await getRunning(ctx, agentId);
 		await ensureVercelCli(ctx, sandboxRecord._id, agentId);
 
-		let cmd = `cd ${path ?? "/home/user"} && vercel deploy --yes --token=$VERCEL_TOKEN`;
+		let cmd = `cd ${path ?? SANDBOX_WORK_DIR} && vercel deploy --yes --token=$VERCEL_TOKEN`;
 		if (prod) cmd += " --prod";
 
 		await recordAndLog(
@@ -102,10 +126,13 @@ export const deployToVercel = internalAction({
 			`vercel deploy${prod ? " --prod" : ""}`,
 		);
 
-		const result: { result: string; exitCode: number } = await ctx.runAction(internal.sandbox.execute.runCommand, {
-			command: cmd,
-			agentId,
-		});
+		const result: { result: string; exitCode: number } = await ctx.runAction(
+			internal.sandbox.execute.runCommand,
+			{
+				command: cmd,
+				agentId,
+			},
+		);
 
 		// Extract deployment URL from output (Vercel prints the URL on success)
 		const output = result.result ?? "";
@@ -117,9 +144,7 @@ export const deployToVercel = internalAction({
 			sandboxRecord._id,
 			agentId,
 			"status",
-			deployUrl
-				? `Deployed to: ${deployUrl}`
-				: `Deploy finished (exit ${result.exitCode})`,
+			deployUrl ? `Deployed to: ${deployUrl}` : `Deploy finished (exit ${result.exitCode})`,
 		);
 
 		return {

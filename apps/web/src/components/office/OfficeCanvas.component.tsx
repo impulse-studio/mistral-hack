@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { ZOOM_MAX, ZOOM_MIN } from "@/lib/pixelAgents/constants";
+import { ZOOM_MAX, ZOOM_MIN, CAT_RENDER_WIDTH } from "@/lib/pixelAgents/constants";
 import { startGameLoop } from "@/lib/pixelAgents/gameLoop";
 import type { OfficeState } from "@/lib/pixelAgents/officeState";
 import { renderFrame } from "@/lib/pixelAgents/renderer";
@@ -40,7 +40,8 @@ const CLICKABLE_FURNITURE = new Set([
 
 /** Predefined paper positions relative to the first bookshelf (col 21, row 2).
  *  Two bookshelves side by side = 32px wide, 32px tall in world space.
- *  Papers appear on shelves and scattered nearby as documents accumulate. */
+ *  Tileset bookshelf: 16x32px, backgroundTiles=1 (top tile is bg).
+ *  Shelves span roughly sprite rows 2-26. Papers placed ON shelves. */
 const PAPER_SLOTS: Array<{
 	x: number;
 	y: number;
@@ -49,24 +50,20 @@ const PAPER_SLOTS: Array<{
 	color: string;
 	angle: number;
 }> = [
-	// Bottom shelf of bookshelf 1 (empty shelf, rows 24-30 of sprite)
-	{ x: 2, y: 25, w: 4, h: 5, color: "#f5f0e0", angle: 0.1 },
-	{ x: 8, y: 26, w: 3, h: 5, color: "#fff8e8", angle: -0.12 },
-	// Bottom shelf of bookshelf 2
-	{ x: 18, y: 24, w: 4, h: 5, color: "#f0ead0", angle: 0.18 },
-	{ x: 24, y: 26, w: 3, h: 5, color: "#fff5d5", angle: -0.08 },
-	// Middle shelves — papers peeking between books
-	{ x: 5, y: 17, w: 3, h: 4, color: "#fffae8", angle: 0.15 },
-	{ x: 22, y: 16, w: 3, h: 4, color: "#fff0d0", angle: -0.1 },
-	// Upper shelves
-	{ x: 12, y: 9, w: 3, h: 4, color: "#f5edd8", angle: 0.06 },
-	{ x: 27, y: 8, w: 3, h: 4, color: "#ffe8c0", angle: -0.14 },
-	// Sticking out the top
-	{ x: 7, y: -2, w: 3, h: 5, color: "#fffae8", angle: -0.2 },
-	{ x: 20, y: -3, w: 3, h: 5, color: "#f8f2e0", angle: 0.15 },
-	// Floor papers (below bookshelves, row 4 = y offset 32)
-	{ x: 0, y: 33, w: 4, h: 5, color: "#fff8e0", angle: 0.35 },
-	{ x: 14, y: 34, w: 4, h: 5, color: "#f5edd8", angle: -0.25 },
+	// ── Bookshelf 1 (center≈7) — 6 papers ──
+	{ x: 6, y: 2, w: 3, h: 4, color: "#f5f0e0", angle: 0.1 },
+	{ x: 7, y: 8, w: 3, h: 4, color: "#f0ead0", angle: -0.12 },
+	{ x: 5, y: 14, w: 3, h: 4, color: "#fffae8", angle: 0.15 },
+	{ x: 7, y: 20, w: 3, h: 4, color: "#f5edd8", angle: -0.08 },
+	{ x: 8, y: 5, w: 3, h: 4, color: "#fff8e0", angle: 0.2 },
+	{ x: 6, y: 11, w: 3, h: 4, color: "#fffae8", angle: -0.18 },
+	// ── Bookshelf 2 (center≈23) — 6 papers, mirrored Y ──
+	{ x: 22, y: 2, w: 3, h: 4, color: "#fff8e8", angle: -0.1 },
+	{ x: 21, y: 8, w: 3, h: 4, color: "#fff5d5", angle: 0.12 },
+	{ x: 23, y: 14, w: 3, h: 4, color: "#fff0d0", angle: -0.15 },
+	{ x: 21, y: 20, w: 3, h: 4, color: "#ffe8c0", angle: 0.08 },
+	{ x: 20, y: 5, w: 3, h: 4, color: "#f5edd8", angle: -0.2 },
+	{ x: 22, y: 11, w: 3, h: 4, color: "#f8f2e0", angle: 0.18 },
 ];
 
 /** Bookshelf-mgr-1 is at col 21, row 2 in the default layout */
@@ -145,6 +142,11 @@ export function OfficeCanvas({
 	const zoomAccRef = useRef(0);
 	const initialZoomSet = useRef(false);
 	const docCountRef = useRef(0);
+
+	// Cat overlay: two DOM imgs so the browser natively animates GIF/WebP
+	const catWalkRef = useRef<HTMLImageElement>(null);
+	const catSitRef = useRef<HTMLImageElement>(null);
+	const catPrevWalkingRef = useRef(false);
 
 	useEffect(() => {
 		zoomRef.current = zoom;
@@ -225,6 +227,36 @@ export function OfficeCanvas({
 				}
 
 				ctx.restore();
+
+				// ── Position the cat HTML overlay ──
+				const cat = officeState.walkingCat;
+				const isWalking = cat.path.length > 0;
+				const walkEl = catWalkRef.current;
+				const sitEl = catSitRef.current;
+
+				// Toggle which img is visible
+				if (isWalking !== catPrevWalkingRef.current) {
+					catPrevWalkingRef.current = isWalking;
+					if (walkEl) walkEl.style.display = isWalking ? "block" : "none";
+					if (sitEl) sitEl.style.display = isWalking ? "none" : "block";
+				}
+
+				const activeEl = isWalking ? walkEl : sitEl;
+				if (activeEl) {
+					const z = zoomRef.current;
+					const catScreenW = CAT_RENDER_WIDTH * z;
+					const ratio =
+						activeEl.naturalWidth > 0 ? activeEl.naturalHeight / activeEl.naturalWidth : 0.8;
+					const catScreenH = catScreenW * ratio;
+					const screenX = offsetX + cat.x * z - catScreenW / 2;
+					const screenY = offsetY + cat.y * z - catScreenH;
+
+					activeEl.style.left = `${screenX}px`;
+					activeEl.style.top = `${screenY}px`;
+					activeEl.style.width = `${catScreenW}px`;
+					activeEl.style.height = `${catScreenH}px`;
+					activeEl.style.transform = cat.facingLeft ? "scaleX(-1)" : "none";
+				}
 			},
 		});
 
@@ -267,6 +299,8 @@ export function OfficeCanvas({
 			if (agentId !== null) {
 				officeState.selectedAgentId = agentId;
 				onClickAgent(agentId);
+			} else if (officeState.isCatAt(worldX, worldY) && onClickFurniture) {
+				onClickFurniture("mistral-cat");
 			} else {
 				// Check if clicked on furniture
 				const furnitureUid = officeState.getFurnitureUidAt(worldX, worldY);
@@ -332,6 +366,10 @@ export function OfficeCanvas({
 				canvas.style.cursor = "pointer";
 				return;
 			}
+			if (officeState.isCatAt(wx, wy)) {
+				canvas.style.cursor = "pointer";
+				return;
+			}
 			const hitFurn = officeState.getFurnitureUidAt(wx, wy);
 			if (hitFurn && (hitFurn === "pc-mgr" || CLICKABLE_FURNITURE.has(hitFurn))) {
 				canvas.style.cursor = "pointer";
@@ -357,6 +395,22 @@ export function OfficeCanvas({
 				onPointerUp={handlePointerUp}
 				onContextMenu={(e) => e.preventDefault()}
 				className="absolute inset-0 cursor-default"
+			/>
+
+			{/* Cat overlay — real DOM imgs so the browser natively animates GIF/WebP */}
+			<img
+				ref={catWalkRef}
+				src="/assets/cat-walking-white.gif"
+				alt=""
+				className="pointer-events-none absolute"
+				style={{ imageRendering: "pixelated" }}
+			/>
+			<img
+				ref={catSitRef}
+				src="/assets/animated-sitting-cat.webp"
+				alt=""
+				className="pointer-events-none absolute"
+				style={{ imageRendering: "pixelated", display: "none" }}
 			/>
 
 			{/* Zoom controls */}

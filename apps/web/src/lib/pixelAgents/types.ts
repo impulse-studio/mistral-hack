@@ -72,6 +72,8 @@ export interface FurnitureInstance {
 	y: number;
 	/** Y value used for depth sorting (typically bottom edge) */
 	zY: number;
+	/** Optional pre-loaded image (e.g. animated WebP) drawn instead of the pixel sprite */
+	image?: HTMLImageElement;
 }
 
 export interface ToolActivity {
@@ -183,7 +185,7 @@ export interface Character {
 	/** Assigned seat uid, or null if no seat */
 	seatId: string | null;
 	/** Active speech bubble type, or null if none showing */
-	bubbleType: "permission" | "waiting" | null;
+	bubbleType: "permission" | "waiting" | "coffee" | null;
 	/** Countdown timer for bubble (waiting: 2→0, permission: unused) */
 	bubbleTimer: number;
 	/** Timer to stay seated while inactive after seat reassignment (counts down to 0) */
@@ -202,4 +204,16 @@ export interface Character {
 	isLeaving: boolean;
 	/** Workspace folder name (only set for multi-root workspaces) */
 	folderName?: string;
+}
+
+export interface WalkingCat {
+	x: number;
+	y: number;
+	tileCol: number;
+	tileRow: number;
+	path: Array<{ col: number; row: number }>;
+	moveProgress: number;
+	facingLeft: boolean;
+	pauseTimer: number;
+	waypointIndex: number;
 }
