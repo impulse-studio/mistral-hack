@@ -32,8 +32,8 @@ function DrawerBackdrop({ className, ...props }: DrawerPrimitive.Backdrop.Props)
 
 const drawerSideStyles = {
 	right:
-		"fixed top-0 right-0 bottom-0 z-50 w-[360px] border-l-2 border-border data-open:animate-in data-open:slide-in-from-right data-closed:animate-out data-closed:slide-out-to-right",
-	left: "fixed top-0 left-0 bottom-0 z-50 w-[360px] border-r-2 border-border data-open:animate-in data-open:slide-in-from-left data-closed:animate-out data-closed:slide-out-to-left",
+		"fixed top-0 right-0 bottom-0 z-50 w-[520px] border-l-2 border-border data-open:animate-in data-open:slide-in-from-right data-closed:animate-out data-closed:slide-out-to-right",
+	left: "fixed top-0 left-0 bottom-0 z-50 w-[520px] border-r-2 border-border data-open:animate-in data-open:slide-in-from-left data-closed:animate-out data-closed:slide-out-to-left",
 	top: "fixed top-0 left-0 right-0 z-50 h-[360px] border-b-2 border-border data-open:animate-in data-open:slide-in-from-top data-closed:animate-out data-closed:slide-out-to-top",
 	bottom:
 		"fixed bottom-0 left-0 right-0 z-50 h-[360px] border-t-2 border-border data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom",

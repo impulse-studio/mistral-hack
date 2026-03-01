@@ -42,7 +42,6 @@ interface ConvexAgent {
 
 const EMPTY_TASKS: never[] = [];
 const EMPTY_TERMINAL: never[] = [];
-const EMPTY_REASONING: never[] = [];
 
 const PIXELATED_STYLE = { imageRendering: "pixelated" } as const;
 const DIALOG_CLOSE_BUTTON = <Button variant="default" size="icon-sm" />;
@@ -77,6 +76,15 @@ function mapLogToTerminalText(type: string, content: string): string {
 		}
 		case "screenshot": {
 			return `[screenshot] ${content}`;
+		}
+		case "reasoning": {
+			return `[thinking] ${content}`;
+		}
+		case "assistant_text": {
+			return `[assistant] ${content}`;
+		}
+		case "usage": {
+			return `[usage] ${content}`;
 		}
 		default: {
 			return content;
@@ -289,23 +297,24 @@ function OfficeContent() {
 		}));
 	}, [agentLogs]);
 
-	const agentReasoningSteps = useMemo(() => {
-		if (!agentLogs) return EMPTY_REASONING;
-		const statusLogs = agentLogs.filter((l) => l.type === "status");
-		if (statusLogs.length === 0) return EMPTY_REASONING;
-
-		return statusLogs.map((log, index) => {
-			const isLast = index === statusLogs.length - 1;
-			const nextTimestamp = statusLogs[index + 1]?.timestamp;
-			const duration = nextTimestamp ? nextTimestamp - log.timestamp : undefined;
-
-			return {
+	const chatMessages = useMemo(() => {
+		if (!agentLogs) return [];
+		const chatTypes = new Set([
+			"reasoning",
+			"assistant_text",
+			"tool_call",
+			"tool_result",
+			"usage",
+			"status",
+		]);
+		return agentLogs
+			.filter((l) => chatTypes.has(l.type))
+			.map((log) => ({
 				id: String(log._id),
-				title: log.content,
-				status: (isLast ? "active" : "completed") as "active" | "completed",
-				duration,
-			};
-		});
+				type: log.type as import("@/lib/agent/AgentChat.component").AgentChatMessageType,
+				content: log.content,
+				timestamp: log.timestamp,
+			}));
 	}, [agentLogs]);
 
 	const latestScreenshotUrl = useMemo(() => {
@@ -392,7 +401,7 @@ function OfficeContent() {
 				agent={agentInfo}
 				tasks={agentTasks}
 				terminalLines={terminalLines}
-				reasoningSteps={agentReasoningSteps}
+				chatMessages={chatMessages}
 				deliverables={agentDeliverables}
 				latestScreenshotUrl={latestScreenshotUrl}
 				onClose={handleClosePanel}

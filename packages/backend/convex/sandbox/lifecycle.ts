@@ -27,9 +27,17 @@ async function provisionSandbox(sandbox: {
 	await sandbox.process.executeCommand("npm config set prefer-family ipv4").catch(() => {});
 
 	// Install Mistral Vibe CLI if not present (best-effort)
+	// The install script puts the binary in ~/.local/bin which may not be in PATH
+	// for CU desktop sessions, so we also symlink to /usr/local/bin.
 	await sandbox.process
 		.executeCommand(
-			"which vibe > /dev/null 2>&1 || curl -LsSf https://mistral.ai/vibe/install.sh | bash",
+			[
+				"which vibe > /dev/null 2>&1 || {",
+				"  curl -LsSf https://mistral.ai/vibe/install.sh | bash",
+				"  && VIBE_BIN=$(find $HOME/.local/bin /root/.local/bin -name vibe -type f 2>/dev/null | head -1)",
+				'  && test -n "$VIBE_BIN" && sudo ln -sf "$VIBE_BIN" /usr/local/bin/vibe',
+				"}",
+			].join(" "),
 		)
 		.catch(() => {});
 

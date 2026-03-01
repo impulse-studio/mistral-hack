@@ -14,9 +14,13 @@ export function createWebSkills(ctx: RunnerCtx, agentId: string) {
 	return {
 		web_fetch: tool({
 			description:
-				"Fetch a URL and return its readable text content (HTML is stripped). Useful for reading documentation, APIs, and web pages.",
+				"Fetch a URL and return its readable text content (HTML is stripped). Use this to read library documentation, npm package pages, API references, and tutorials. ALWAYS use this to verify a library's API before writing code with it — check https://www.npmjs.com/package/<name> or the official docs.",
 			inputSchema: z.object({
-				url: z.string().describe("The URL to fetch"),
+				url: z
+					.string()
+					.describe(
+						"The URL to fetch (e.g., https://www.npmjs.com/package/zustand, https://docs.example.com)",
+					),
 			}),
 			execute: async ({ url }) => {
 				await ctx.runMutation(internal.logs.mutations.append, {

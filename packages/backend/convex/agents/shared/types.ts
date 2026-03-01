@@ -12,4 +12,9 @@ export type RunnerCtx = {
 export type RunnerResult = {
 	success: boolean;
 	result: string;
+	continuation?: {
+		messages: string; // JSON-serialized Array<ResponseMessage>
+		stepsCompleted: number;
+		continuationCount: number;
+	};
 };

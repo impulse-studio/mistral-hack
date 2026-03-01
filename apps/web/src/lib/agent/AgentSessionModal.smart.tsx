@@ -59,7 +59,6 @@ interface AgentSessionModalSmartProps {
 
 const EMPTY_TERMINAL: TerminalLine[] = [];
 const EMPTY_TASKS: AgentSessionTask[] = [];
-const EMPTY_REASONING: never[] = [];
 
 function AgentSessionModalSmart({ agentId, open, onClose }: AgentSessionModalSmartProps) {
 	const typedAgentId = agentId as GenericId<"agents"> | null;
@@ -134,7 +133,6 @@ function AgentSessionModalSmart({ agentId, open, onClose }: AgentSessionModalSma
 						agent={agent}
 						tasks={tasks}
 						terminalLines={terminalLines}
-						reasoningSteps={EMPTY_REASONING}
 						className="h-full"
 					/>
 				)}

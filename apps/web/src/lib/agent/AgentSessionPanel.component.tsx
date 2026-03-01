@@ -1,8 +1,6 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { AgentReasoning } from "@/lib/agent/AgentReasoning.component";
-import type { AgentReasoningStep } from "@/lib/agent/AgentReasoning.component";
 import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
 import { PixelBadge } from "@/lib/pixel/PixelBadge";
 import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
@@ -35,11 +33,10 @@ interface AgentSessionPanelProps {
 	agent: AgentSessionAgent;
 	tasks: AgentSessionTask[];
 	terminalLines: TerminalLine[];
-	reasoningSteps: AgentReasoningStep[];
 	className?: string;
 }
 
-type AgentSessionTab = "terminal" | "tasks" | "reasoning";
+type AgentSessionTab = "terminal" | "tasks";
 
 // ── Constants ────────────────────────────────────────────
 
@@ -79,13 +76,7 @@ const TASK_BADGE_COLOR: Record<string, "muted" | "yellow" | "orange" | "blue" | 
 
 // ── Component ────────────────────────────────────────────
 
-function AgentSessionPanel({
-	agent,
-	tasks,
-	terminalLines,
-	reasoningSteps,
-	className,
-}: AgentSessionPanelProps) {
+function AgentSessionPanel({ agent, tasks, terminalLines, className }: AgentSessionPanelProps) {
 	const [activeTab, setActiveTab] = useState<AgentSessionTab>("terminal");
 
 	const glowColor = STATUS_GLOW[agent.status] ?? "muted";
@@ -93,7 +84,7 @@ function AgentSessionPanel({
 	const isPulsing =
 		agent.status === "working" || agent.status === "thinking" || agent.status === "coding";
 
-	const tabs: AgentSessionTab[] = ["terminal", "tasks", "reasoning"];
+	const tabs: AgentSessionTab[] = ["terminal", "tasks"];
 
 	return (
 		<div className={cn("flex flex-col", className)}>
@@ -153,9 +144,6 @@ function AgentSessionPanel({
 					/>
 				)}
 				{activeTab === "tasks" && <AgentSessionTasks tasks={tasks} />}
-				{activeTab === "reasoning" && (
-					<AgentReasoning steps={reasoningSteps} title={`${agent.name} reasoning`} />
-				)}
 			</div>
 		</div>
 	);

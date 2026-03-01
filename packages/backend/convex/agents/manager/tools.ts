@@ -61,7 +61,7 @@ export const createTaskTool = createTool({
 
 export const spawnAgentTool = createTool({
 	description:
-		"Spawn a new sub-agent at an available desk. If taskId is provided, the agent is automatically assigned and starts working immediately.",
+		"Spawn a new sub-agent at an available desk. If taskId is provided, the agent is automatically assigned and starts working immediately. Will FAIL if the task is already assigned to another agent, already in progress, or has unmet dependencies.",
 	inputSchema: z.object({
 		name: z.string().describe("Agent display name"),
 		role: z
@@ -80,14 +80,29 @@ export const spawnAgentTool = createTool({
 
 		if (taskId) {
 			const typedTaskId = taskId as Id<"tasks">;
-			await ctx.runMutation(internal.tasks.mutations.assignInternal, {
-				taskId: typedTaskId,
-				agentId,
-			});
-			await agentPool.enqueueAction(ctx, internal.agents.runner.runSubAgent, {
-				agentId,
-				taskId: typedTaskId,
-			});
+			try {
+				await ctx.runMutation(internal.tasks.mutations.assignInternal, {
+					taskId: typedTaskId,
+					agentId,
+				});
+				await agentPool.enqueueAction(ctx, internal.agents.runner.runSubAgent, {
+					agentId,
+					taskId: typedTaskId,
+				});
+			} catch (err) {
+				// Assignment failed (duplicate, deps unmet, etc.) — despawn the orphan agent
+				await ctx.runMutation(internal.office.mutations.despawnAgentInternal, {
+					agentId,
+				});
+				const reason = err instanceof Error ? err.message : String(err);
+				return {
+					agentId: null,
+					name,
+					role,
+					model,
+					message: `FAILED to assign task: ${reason}. Agent was not spawned.`,
+				};
+			}
 		}
 
 		return {

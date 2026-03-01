@@ -76,9 +76,13 @@ export function createFilesystemSkills(ctx: RunnerCtx, agentId: string) {
 
 		search_files: tool({
 			description:
-				"Search for files matching a glob/regex pattern under a directory. Returns matching file paths.",
+				"Search for files matching a glob/regex pattern under a directory. Returns matching file paths. IMPORTANT: Use the most specific directory possible (e.g., `/home/company/my-project/src` instead of `/home/company`) to avoid slow searches across large directories.",
 			inputSchema: z.object({
-				path: z.string().describe("Base directory to search in"),
+				path: z
+					.string()
+					.describe(
+						"Base directory to search in. Use the narrowest path possible — avoid searching `/home/company` directly.",
+					),
 				pattern: z.string().describe("Glob or regex pattern to match file names"),
 			}),
 			execute: async ({ path, pattern }) => {

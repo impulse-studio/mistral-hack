@@ -5,6 +5,7 @@ import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { runComputerUseTask } from "./browser/runner";
 import { runAgenticTask } from "./agenticRunner";
+import type { ContinuationState } from "./agenticRunner";
 import { roleHas } from "./shared/capabilities";
 import type { RunnerResult } from "./shared/types";
 
@@ -56,7 +57,7 @@ export const runSubAgent = internalAction({
 			return { success: false, error: errorMsg };
 		}
 
-		// 2. Update statuses
+		// 2. Update statuses (idempotent — safe for continuation re-entry)
 		await ctx.runMutation(internal.office.mutations.updateAgentStatus, {
 			agentId,
 			status: "working",
@@ -95,13 +96,58 @@ export const runSubAgent = internalAction({
 				envVars: Object.keys(envVars).length > 0 ? envVars : undefined,
 			});
 
+			// Load existing continuation state (if this is a resumed run)
+			const continuation = await ctx.runQuery(internal.agents.continuations.getLatest, { taskId });
+			const continuationState: ContinuationState | undefined = continuation
+				? {
+						messages: continuation.messages,
+						stepsCompleted: continuation.stepsCompleted,
+						continuationCount: continuation.continuationCount,
+					}
+				: undefined;
+
 			// Dispatch: browser/designer use vision-action loop, all others use agentic runner
 			let outcome: RunnerResult;
 			if (agent.role === "browser" || agent.role === "designer") {
 				outcome = await runComputerUseTask(ctx, agentId, task);
 			} else {
-				outcome = await runAgenticTask(ctx, agentId, task, agent.role, agent.name);
+				outcome = await runAgenticTask(
+					ctx,
+					agentId,
+					task,
+					agent.role,
+					agent.name,
+					continuationState,
+				);
 			}
+
+			// ── Continuation handling ──
+			// If the runner returned continuation data, persist state and schedule next run.
+			// Do NOT call onSubAgentComplete — task is still in progress.
+			if (outcome.continuation) {
+				await ctx.runMutation(internal.agents.continuations.save, {
+					agentId,
+					taskId,
+					messages: outcome.continuation.messages,
+					stepsCompleted: outcome.continuation.stepsCompleted,
+					continuationCount: outcome.continuation.continuationCount,
+				});
+				await ctx.runMutation(internal.agents.continuations.scheduleContinuation, {
+					agentId,
+					taskId,
+				});
+				await ctx.runMutation(internal.logs.mutations.append, {
+					agentId,
+					type: "status",
+					content: `Task continuing (run ${outcome.continuation.continuationCount + 1}/4)...`,
+				});
+				// Agent stays "working", task stays "in_progress"
+				return { success: true, result: "continuation scheduled" };
+			}
+
+			// ── Normal completion ──
+			// Clean up any leftover continuation record
+			await ctx.runMutation(internal.agents.continuations.cleanup, { taskId });
 
 			const { success: taskSuccess, result } = outcome;
 			const finalStatus = taskSuccess ? "done" : "failed";
@@ -138,6 +184,9 @@ export const runSubAgent = internalAction({
 			return { success: taskSuccess, result };
 		} catch (error) {
 			const errorMsg = error instanceof Error ? error.message : String(error);
+
+			// Clean up continuation on unrecoverable errors
+			await ctx.runMutation(internal.agents.continuations.cleanup, { taskId });
 
 			await ctx.runMutation(internal.tasks.mutations.updateStatusInternal, {
 				taskId,

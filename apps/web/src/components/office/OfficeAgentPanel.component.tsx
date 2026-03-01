@@ -2,9 +2,9 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerClose, DrawerContent } from "@/components/ui/drawer";
-import { AgentReasoning } from "@/lib/agent/AgentReasoning.component";
+import { AgentChat } from "@/lib/agent/AgentChat.component";
+import type { AgentChatMessage } from "@/lib/agent/AgentChat.component";
 import { cn } from "@/lib/utils";
-import type { AgentReasoningStep } from "@/lib/agent/AgentReasoning.component";
 import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
 import { PixelBadge } from "@/lib/pixel/PixelBadge";
 import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
@@ -43,14 +43,14 @@ interface OfficeAgentPanelProps {
 	} | null;
 	tasks: OfficeAgentPanelTask[];
 	terminalLines: TerminalLine[];
-	reasoningSteps: AgentReasoningStep[];
+	chatMessages?: AgentChatMessage[];
 	deliverables?: OfficeAgentPanelDeliverable[];
 	latestScreenshotUrl?: string | null;
 	onClose: () => void;
 	onOpenWorkerBoards?: () => void;
 }
 
-type OfficeAgentPanelTab = "tasks" | "terminal" | "screen" | "reasoning" | "files";
+type OfficeAgentPanelTab = "tasks" | "chat" | "terminal" | "screen" | "files";
 
 const AGENT_PANEL_STATUS_GLOW: Record<string, "green" | "cyan" | "muted" | "red" | "yellow"> = {
 	working: "green",
@@ -77,20 +77,20 @@ export function OfficeAgentPanel({
 	agent,
 	tasks,
 	terminalLines,
-	reasoningSteps,
+	chatMessages,
 	deliverables,
 	latestScreenshotUrl,
 	onClose,
 	onOpenWorkerBoards,
 }: OfficeAgentPanelProps) {
-	const [activeTab, setActiveTab] = useState<OfficeAgentPanelTab>("tasks");
+	const [activeTab, setActiveTab] = useState<OfficeAgentPanelTab>("chat");
 
 	const glowColor = agent ? (AGENT_PANEL_STATUS_GLOW[agent.status] ?? "muted") : "muted";
 	const badgeColor = agent ? (AGENT_PANEL_STATUS_BADGE[agent.status] ?? "muted") : "muted";
 	const isPulsing =
 		agent?.status === "working" || agent?.status === "thinking" || agent?.status === "coding";
 
-	const tabs: OfficeAgentPanelTab[] = ["tasks", "terminal", "screen", "reasoning"];
+	const tabs: OfficeAgentPanelTab[] = ["chat", "tasks", "terminal", "screen"];
 	if (deliverables && deliverables.length > 0) {
 		tabs.push("files");
 	}
@@ -172,6 +172,14 @@ export function OfficeAgentPanel({
 
 						{/* Content */}
 						<div className="flex-1 overflow-auto p-4">
+							{activeTab === "chat" && (
+								<AgentChat
+									messages={chatMessages ?? []}
+									title={`${agent.name} conversation`}
+									streaming={isPulsing}
+									className="h-full"
+								/>
+							)}
 							{activeTab === "tasks" && <OfficeAgentPanelTasks tasks={tasks} />}
 							{activeTab === "terminal" && (
 								<TerminalOutput
@@ -183,9 +191,6 @@ export function OfficeAgentPanel({
 							)}
 							{activeTab === "screen" && (
 								<OfficeAgentPanelScreen screenshotUrl={latestScreenshotUrl ?? null} />
-							)}
-							{activeTab === "reasoning" && (
-								<AgentReasoning steps={reasoningSteps} title={`${agent.name} reasoning`} />
 							)}
 							{activeTab === "files" && (
 								<OfficeAgentPanelDeliverables deliverables={deliverables ?? []} />

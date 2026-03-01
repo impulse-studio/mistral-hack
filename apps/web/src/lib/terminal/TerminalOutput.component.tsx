@@ -21,7 +21,10 @@ type TerminalLineType =
 	| "status"
 	| "tool_call"
 	| "tool_result"
-	| "screenshot";
+	| "screenshot"
+	| "reasoning"
+	| "assistant_text"
+	| "usage";
 
 interface TerminalLine {
 	id: string;
@@ -49,6 +52,9 @@ const LOG_TYPE_COLOR: Record<string, string> = {
 	status: "text-yellow-400/90",
 	screenshot: "text-blue-400/80",
 	stdout: "text-green-400/90",
+	reasoning: "text-cyan-300/80",
+	assistant_text: "text-green-300/90",
+	usage: "text-muted-foreground/50",
 };
 
 const STATUS_GLOW = {

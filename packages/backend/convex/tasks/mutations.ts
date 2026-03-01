@@ -56,6 +56,21 @@ export const assign = mutation({
 		if (!task) throw new Error(`Task ${taskId} not found`);
 		if (task.assignedTo === agentId) return;
 
+		// Reject if task is already assigned to a different active agent
+		if (task.assignedTo) {
+			const existing = await ctx.db.get(task.assignedTo);
+			if (existing && existing.status !== "despawning" && existing.status !== "failed") {
+				throw new Error(
+					`Task "${task.title}" is already assigned to agent "${existing.name}" (${existing.role})`,
+				);
+			}
+		}
+
+		// Reject if task is already in_progress or done
+		if (task.status === "in_progress" || task.status === "done") {
+			throw new Error(`Task "${task.title}" is already ${task.status} — cannot reassign`);
+		}
+
 		// Enforce dependency gate
 		const unmet = await getUnmetDependencies(ctx.db, task);
 		if (unmet.length > 0) {
@@ -161,6 +176,22 @@ export const assignInternal = internalMutation({
 		const task = await ctx.db.get(taskId);
 		if (!task) throw new Error(`Task ${taskId} not found`);
 		if (task.assignedTo === agentId) return;
+
+		// Reject if task is already assigned to a different agent
+		if (task.assignedTo) {
+			const existing = await ctx.db.get(task.assignedTo);
+			// Only block if the other agent is still active (not despawning/failed)
+			if (existing && existing.status !== "despawning" && existing.status !== "failed") {
+				throw new Error(
+					`Task "${task.title}" is already assigned to agent "${existing.name}" (${existing.role})`,
+				);
+			}
+		}
+
+		// Reject if task is already in_progress or done
+		if (task.status === "in_progress" || task.status === "done") {
+			throw new Error(`Task "${task.title}" is already ${task.status} — cannot reassign`);
+		}
 
 		// Enforce dependency gate
 		const unmet = await getUnmetDependencies(ctx.db, task);

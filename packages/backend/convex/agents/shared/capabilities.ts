@@ -9,7 +9,7 @@ export type SandboxCapability =
 	| "web";
 
 export const roleCapabilities: Record<string, SandboxCapability[]> = {
-	coder: ["shell", "vibe", "git", "deploy", "github", "filesystem"],
+	coder: ["shell", "vibe", "git", "deploy", "github", "filesystem", "web"],
 	browser: ["shell", "computerUse", "filesystem"],
 	designer: ["shell", "computerUse", "filesystem"],
 	researcher: ["shell", "git", "filesystem", "web"],

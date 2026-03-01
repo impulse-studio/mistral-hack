@@ -183,7 +183,7 @@ export async function runComputerUseTask(
 		);
 
 		// Ask Mistral Large to decide next action
-		const { object: nextAction } = await generateObject({
+		const { object: nextAction, usage: stepUsage } = await generateObject({
 			model,
 			schema: ActionSchema,
 			messages: [
@@ -228,10 +228,31 @@ Rules:
 			],
 		});
 
-		// Log the action
+		// Log the action + usage
 		const actionDesc = formatAction(nextAction);
 		actionLog.push(actionDesc);
-		await log(ctx, agentId, "command", `Action ${i + 1}: ${actionDesc}`);
+
+		const browserEntries: Array<{ type: "reasoning" | "usage" | "command"; content: string }> = [
+			{ type: "command", content: `Action ${i + 1}: ${actionDesc}` },
+		];
+
+		if (stepUsage) {
+			browserEntries.push({
+				type: "usage",
+				content: JSON.stringify({
+					step: i + 1,
+					inputTokens: stepUsage.inputTokens ?? 0,
+					outputTokens: stepUsage.outputTokens ?? 0,
+					reasoningTokens: stepUsage.outputTokenDetails?.reasoningTokens ?? 0,
+					totalTokens: stepUsage.totalTokens ?? 0,
+				}),
+			});
+		}
+
+		await ctx.runMutation(internal.logs.mutations.appendBatch, {
+			agentId,
+			entries: browserEntries,
+		});
 
 		// Execute the action
 		if (nextAction.action === "done") {
@@ -433,7 +454,7 @@ function formatAction(action: Action): string {
 async function log(ctx: RunnerCtx, agentId: string, type: string, content: string): Promise<void> {
 	await ctx.runMutation(internal.logs.mutations.append, {
 		agentId,
-		type: type as "status" | "command" | "stdout" | "stderr",
+		type: type as "status" | "command" | "stdout" | "stderr" | "reasoning" | "usage",
 		content,
 	});
 }

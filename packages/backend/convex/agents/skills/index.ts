@@ -1,4 +1,5 @@
 import { roleCapabilities } from "../shared/capabilities";
+import { updateTaskStatusTool, commentOnTaskTool } from "../shared/tools";
 import type { RunnerCtx } from "../shared/types";
 import { createShellSkills } from "./shell";
 import { createFilesystemSkills } from "./filesystem";
@@ -11,6 +12,7 @@ import { createVibeSkills } from "./vibe";
 /**
  * Assemble the full skillset for an agent based on its role capabilities.
  * Each skill group is conditionally included based on `roleCapabilities[role]`.
+ * All agents get task tools (updateTaskStatus, commentOnTask) for progress reporting.
  */
 export function buildSkillset(ctx: RunnerCtx, agentId: string, role: string) {
 	const caps = roleCapabilities[role] ?? [];
@@ -18,6 +20,12 @@ export function buildSkillset(ctx: RunnerCtx, agentId: string, role: string) {
 		string,
 		ReturnType<typeof createShellSkills>[keyof ReturnType<typeof createShellSkills>]
 	> = {};
+
+	// Task tools — all agents can report progress and comment on their task
+	Object.assign(skills, {
+		updateTaskStatus: updateTaskStatusTool,
+		commentOnTask: commentOnTaskTool,
+	});
 
 	if (caps.includes("shell")) Object.assign(skills, createShellSkills(ctx, agentId));
 	if (caps.includes("filesystem")) Object.assign(skills, createFilesystemSkills(ctx, agentId));

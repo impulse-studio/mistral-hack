@@ -49,6 +49,9 @@ export const logTypeValidator = v.union(
 	v.literal("tool_call"),
 	v.literal("tool_result"),
 	v.literal("screenshot"),
+	v.literal("reasoning"),
+	v.literal("assistant_text"),
+	v.literal("usage"),
 );
 
 export const messageMetadataValidator = v.record(v.string(), v.string());
@@ -312,6 +315,21 @@ export const userQuestionDoc = v.object({
 	...userQuestionFields,
 });
 
+export const continuationFields = {
+	agentId: v.id("agents"),
+	taskId: v.id("tasks"),
+	messages: v.string(), // JSON-serialized Array<ResponseMessage>
+	stepsCompleted: v.number(),
+	continuationCount: v.number(), // 1-indexed, cap at MAX_CONTINUATIONS
+	createdAt: v.number(),
+};
+
+export const continuationDoc = v.object({
+	_id: v.id("continuations"),
+	_creationTime: v.number(),
+	...continuationFields,
+});
+
 export const userPreferencesFields = {
 	userId: v.string(), // better-auth user ID
 	onboardingCompleted: v.boolean(),
@@ -381,6 +399,11 @@ export default defineSchema({
 
 	// User preferences — per-user settings (onboarding, etc.)
 	userPreferences: defineTable(userPreferencesFields).index("by_user", ["userId"]),
+
+	// Continuations — persisted conversation state for resuming timed-out agent runs
+	continuations: defineTable(continuationFields)
+		.index("by_task", ["taskId"])
+		.index("by_agent", ["agentId"]),
 
 	// Documents — shared knowledge base (agent notes, specs, uploads)
 	documents: defineTable(documentFields)
