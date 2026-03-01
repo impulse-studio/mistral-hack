@@ -244,6 +244,53 @@ export const getAgentWindows = action({
 	},
 });
 
+// === Document Hub ===
+
+export const listDocuments = action({
+	args: { type: v.optional(v.string()) },
+	handler: async (ctx, { type }): Promise<unknown> => {
+		return await ctx.runQuery(internal.documents.queries.listInternal, {
+			type: type as "note" | "reference" | "code_doc" | "upload" | undefined,
+			limit: 20,
+		});
+	},
+});
+
+export const getDocument = action({
+	args: { documentId: v.id("documents") },
+	handler: async (ctx, { documentId }): Promise<unknown> => {
+		return await ctx.runQuery(internal.documents.queries.getInternal, { documentId });
+	},
+});
+
+export const searchDocuments = action({
+	args: { query: v.string() },
+	handler: async (ctx, { query }): Promise<unknown> => {
+		return await ctx.runQuery(internal.documents.queries.searchInternal, {
+			query,
+			limit: 10,
+		});
+	},
+});
+
+export const createDocument = action({
+	args: {
+		title: v.string(),
+		content: v.string(),
+		type: v.string(),
+		tags: v.array(v.string()),
+	},
+	handler: async (ctx, { title, content, type, tags }): Promise<unknown> => {
+		return await ctx.runMutation(internal.documents.mutations.createInternal, {
+			title,
+			content,
+			type: type as "note" | "reference" | "code_doc",
+			tags,
+			createdBy: "agent",
+		});
+	},
+});
+
 // === Agent Runner ===
 
 export const runSubAgent = action({

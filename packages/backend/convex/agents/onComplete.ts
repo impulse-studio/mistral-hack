@@ -28,10 +28,31 @@ export const onSubAgentComplete = internalMutation({
 			}
 		}
 
+		// Auto-save task result as a document in the Doc Hub
+		const agent = await ctx.db.get(agentId);
+		if (result && result.length > 10) {
+			const role = agent?.role ?? "general";
+			const docType = role === "coder" ? "code_doc" : role === "copywriter" ? "reference" : "note";
+			const tags = [role, success ? "completed" : "failed"];
+			if (task?.title) tags.push(...task.title.toLowerCase().split(/\s+/).slice(0, 3));
+
+			const now = Date.now();
+			await ctx.db.insert("documents", {
+				title: task?.title ?? "Task Result",
+				content: result.slice(0, 50_000), // cap at 50k chars
+				type: docType as "note" | "reference" | "code_doc",
+				tags,
+				createdBy: "agent" as const,
+				agentId,
+				taskId,
+				updatedAt: now,
+				createdAt: now,
+			});
+		}
+
 		// Transition agent based on outcome:
 		// - Success → idle (keep desk and sandbox warm for mailbox reuse)
 		// - Failure → keep "failed" status so the UI reflects it and manager sees it
-		const agent = await ctx.db.get(agentId);
 		if (agent && agent.status !== "despawning") {
 			if (success) {
 				// Go idle — ready for follow-up work via mailbox

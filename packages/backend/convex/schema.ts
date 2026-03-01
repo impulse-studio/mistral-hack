@@ -172,6 +172,28 @@ export const deskFields = {
 	occupiedBy: v.optional(v.id("agents")),
 };
 
+export const documentTypeValidator = v.union(
+	v.literal("note"),
+	v.literal("reference"),
+	v.literal("code_doc"),
+	v.literal("upload"),
+);
+
+export const documentFields = {
+	title: v.string(),
+	content: v.optional(v.string()),
+	storageId: v.optional(v.id("_storage")),
+	mimeType: v.optional(v.string()),
+	sizeBytes: v.optional(v.number()),
+	type: documentTypeValidator,
+	tags: v.array(v.string()),
+	createdBy: v.union(v.literal("user"), v.literal("manager"), v.literal("agent")),
+	agentId: v.optional(v.id("agents")),
+	taskId: v.optional(v.id("tasks")),
+	updatedAt: v.number(),
+	createdAt: v.number(),
+};
+
 export const deliverableTypeValidator = v.union(
 	v.literal("pdf"),
 	v.literal("html"),
@@ -278,6 +300,12 @@ export const deliverableDoc = v.object({
 	...deliverableFields,
 });
 
+export const documentDoc = v.object({
+	_id: v.id("documents"),
+	_creationTime: v.number(),
+	...documentFields,
+});
+
 export const userQuestionDoc = v.object({
 	_id: v.id("userQuestions"),
 	_creationTime: v.number(),
@@ -339,4 +367,15 @@ export default defineSchema({
 
 	// User questions — structured questions from manager to user
 	userQuestions: defineTable(userQuestionFields).index("by_thread_status", ["threadId", "status"]),
+
+	// Documents — shared knowledge base (agent notes, specs, uploads)
+	documents: defineTable(documentFields)
+		.index("by_type", ["type"])
+		.index("by_updatedAt", ["updatedAt"])
+		.index("by_agent", ["agentId"])
+		.index("by_task", ["taskId"])
+		.searchIndex("search_title_content", {
+			searchField: "title",
+			filterFields: ["type"],
+		}),
 });

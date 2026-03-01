@@ -9,6 +9,7 @@ export function Header() {
 		{ to: "/", label: "Home" },
 		{ to: "/office", label: "Office" },
 		{ to: "/ai", label: "AI Chat" },
+		{ to: "/docs", label: "Docs" },
 		{ to: "/test", label: "Debug Daytona" },
 	] as const;
 
