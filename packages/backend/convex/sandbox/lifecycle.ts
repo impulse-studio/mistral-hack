@@ -5,9 +5,57 @@ import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { getDaytona, withRetry } from "./helpers";
+import { SHARED_WORKSPACE, SANDBOX_GIT_USER, SANDBOX_GIT_EMAIL } from "./constants";
 
 const SHARED_VOLUME_NAME = "ai-office-workspace";
-const SHARED_VOLUME_MOUNT = "/home/company";
+const SHARED_VOLUME_MOUNT = SHARED_WORKSPACE;
+
+/**
+ * Provision a sandbox after creation or reconnect:
+ * - Configure git identity (fixes "Author identity unknown")
+ * - Install Mistral Vibe CLI (coding agent tool)
+ * - Install gh CLI if GITHUB_TOKEN is available
+ */
+async function provisionSandbox(sandbox: {
+	process: { executeCommand: (cmd: string) => Promise<unknown> };
+}): Promise<void> {
+	await sandbox.process.executeCommand(
+		`git config --global user.name "${SANDBOX_GIT_USER}" && git config --global user.email "${SANDBOX_GIT_EMAIL}"`,
+	);
+
+	// Force npm to use IPv4 — Daytona sandboxes block IPv6, causing hangs
+	await sandbox.process.executeCommand("npm config set prefer-family ipv4").catch(() => {});
+
+	// Install Mistral Vibe CLI if not present (best-effort)
+	await sandbox.process
+		.executeCommand(
+			"which vibe > /dev/null 2>&1 || curl -LsSf https://mistral.ai/vibe/install.sh | bash",
+		)
+		.catch(() => {});
+
+	// Install gh CLI if not present (best-effort — uses passwordless sudo)
+	await sandbox.process
+		.executeCommand(
+			[
+				"which gh > /dev/null 2>&1 || {",
+				"  GH_VERSION=$(curl -sL https://api.github.com/repos/cli/cli/releases/latest | grep tag_name | cut -d'\"' -f4 | sed 's/v//')",
+				'  && curl -sL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" | tar xz -C /tmp',
+				"  && sudo cp /tmp/gh_${GH_VERSION}_linux_amd64/bin/gh /usr/local/bin/gh",
+				"  && sudo chmod +x /usr/local/bin/gh",
+				"}",
+			].join(" "),
+		)
+		.catch(() => {
+			// Non-fatal — gh may not be needed for every agent
+		});
+
+	// Authenticate gh with GITHUB_TOKEN if available
+	await sandbox.process
+		.executeCommand(
+			'test -n "$GITHUB_TOKEN" && echo "$GITHUB_TOKEN" | gh auth login --with-token 2>/dev/null || true',
+		)
+		.catch(() => {});
+}
 
 type SandboxResult = { sandboxId: Id<"sandbox">; daytonaId: string };
 
@@ -43,28 +91,37 @@ export const createSandbox = internalAction({
 		agentId: v.optional(v.id("agents")),
 		name: v.optional(v.string()),
 		envVars: v.optional(v.any()),
+		snapshotOverride: v.optional(v.string()),
 	},
-	handler: async (ctx, { agentId, name, envVars }): Promise<SandboxResult> => {
+	handler: async (ctx, { agentId, name, envVars, snapshotOverride }): Promise<SandboxResult> => {
 		try {
 			const daytona = getDaytona();
 			const volumeId = await ensureSharedVolume();
 
+			// Use explicit override, else fall back to system default
+			const snapshotName =
+				snapshotOverride ??
+				(await ctx.runQuery(internal.systemConfig.get, {
+					key: "default_snapshot",
+				}));
+
+			const baseParams = {
+				language: "typescript" as const,
+				volumes: [{ volumeId, mountPath: SHARED_VOLUME_MOUNT }],
+				labels: agentId ? { agentId } : undefined,
+				autoStopInterval: 30, // minutes — Daytona-level safety net for orphaned sandboxes
+				autoDeleteInterval: -1,
+				envVars: envVars as Record<string, string> | undefined,
+			};
+
 			const sandbox = await withRetry(() =>
-				daytona.create(
-					{
-						language: "typescript",
-						volumes: [{ volumeId, mountPath: SHARED_VOLUME_MOUNT }],
-						labels: agentId ? { agentId } : undefined,
-						autoStopInterval: 0,
-						autoDeleteInterval: -1,
-						envVars: envVars as Record<string, string> | undefined,
-					},
-					{ timeout: 60 },
-				),
+				snapshotName
+					? daytona.create({ ...baseParams, snapshot: snapshotName }, { timeout: 60 })
+					: daytona.create(baseParams, { timeout: 60 }),
 			);
 
-			// Ensure /home/user exists — Daytona sandboxes don't guarantee this path
-			await sandbox.process.executeCommand("mkdir -p /home/user");
+			// Provision sandbox (skip heavy installs if snapshot already has them)
+			await provisionSandbox(sandbox);
 
 			const sandboxId: Id<"sandbox"> = await ctx.runMutation(
 				internal.sandbox.mutations.ensureSandboxInternal,
@@ -218,7 +275,11 @@ export const ensureRunning = internalAction({
 			// Verify the sandbox still exists in Daytona (it may have been auto-deleted)
 			try {
 				const daytona = getDaytona();
-				await withRetry(() => daytona.findOne({ idOrName: sandboxRecord.daytonaId }));
+				const sandbox = await withRetry(() =>
+					daytona.findOne({ idOrName: sandboxRecord.daytonaId }),
+				);
+				// Re-provision on reconnect (git config, gh CLI)
+				await provisionSandbox(sandbox).catch(() => {});
 				return {
 					sandboxId: sandboxRecord._id,
 					daytonaId: sandboxRecord.daytonaId,
@@ -290,6 +351,34 @@ export const ensureComputerUseStarted = internalAction({
 		}
 
 		await withRetry(() => sandbox.computerUse.start());
+	},
+});
+
+// Destroy a sandbox by its Daytona ID (for viewer/template sandboxes)
+export const destroySandboxByDaytonaId = internalAction({
+	args: { daytonaId: v.string() },
+	handler: async (ctx, { daytonaId }): Promise<void> => {
+		try {
+			const daytona = getDaytona();
+			const sandbox = await withRetry(() => daytona.findOne({ idOrName: daytonaId }));
+			await withRetry(() => daytona.delete(sandbox));
+			console.log(`[destroySandboxByDaytonaId] Deleted Daytona sandbox ${daytonaId}`);
+		} catch (error) {
+			console.warn(
+				`[destroySandboxByDaytonaId] Could not delete sandbox: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+
+		// Mark DB record as archived if it exists
+		const record = await ctx.runQuery(internal.sandbox.queries.getByDaytonaIdInternal, {
+			daytonaId,
+		});
+		if (record) {
+			await ctx.runMutation(internal.sandbox.mutations.updateStatus, {
+				sandboxId: record._id,
+				status: "archived",
+			});
+		}
 	},
 });
 

@@ -157,13 +157,13 @@ export const idleTimeoutCheck = internalAction({
 			return null;
 		}
 
-		// Check agent is still idle
+		// Check agent is still idle or failed (both should be cleaned up)
 		const agent = await ctx.runQuery(internal.office.queries.getAgentInternal, {
 			agentId,
 		});
-		if (!agent || agent.status !== "idle") return null;
+		if (!agent || (agent.status !== "idle" && agent.status !== "failed")) return null;
 
-		// No messages, still idle → despawn
+		// No messages, still idle/failed → despawn
 		await ctx.runMutation(internal.office.mutations.despawnAgentInternal, { agentId });
 		await ctx.runMutation(internal.mailbox.mutations.deadLetterAll, { agentId });
 		await ctx.scheduler.runAfter(0, internal.sandbox.lifecycle.stopAgentSandbox, { agentId });

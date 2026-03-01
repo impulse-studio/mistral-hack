@@ -5,6 +5,7 @@ import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { runCommandStreaming } from "./streamLogs";
 import { getDaytona, escapeShellArg, withRetry } from "./helpers";
+import { SANDBOX_WORK_DIR } from "./constants";
 
 // Run Mistral Vibe headless CLI inside the agent's Daytona sandbox
 export const runVibeHeadless = internalAction({
@@ -31,11 +32,11 @@ export const runVibeHeadless = internalAction({
 		const daytona = getDaytona();
 		const sandbox = await withRetry(() => daytona.findOne({ idOrName: sandboxRecord.daytonaId }));
 
-		const dir = workingDir ?? "/home/user";
+		const dir = workingDir ?? SANDBOX_WORK_DIR;
 		// BUG 6 FIX: Use proper POSIX single-quote shell escaping
 		const escapedPrompt = escapeShellArg(prompt);
 		const escapedDir = escapeShellArg(dir);
-		const cmd = `cd ${escapedDir} && mistral-vibe --headless --prompt ${escapedPrompt}`;
+		const cmd = `cd ${escapedDir} && vibe --prompt ${escapedPrompt}`;
 
 		// Log the command before streaming output
 		await ctx.runMutation(internal.logs.mutations.append, {

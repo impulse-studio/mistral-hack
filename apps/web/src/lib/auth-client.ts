@@ -1,8 +1,10 @@
 import { convexClient } from "@convex-dev/better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
-import { env } from "@mistral-hack/env/web";
 
 export const authClient = createAuthClient({
-	baseURL: import.meta.env.DEV ? "http://localhost:3003" : env.VITE_CONVEX_SITE_URL,
+	// Dev: Vite proxy on localhost handles /api/auth/*
+	// Prod (SSR on Vercel): same-origin → TanStack Start server route proxies to Convex
+	// Using Convex site URL directly would break cookies (cross-domain)
+	baseURL: import.meta.env.DEV ? "http://localhost:3003" : undefined,
 	plugins: [convexClient()],
 });

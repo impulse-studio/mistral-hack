@@ -8,7 +8,12 @@ import type {
 	FloorColor,
 } from "./types";
 import { getCachedSprite, getOutlineSprite } from "./spriteCache";
-import { getCharacterSprites, BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE } from "./spriteData";
+import {
+	getCharacterSprites,
+	BUBBLE_PERMISSION_SPRITE,
+	BUBBLE_WAITING_SPRITE,
+	BUBBLE_COFFEE_SPRITE,
+} from "./spriteData";
 import { getCharacterSprite } from "./characters";
 import { renderMatrixEffect } from "./matrixEffect";
 import { getColorizedFloorSprite, hasFloorSprites, WALL_COLOR } from "./floorTiles";
@@ -114,15 +119,28 @@ export function renderScene(
 
 	// Furniture
 	for (const f of furniture) {
-		const cached = getCachedSprite(f.sprite, zoom);
 		const fx = offsetX + f.x * zoom;
 		const fy = offsetY + f.y * zoom;
-		drawables.push({
-			zY: f.zY,
-			draw: (c) => {
-				c.drawImage(cached, fx, fy);
-			},
-		});
+		if (f.image && f.image.complete && f.image.naturalWidth > 0) {
+			// Animated image (e.g. WebP) — draw scaled to sprite footprint
+			const w = f.sprite[0].length * zoom;
+			const h = f.sprite.length * zoom;
+			const img = f.image;
+			drawables.push({
+				zY: f.zY,
+				draw: (c) => {
+					c.drawImage(img, fx, fy, w, h);
+				},
+			});
+		} else {
+			const cached = getCachedSprite(f.sprite, zoom);
+			drawables.push({
+				zY: f.zY,
+				draw: (c) => {
+					c.drawImage(cached, fx, fy);
+				},
+			});
+		}
 	}
 
 	// Characters
@@ -464,7 +482,11 @@ export function renderBubbles(
 		if (!ch.bubbleType) continue;
 
 		const sprite =
-			ch.bubbleType === "permission" ? BUBBLE_PERMISSION_SPRITE : BUBBLE_WAITING_SPRITE;
+			ch.bubbleType === "permission"
+				? BUBBLE_PERMISSION_SPRITE
+				: ch.bubbleType === "coffee"
+					? BUBBLE_COFFEE_SPRITE
+					: BUBBLE_WAITING_SPRITE;
 
 		// Compute opacity: permission = full, waiting = fade in last 0.5s
 		let alpha = 1.0;

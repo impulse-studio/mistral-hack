@@ -10,6 +10,7 @@ export function Header() {
 		{ to: "/office", label: "Office" },
 		{ to: "/ai", label: "AI Chat" },
 		{ to: "/docs", label: "Docs" },
+		{ to: "/snapshots", label: "Sandboxes" },
 		{ to: "/test", label: "Debug Daytona" },
 	] as const;
 

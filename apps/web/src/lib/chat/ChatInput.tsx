@@ -1,4 +1,4 @@
-import { Mic, MicOff, Send } from "pixelarticons/react";
+import { Cancel, Mic, MicOff, Send } from "pixelarticons/react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 interface ChatInputProps {
 	onSend: (text: string) => void;
 	disabled?: boolean;
+	isManagerWorking?: boolean;
+	onFullStop?: () => void;
 	className?: string;
 	/** Voice recording state — provided by parent via useVoiceConverse. */
 	voiceRecording?: boolean;
@@ -22,6 +24,8 @@ interface ChatInputProps {
 function ChatInput({
 	onSend,
 	disabled = false,
+	isManagerWorking = false,
+	onFullStop,
 	className,
 	voiceRecording = false,
 	voiceProcessing = false,
@@ -32,15 +36,17 @@ function ChatInput({
 }: ChatInputProps) {
 	const [chatInputValue, setChatInputValue] = useState("");
 
+	const hasText = chatInputValue.trim() !== "";
+
 	function handleChatInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-		if (e.key === "Enter" && chatInputValue.trim() !== "" && !disabled) {
+		if (e.key === "Enter" && hasText && !disabled) {
 			onSend(chatInputValue.trim());
 			setChatInputValue("");
 		}
 	}
 
 	function handleChatInputSend() {
-		if (chatInputValue.trim() !== "" && !disabled) {
+		if (hasText && !disabled) {
 			onSend(chatInputValue.trim());
 			setChatInputValue("");
 		}
@@ -87,7 +93,7 @@ function ChatInput({
 		);
 	}
 
-	// Default state — text input + mic button
+	// Default state — text input + action button
 	return (
 		<div className={cn("flex h-16 items-center gap-2 border-t-2 border-border px-3", className)}>
 			<Button
@@ -104,18 +110,43 @@ function ChatInput({
 				value={chatInputValue}
 				onChange={(e) => setChatInputValue(e.target.value)}
 				onKeyDown={handleChatInputKeyDown}
-				placeholder="Type your message..."
+				placeholder={isManagerWorking ? "Cue a follow-up..." : "Type your message..."}
 				disabled={disabled}
 				className="flex-1 border-2 border-border bg-transparent px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:border-brand-accent focus:outline-none disabled:opacity-50"
 			/>
-			<Button
-				variant="default"
-				size="icon"
-				onClick={handleChatInputSend}
-				disabled={disabled || chatInputValue.trim() === ""}
-			>
-				<Send className="size-4" />
-			</Button>
+			{isManagerWorking && !hasText ? (
+				// Full Stop — manager working, no text
+				<Button
+					variant="ghost"
+					size="icon"
+					aria-label="Full stop"
+					onClick={onFullStop}
+					className="border-2 border-destructive bg-destructive/15 text-destructive hover:bg-destructive/25"
+				>
+					<Cancel className="size-4" />
+				</Button>
+			) : isManagerWorking && hasText ? (
+				// Cue — manager working, text present
+				<Button
+					variant="ghost"
+					size="icon"
+					aria-label="Queue message"
+					onClick={handleChatInputSend}
+					className="border-2 border-brand-accent bg-brand-accent/15 text-brand-accent hover:bg-brand-accent/25"
+				>
+					<Send className="size-4" />
+				</Button>
+			) : (
+				// Normal Send
+				<Button
+					variant="default"
+					size="icon"
+					onClick={handleChatInputSend}
+					disabled={disabled || !hasText}
+				>
+					<Send className="size-4" />
+				</Button>
+			)}
 		</div>
 	);
 }

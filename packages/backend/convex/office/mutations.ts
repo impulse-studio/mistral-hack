@@ -1,6 +1,8 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, internalMutation } from "../_generated/server";
+import { internal } from "../_generated/api";
 import { agentStatusValidator } from "../schema";
+import { agentPool } from "../workpool";
 
 // Initialize desks for the pixel-art office (8 worker + 1 manager)
 export const initDesks = mutation({
@@ -107,11 +109,52 @@ export const spawnAgent = mutation({
 	},
 	returns: v.id("agents"),
 	handler: async (ctx, args) => {
+		let desks = await ctx.db.query("desks").collect();
+
+		// Auto-init desks if the table is empty
+		if (desks.length === 0) {
+			const workerPositions = [
+				{ x: 1, y: 1 },
+				{ x: 2, y: 1 },
+				{ x: 3, y: 1 },
+				{ x: 4, y: 1 },
+				{ x: 1, y: 2 },
+				{ x: 2, y: 2 },
+				{ x: 3, y: 2 },
+				{ x: 4, y: 2 },
+			];
+			for (const position of workerPositions) {
+				await ctx.db.insert("desks", { position });
+			}
+			await ctx.db.insert("desks", { position: { x: 0, y: 0 }, label: "manager" });
+			desks = await ctx.db.query("desks").collect();
+		}
+
 		// Find an available worker desk (skip manager desk)
-		const desks = await ctx.db.query("desks").collect();
-		const availableDesk = desks.find((d) => !d.occupiedBy && d.label !== "manager");
+		let availableDesk = desks.find((d) => !d.occupiedBy && d.label !== "manager");
+
+		// If no desk available, try to free desks from stale agents (despawning/completed/failed)
 		if (!availableDesk) {
-			throw new ConvexError("No available desks — all worker desks are occupied");
+			const staleStatuses = new Set(["despawning", "completed", "failed"]);
+			for (const desk of desks) {
+				if (desk.occupiedBy && desk.label !== "manager") {
+					const occupant = await ctx.db.get(desk.occupiedBy);
+					if (!occupant || staleStatuses.has(occupant.status)) {
+						await ctx.db.patch(desk._id, { occupiedBy: undefined });
+						if (!availableDesk) {
+							availableDesk = { ...desk, occupiedBy: undefined };
+						}
+					}
+				}
+			}
+		}
+
+		if (!availableDesk) {
+			const occupied = desks.filter((d) => d.occupiedBy && d.label !== "manager").length;
+			const total = desks.filter((d) => d.label !== "manager").length;
+			throw new ConvexError(
+				`No available desks — ${occupied}/${total} worker desks are occupied by active agents`,
+			);
 		}
 
 		// Create the agent
@@ -189,11 +232,52 @@ export const spawnAgentInternal = internalMutation({
 	},
 	returns: v.id("agents"),
 	handler: async (ctx, args) => {
+		let desks = await ctx.db.query("desks").collect();
+
+		// Auto-init desks if the table is empty (same logic as ensureManager)
+		if (desks.length === 0) {
+			const workerPositions = [
+				{ x: 1, y: 1 },
+				{ x: 2, y: 1 },
+				{ x: 3, y: 1 },
+				{ x: 4, y: 1 },
+				{ x: 1, y: 2 },
+				{ x: 2, y: 2 },
+				{ x: 3, y: 2 },
+				{ x: 4, y: 2 },
+			];
+			for (const position of workerPositions) {
+				await ctx.db.insert("desks", { position });
+			}
+			await ctx.db.insert("desks", { position: { x: 0, y: 0 }, label: "manager" });
+			desks = await ctx.db.query("desks").collect();
+		}
+
 		// Find an available worker desk (skip manager desk)
-		const desks = await ctx.db.query("desks").collect();
-		const availableDesk = desks.find((d) => !d.occupiedBy && d.label !== "manager");
+		let availableDesk = desks.find((d) => !d.occupiedBy && d.label !== "manager");
+
+		// If no desk available, try to free desks from stale agents (despawning/completed/failed)
 		if (!availableDesk) {
-			throw new ConvexError("No available desks — all worker desks are occupied");
+			const staleStatuses = new Set(["despawning", "completed", "failed"]);
+			for (const desk of desks) {
+				if (desk.occupiedBy && desk.label !== "manager") {
+					const occupant = await ctx.db.get(desk.occupiedBy);
+					if (!occupant || staleStatuses.has(occupant.status)) {
+						await ctx.db.patch(desk._id, { occupiedBy: undefined });
+						if (!availableDesk) {
+							availableDesk = { ...desk, occupiedBy: undefined };
+						}
+					}
+				}
+			}
+		}
+
+		if (!availableDesk) {
+			const occupied = desks.filter((d) => d.occupiedBy && d.label !== "manager").length;
+			const total = desks.filter((d) => d.label !== "manager").length;
+			throw new ConvexError(
+				`No available desks — ${occupied}/${total} worker desks are occupied by active agents`,
+			);
 		}
 
 		const agentId = await ctx.db.insert("agents", {
@@ -234,61 +318,81 @@ export const despawnAgentInternal = internalMutation({
 	},
 });
 
-// Reset all worker agents — despawn, free desks, dead-letter mailbox, clear logs, unassign tasks
+// Full session reset — stop everything: agents, sandboxes, workpool, tasks, chat
 export const resetAllWorkers = mutation({
 	args: {},
 	returns: v.number(),
 	handler: async (ctx) => {
-		// Get all worker agents (any status except already despawning)
+		const now = Date.now();
+
+		// ── 1. Cancel all pending workpool jobs ──
+		// Running jobs will finish but won't be retried; pending jobs are dropped.
+		await agentPool.cancelAll(ctx);
+
+		// ── 2. Despawn ALL worker agents (including already-despawning ones) ──
 		const workers = await ctx.db
 			.query("agents")
 			.withIndex("by_type", (q) => q.eq("type", "worker"))
 			.collect();
 
-		const toReset = workers.filter((a) => a.status !== "despawning");
-		const now = Date.now();
-
-		for (const agent of toReset) {
-			// 1. Mark agent as despawning
-			await ctx.db.patch(agent._id, {
-				status: "despawning",
-				completedAt: now,
-				currentTaskId: undefined,
-			});
-
-			// 2. Free the desk
+		for (const agent of workers) {
+			if (agent.status !== "despawning") {
+				await ctx.db.patch(agent._id, {
+					status: "despawning",
+					completedAt: now,
+					currentTaskId: undefined,
+				});
+			}
 			if (agent.deskId) {
 				await ctx.db.patch(agent.deskId, { occupiedBy: undefined });
 			}
+		}
 
-			// 3. Dead-letter all pending mailbox messages
-			const pendingMail = await ctx.db
-				.query("agentMailbox")
-				.withIndex("by_recipient_status", (q) =>
-					q.eq("recipientId", agent._id).eq("status", "pending"),
-				)
-				.collect();
-			for (const msg of pendingMail) {
-				await ctx.db.patch(msg._id, { status: "dead_letter", processedAt: now });
-			}
+		// ── 3. Reset manager to idle (don't delete — it's permanent) ──
+		const manager = await ctx.db
+			.query("agents")
+			.withIndex("by_type", (q) => q.eq("type", "manager"))
+			.first();
+		if (manager && manager.status !== "idle") {
+			await ctx.db.patch(manager._id, {
+				status: "idle",
+				currentTaskId: undefined,
+				reasoning: undefined,
+			});
+		}
 
-			// 4. Clear agent logs + screenshots
-			const logs = await ctx.db
-				.query("agentLogs")
-				.withIndex("by_agent", (q) => q.eq("agentId", agent._id))
-				.collect();
-			for (const log of logs) {
-				if (log.screenshotId) {
-					await ctx.storage.delete(log.screenshotId);
-				}
-				await ctx.db.delete(log._id);
+		// ── 4. Nuke ALL sandboxes (Daytona + DB) in one shot ──
+		// cleanupAllSandboxes calls daytona.list() and deletes everything,
+		// then marks all DB records as archived — catches orphaned sandboxes too.
+		await ctx.scheduler.runAfter(0, internal.sandbox.lifecycle.cleanupAllSandboxes);
+
+		// ── 5. Mark all sandbox DB records as archived immediately ──
+		// (cleanupAllSandboxes will also do this, but we want instant UI feedback)
+		const allSandboxes = await ctx.db.query("sandbox").collect();
+		for (const sb of allSandboxes) {
+			if (sb.status !== "archived") {
+				await ctx.db.patch(sb._id, { status: "archived" });
 			}
 		}
 
-		// 5. Delete all tasks
+		// ── 6. Delete all mailbox messages (all agents) ──
+		const allMailbox = await ctx.db.query("agentMailbox").collect();
+		for (const msg of allMailbox) {
+			await ctx.db.delete(msg._id);
+		}
+
+		// ── 7. Delete all agent logs + screenshots ──
+		const allLogs = await ctx.db.query("agentLogs").collect();
+		for (const log of allLogs) {
+			if (log.screenshotId) {
+				await ctx.storage.delete(log.screenshotId);
+			}
+			await ctx.db.delete(log._id);
+		}
+
+		// ── 8. Delete all tasks + comments + deliverables ──
 		const allTasks = await ctx.db.query("tasks").collect();
 		for (const task of allTasks) {
-			// Delete related comments
 			const comments = await ctx.db
 				.query("taskComments")
 				.withIndex("by_task", (q) => q.eq("taskId", task._id))
@@ -296,23 +400,50 @@ export const resetAllWorkers = mutation({
 			for (const comment of comments) {
 				await ctx.db.delete(comment._id);
 			}
-
-			// Delete related deliverables
-			const deliverables = await ctx.db
-				.query("deliverables")
-				.withIndex("by_task", (q) => q.eq("taskId", task._id))
-				.collect();
-			for (const deliverable of deliverables) {
-				if (deliverable.storageId) {
-					await ctx.storage.delete(deliverable.storageId);
-				}
-				await ctx.db.delete(deliverable._id);
-			}
-
 			await ctx.db.delete(task._id);
 		}
 
-		return toReset.length;
+		const allDeliverables = await ctx.db.query("deliverables").collect();
+		for (const d of allDeliverables) {
+			if (d.storageId) {
+				await ctx.storage.delete(d.storageId);
+			}
+			await ctx.db.delete(d._id);
+		}
+
+		// ── 9. Delete all chat messages ──
+		const allMessages = await ctx.db.query("messages").collect();
+		for (const msg of allMessages) {
+			await ctx.db.delete(msg._id);
+		}
+
+		// ── 10. Delete all user questions ──
+		const allQuestions = await ctx.db.query("userQuestions").collect();
+		for (const q of allQuestions) {
+			await ctx.db.delete(q._id);
+		}
+
+		// ── 11. Delete agent-created documents ──
+		const agentDocs = await ctx.db.query("documents").collect();
+		for (const doc of agentDocs) {
+			if (doc.createdBy === "agent") {
+				if (doc.storageId) {
+					await ctx.storage.delete(doc.storageId);
+				}
+				await ctx.db.delete(doc._id);
+			}
+		}
+
+		// ── 12. Reset shared thread (new one created on next message) ──
+		const threadConfig = await ctx.db
+			.query("systemConfig")
+			.withIndex("by_key", (q) => q.eq("key", "shared-thread-id"))
+			.first();
+		if (threadConfig) {
+			await ctx.db.delete(threadConfig._id);
+		}
+
+		return workers.length;
 	},
 });
 

@@ -152,15 +152,16 @@ export const searchFiles = internalAction({
 		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 
 		const result = await withRetry(() => sandbox.fs.searchFiles(path, pattern));
+		const files = result?.files ?? [];
 
 		await recordAndLog(
 			ctx,
 			sandboxRecord._id,
 			agentId,
 			"status",
-			`Search: ${path} pattern="${pattern}" (${result.files.length} matches)`,
+			`Search: ${path} pattern="${pattern}" (${files.length} matches)`,
 		);
 
-		return { files: result.files };
+		return { files };
 	},
 });

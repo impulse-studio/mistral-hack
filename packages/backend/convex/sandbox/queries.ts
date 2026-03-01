@@ -44,12 +44,50 @@ export const getInternal = internalQuery({
 	},
 });
 
+// Get sandbox record by Daytona ID (internal — for viewer/template flow)
+export const getByDaytonaIdInternal = internalQuery({
+	args: { daytonaId: v.string() },
+	returns: v.union(sandboxDoc, v.null()),
+	handler: async (ctx, { daytonaId }) => {
+		return await ctx.db
+			.query("sandbox")
+			.filter((q) => q.eq(q.field("daytonaId"), daytonaId))
+			.first();
+	},
+});
+
 // List all sandboxes (internal — for lifecycle cleanup)
 export const getAllSandboxesInternal = internalQuery({
 	args: {},
 	returns: v.array(sandboxDoc),
 	handler: async (ctx) => {
 		return await ctx.db.query("sandbox").collect();
+	},
+});
+
+// Find running sandboxes whose agent is despawning, gone, or missing
+export const getOrphanedSandboxes = internalQuery({
+	args: {},
+	returns: v.array(sandboxDoc),
+	handler: async (ctx) => {
+		const running = await ctx.db
+			.query("sandbox")
+			.withIndex("by_status", (q) => q.eq("status", "running"))
+			.collect();
+
+		const orphaned = [];
+		for (const sb of running) {
+			if (!sb.agentId) {
+				// Legacy sandbox with no agent — orphaned
+				orphaned.push(sb);
+				continue;
+			}
+			const agent = await ctx.db.get(sb.agentId);
+			if (!agent || agent.status === "despawning") {
+				orphaned.push(sb);
+			}
+		}
+		return orphaned;
 	},
 });
 
