@@ -1,4 +1,4 @@
-import { ZOOM_DEFAULT_DPR_FACTOR, ZOOM_MIN } from "./constants";
+import { ZOOM_FIXED } from "./constants";
 
 /** Map status prefixes back to tool names for animation selection */
 export const STATUS_TO_TOOL: Record<string, string> = {
@@ -21,8 +21,7 @@ export function extractToolName(status: string): string | null {
 	return first || null;
 }
 
-/** Compute a default integer zoom level (device pixels per sprite pixel) */
+/** Fixed zoom level */
 export function defaultZoom(): number {
-	const dpr = window.devicePixelRatio || 1;
-	return Math.max(ZOOM_MIN, Math.round(ZOOM_DEFAULT_DPR_FACTOR * dpr));
+	return ZOOM_FIXED;
 }

@@ -3,31 +3,13 @@
  * without the editor-dependent OfficeCanvas from lib/pixelAgents.
  * Uses OfficeState + renderFrame + startGameLoop directly.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
-import { Button } from "@/components/ui/button";
-import { ZOOM_MAX, ZOOM_MIN, CAT_RENDER_WIDTH } from "@/lib/pixelAgents/constants";
+import { ZOOM_FIXED, CAT_RENDER_WIDTH } from "@/lib/pixelAgents/constants";
 import { startGameLoop } from "@/lib/pixelAgents/gameLoop";
 import type { OfficeState } from "@/lib/pixelAgents/officeState";
 import { renderFrame } from "@/lib/pixelAgents/renderer";
 import { TILE_SIZE } from "@/lib/pixelAgents/types";
-
-/** Step down from ZOOM_MAX until the office map fits within the container. */
-function computeFitZoom(
-	containerWidth: number,
-	containerHeight: number,
-	cols: number,
-	rows: number,
-): number {
-	const baseW = cols * TILE_SIZE;
-	const baseH = rows * TILE_SIZE;
-	for (let z = ZOOM_MAX; z > ZOOM_MIN; z--) {
-		if (baseW * z <= containerWidth && baseH * z <= containerHeight) {
-			return z;
-		}
-	}
-	return ZOOM_MIN;
-}
 
 /** Furniture UIDs that show pointer cursor on hover and fire onClickFurniture */
 const CLICKABLE_FURNITURE = new Set([
@@ -136,11 +118,8 @@ export function OfficeCanvas({
 }: OfficeCanvasProps) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
-	const [zoom, setZoom] = useState(ZOOM_MIN); // placeholder until container measured
-	const zoomRef = useRef(ZOOM_MIN);
+	const zoomRef = useRef(ZOOM_FIXED);
 	const panRef = useRef({ x: 0, y: 0 });
-	const zoomAccRef = useRef(0);
-	const initialZoomSet = useRef(false);
 	const docCountRef = useRef(0);
 
 	// Cat overlay: two DOM imgs so the browser natively animates GIF/WebP
@@ -149,15 +128,10 @@ export function OfficeCanvas({
 	const catPrevWalkingRef = useRef(false);
 
 	useEffect(() => {
-		zoomRef.current = zoom;
-	}, [zoom]);
-
-	useEffect(() => {
 		docCountRef.current = documentCount;
 	}, [documentCount]);
 
 	// Resize canvas to container (DPR-aware for crisp pixels)
-	// On first measure, also compute the best-fit zoom for the office.
 	const resize = useCallback(() => {
 		const canvas = canvasRef.current;
 		const container = containerRef.current;
@@ -169,15 +143,7 @@ export function OfficeCanvas({
 		canvas.height = Math.round(h * dpr);
 		canvas.style.width = `${w}px`;
 		canvas.style.height = `${h}px`;
-
-		if (!initialZoomSet.current && w > 0 && h > 0) {
-			initialZoomSet.current = true;
-			const layout = officeState.getLayout();
-			const fitZoom = computeFitZoom(w, h, layout.cols, layout.rows);
-			setZoom(fitZoom);
-			zoomRef.current = fitZoom;
-		}
-	}, [officeState]);
+	}, []);
 
 	useEffect(() => {
 		resize();
@@ -262,17 +228,6 @@ export function OfficeCanvas({
 
 		return stopLoop;
 	}, [officeState]);
-
-	// Zoom via mouse wheel
-	const handleWheel = useCallback((e: React.WheelEvent) => {
-		e.preventDefault();
-		zoomAccRef.current += e.deltaY;
-		const threshold = 50;
-		if (Math.abs(zoomAccRef.current) < threshold) return;
-		const dir = zoomAccRef.current < 0 ? 1 : -1;
-		zoomAccRef.current = 0;
-		setZoom((z) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z + dir)));
-	}, []);
 
 	// Click → hit-test agents
 	const handleClick = useCallback(
@@ -388,7 +343,6 @@ export function OfficeCanvas({
 		<div ref={containerRef} className="relative h-full w-full overflow-hidden">
 			<canvas
 				ref={canvasRef}
-				onWheel={handleWheel}
 				onClick={handleClick}
 				onPointerDown={handlePointerDown}
 				onPointerMove={handlePointerMove}
@@ -405,8 +359,8 @@ export function OfficeCanvas({
 				className="pointer-events-none absolute"
 				style={{
 					imageRendering: "pixelated",
-					width: CAT_RENDER_WIDTH * ZOOM_MIN,
-					height: CAT_RENDER_WIDTH * ZOOM_MIN * 0.8,
+					width: CAT_RENDER_WIDTH * ZOOM_FIXED,
+					height: CAT_RENDER_WIDTH * ZOOM_FIXED * 0.8,
 				}}
 			/>
 			<img
@@ -416,32 +370,11 @@ export function OfficeCanvas({
 				className="pointer-events-none absolute"
 				style={{
 					imageRendering: "pixelated",
-					width: CAT_RENDER_WIDTH * ZOOM_MIN,
-					height: CAT_RENDER_WIDTH * ZOOM_MIN * 0.8,
+					width: CAT_RENDER_WIDTH * ZOOM_FIXED,
+					height: CAT_RENDER_WIDTH * ZOOM_FIXED * 0.8,
 					display: "none",
 				}}
 			/>
-
-			{/* Zoom controls */}
-			<div className="absolute bottom-4 right-4 flex flex-col items-center gap-1 font-mono text-[10px]">
-				<Button
-					variant="default"
-					size="icon-sm"
-					className="text-muted-foreground"
-					onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + 1))}
-				>
-					+
-				</Button>
-				<span className="text-muted-foreground">{zoom}×</span>
-				<Button
-					variant="default"
-					size="icon-sm"
-					className="text-muted-foreground"
-					onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - 1))}
-				>
-					−
-				</Button>
-			</div>
 		</div>
 	);
 }

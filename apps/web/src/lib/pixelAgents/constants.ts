@@ -72,8 +72,11 @@ export const CAMERA_FOLLOW_LERP = 0.1;
 export const CAMERA_FOLLOW_SNAP_THRESHOLD = 0.5;
 
 // ── Zoom ─────────────────────────────────────────────────────
-export const ZOOM_MIN = 1;
-export const ZOOM_MAX = 10;
+export const ZOOM_FIXED = 3;
+/** @deprecated use ZOOM_FIXED */
+export const ZOOM_MIN = ZOOM_FIXED;
+/** @deprecated use ZOOM_FIXED */
+export const ZOOM_MAX = ZOOM_FIXED;
 export const ZOOM_DEFAULT_DPR_FACTOR = 2;
 export const ZOOM_LEVEL_FADE_DELAY_MS = 1500;
 export const ZOOM_LEVEL_HIDE_DELAY_MS = 2000;
