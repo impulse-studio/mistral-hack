@@ -217,7 +217,31 @@ export function updateCharacter(
 						ch.frame = 0;
 						ch.frameTimer = 0;
 						ch.wanderCount++;
+					} else {
+						const pool = wanderPool === loungeWalkableTiles ? "lounge" : "all";
+						console.log(
+							"[wander] agent %d: no path from (%d,%d) to (%d,%d) pool=%s, stuck? active=%s gaming=%s nuzzle=%s drink=%s eat=%s leaving=%s",
+							ch.id,
+							ch.tileCol,
+							ch.tileRow,
+							target.col,
+							target.row,
+							pool,
+							ch.isActive,
+							ch.isGaming,
+							ch.isNuzzling,
+							ch.isDrinking,
+							ch.isEating,
+							ch.isLeaving,
+						);
 					}
+				} else {
+					console.log(
+						"[wander] agent %d: empty wander pool at (%d,%d)",
+						ch.id,
+						ch.tileCol,
+						ch.tileRow,
+					);
 				}
 				ch.wanderTimer = randomRange(WANDER_PAUSE_MIN_SEC, WANDER_PAUSE_MAX_SEC);
 			}
