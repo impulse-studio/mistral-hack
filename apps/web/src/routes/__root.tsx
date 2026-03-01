@@ -11,7 +11,6 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import { Toaster } from "@/components/ui/sonner";
 import { authClient } from "@/lib/auth-client";
-import { getAuth } from "@/lib/auth.functions";
 
 import { Header } from "../components/Header";
 import appCss from "../index.css?url";
@@ -40,14 +39,14 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 	}),
 
 	component: RootDocument,
-	beforeLoad: async (ctx) => {
-		const token = await getAuth();
-		if (token) {
-			ctx.context.convexQueryClient.serverHttpClient?.setAuth(token);
+	beforeLoad: async () => {
+		if (typeof window === "undefined") {
+			return { isAuthenticated: false, token: null };
 		}
+		const { data: session } = await authClient.getSession();
 		return {
-			isAuthenticated: !!token,
-			token,
+			isAuthenticated: !!session,
+			token: null,
 		};
 	},
 });
@@ -63,7 +62,7 @@ function RootDocument() {
 		<ConvexBetterAuthProvider
 			client={context.convexQueryClient.convexClient}
 			authClient={authClient}
-			initialToken={context.token}
+			initialToken={context.token ?? undefined}
 		>
 			<html lang="en" className="dark">
 				<head>

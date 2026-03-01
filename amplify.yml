@@ -1,0 +1,21 @@
+version: 1
+applications:
+  - appRoot: apps/web
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - curl -fsSL https://bun.sh/install | bash
+            - export PATH="$HOME/.bun/bin:$PATH"
+            - cd ../.. && bun install --frozen-lockfile
+        build:
+          commands:
+            - export PATH="$HOME/.bun/bin:$PATH"
+            - NITRO_PRESET=aws-amplify bun run build
+      artifacts:
+        baseDirectory: .amplify-hosting
+        files:
+          - "**/*"
+      cache:
+        paths:
+          - ../../node_modules/**/*

@@ -8,7 +8,17 @@ import tsconfigPaths from "vite-tsconfig-paths";
 export default defineConfig({
 	envDir: "../../",
 	// nitro resolves a separate vite copy in bun monorepos — cast to unify Plugin types
-	plugins: [tsconfigPaths(), tailwindcss(), tanstackStart(), nitro(), viteReact()],
+	plugins: [
+		tsconfigPaths(),
+		tailwindcss(),
+		tanstackStart({
+			spa: {
+				enabled: true,
+			},
+		}),
+		nitro(),
+		viteReact(),
+	],
 	server: {
 		port: 3003,
 		host: "0.0.0.0",
