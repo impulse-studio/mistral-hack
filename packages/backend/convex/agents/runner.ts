@@ -6,6 +6,7 @@ import { internal } from "../_generated/api";
 import { runCoderTask } from "./coder/runner";
 import { runComputerUseTask } from "./browser/runner";
 import { runGeneralTask } from "./general/runner";
+import { roleHas } from "./shared/capabilities";
 
 // Sub-agent runner — executed by the workpool for each sub-agent
 export const runSubAgent = internalAction({
@@ -29,7 +30,7 @@ export const runSubAgent = internalAction({
 			taskId,
 		});
 		if (!depCheck.canStart) {
-			const names = depCheck.unmet.map((d) => `"${d.title}" (${d.status})`).join(", ");
+			const names = depCheck.unmet.map((d: { title: string; status: string }) => `"${d.title}" (${d.status})`).join(", ");
 			const errorMsg = `Cannot start task "${task.title}" — unmet dependencies: ${names}`;
 			await ctx.runMutation(internal.tasks.mutations.updateStatusInternal, {
 				taskId,
@@ -72,10 +73,24 @@ export const runSubAgent = internalAction({
 		});
 
 		try {
+			// Build env vars based on role capabilities
+			const envVars: Record<string, string> = {};
+			const mistralKey = process.env.MISTRAL_API_KEY;
+			if (mistralKey) envVars.MISTRAL_API_KEY = mistralKey;
+			if (roleHas(agent.role, "git") || roleHas(agent.role, "github")) {
+				const ghToken = process.env.GITHUB_TOKEN;
+				if (ghToken) envVars.GITHUB_TOKEN = ghToken;
+			}
+			if (roleHas(agent.role, "deploy")) {
+				const vercelToken = process.env.VERCEL_TOKEN;
+				if (vercelToken) envVars.VERCEL_TOKEN = vercelToken;
+			}
+
 			// Ensure per-agent sandbox is running (creates one if needed, with shared volume)
 			await ctx.runAction(internal.sandbox.lifecycle.ensureRunning, {
 				agentId,
 				name: agent.name,
+				envVars: Object.keys(envVars).length > 0 ? envVars : undefined,
 			});
 
 			// Dispatch to role-specific runner

@@ -282,6 +282,141 @@ export const askUserAction = internalAction({
 	},
 });
 
+// Tool action: clone a repo into an agent's sandbox
+export const gitCloneAction = internalAction({
+	args: {
+		agentId: v.string(),
+		url: v.string(),
+		path: v.optional(v.string()),
+		branch: v.optional(v.string()),
+	},
+	handler: async (
+		ctx,
+		{ agentId, url, path, branch },
+	): Promise<{ success: boolean; path: string; message: string }> => {
+		const clonePath = path ?? "/home/user/repo";
+		const result = await ctx.runAction(internal.sandbox.git.gitClone, {
+			url,
+			path: clonePath,
+			branch,
+			agentId: agentId as Id<"agents">,
+		});
+		return {
+			success: result.success,
+			path: result.path,
+			message: `Repository ${url} cloned to ${clonePath} in agent ${agentId}'s sandbox.`,
+		};
+	},
+});
+
+// Tool action: push committed changes from an agent's sandbox
+export const gitPushAction = internalAction({
+	args: {
+		agentId: v.string(),
+		path: v.optional(v.string()),
+	},
+	handler: async (
+		ctx,
+		{ agentId, path },
+	): Promise<{ success: boolean; message: string }> => {
+		const repoPath = path ?? "/home/user/repo";
+		await ctx.runAction(internal.sandbox.git.gitPush, {
+			path: repoPath,
+			agentId: agentId as Id<"agents">,
+		});
+		return {
+			success: true,
+			message: `Changes pushed from ${repoPath} in agent ${agentId}'s sandbox.`,
+		};
+	},
+});
+
+// Tool action: deploy a project from an agent's sandbox to Vercel
+export const deployProjectAction = internalAction({
+	args: {
+		agentId: v.string(),
+		path: v.optional(v.string()),
+		prod: v.optional(v.boolean()),
+	},
+	handler: async (
+		ctx,
+		{ agentId, path, prod },
+	): Promise<{ success: boolean; deployUrl: string | null; message: string }> => {
+		const result = await ctx.runAction(internal.sandbox.deploy.deployToVercel, {
+			path,
+			prod,
+			agentId: agentId as Id<"agents">,
+		});
+		return {
+			success: result.success,
+			deployUrl: result.deployUrl,
+			message: result.deployUrl
+				? `Deployed to: ${result.deployUrl}`
+				: `Deploy finished (success=${result.success}).`,
+		};
+	},
+});
+
+// Tool action: create a GitHub PR from an agent's sandbox repo
+export const createPullRequestAction = internalAction({
+	args: {
+		agentId: v.string(),
+		path: v.string(),
+		title: v.string(),
+		body: v.string(),
+		base: v.optional(v.string()),
+	},
+	handler: async (
+		ctx,
+		{ agentId, path, title, body, base },
+	): Promise<{ success: boolean; prUrl: string | null; message: string }> => {
+		const result = await ctx.runAction(internal.sandbox.github.createPR, {
+			path,
+			title,
+			body,
+			base,
+			agentId: agentId as Id<"agents">,
+		});
+		return {
+			success: result.success,
+			prUrl: result.prUrl,
+			message: result.prUrl
+				? `PR created: ${result.prUrl}`
+				: `PR creation finished (success=${result.success}).`,
+		};
+	},
+});
+
+// Tool action: create a GitHub issue
+export const createGitHubIssueAction = internalAction({
+	args: {
+		title: v.string(),
+		body: v.string(),
+		labels: v.optional(v.array(v.string())),
+		repo: v.optional(v.string()),
+		agentId: v.optional(v.string()),
+	},
+	handler: async (
+		ctx,
+		{ title, body, labels, repo, agentId },
+	): Promise<{ success: boolean; issueUrl: string | null; message: string }> => {
+		const result = await ctx.runAction(internal.sandbox.github.createIssue, {
+			title,
+			body,
+			labels,
+			repo,
+			agentId: agentId as Id<"agents"> | undefined,
+		});
+		return {
+			success: result.success,
+			issueUrl: result.issueUrl,
+			message: result.issueUrl
+				? `Issue created: ${result.issueUrl}`
+				: `Issue creation finished (success=${result.success}).`,
+		};
+	},
+});
+
 // Tool action: update task status
 export const updateTaskStatusAction = internalAction({
 	args: {

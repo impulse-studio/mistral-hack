@@ -18,25 +18,31 @@ You orchestrate a team of sub-agents to accomplish tasks:
 - Ask the user structured questions when you need input (use askUser)
 
 Agent roles and capabilities:
-- coder: Uses Mistral Vibe headless CLI for code generation in the sandbox
-- browser: Uses Computer Use (mouse, keyboard, screenshots) for browser automation and web tasks
-- designer: Uses Computer Use for visual/GUI tasks — design verification, UI testing, visual QA
-- researcher: Uses shell commands for research, file analysis, and information gathering
-- copywriter: Uses shell commands for writing and content tasks
-- general: Uses shell commands for miscellaneous tasks
+- coder: Mistral Vibe headless for code gen + git + deploy + GitHub PRs
+- browser: Computer Use (mouse, keyboard, screenshots) for browser automation
+- designer: Computer Use for visual/GUI tasks — design verification, UI testing
+- researcher: Shell commands + git for research, file analysis
+- copywriter: Shell commands for writing and content tasks
+- general: Shell commands + git + deploy + GitHub for miscellaneous tasks
 
 Computer Use agents (browser, designer) have full desktop GUI control:
-- Take screenshots to see the screen
-- Click, drag, scroll with the mouse
-- Type text and press keyboard shortcuts
-- Inspect windows and display info
-- Record sessions for review
+- Take screenshots, click, drag, scroll, type, press keyboard shortcuts
+
+Git & GitHub capabilities (coder, researcher, general):
+- gitClone: Clone any GitHub repo into an agent's sandbox
+- gitPush: Push committed changes from an agent's sandbox
+- createPullRequest: Create a PR from an agent's sandbox repo
+- createGitHubIssue: Create a GitHub issue
+
+Deployment capabilities (coder, general):
+- deployProject: Deploy from an agent's sandbox to Vercel (preview or production)
 
 Workflow:
 1. Create a task with createTask
 2. Spawn an agent with spawnAgent, passing the taskId — this assigns the task and starts execution
 3. The agent works in a shared Daytona sandbox (persistent cloud environment)
 4. Results flow back automatically when tasks complete
+5. Use gitClone to set up repos, gitPush to publish, deployProject to ship, createPullRequest for code review
 
 Agent reuse — idle agents stay alive after completing a task:
 - Use sendMessageToAgent to send follow-up work to idle agents instead of spawning new ones
@@ -120,6 +126,59 @@ Be concise, proactive, and strategic. Think step by step before delegating.`,
 					.describe("-1=low (background), 0=normal (default), 1=high, 2=critical (always next)"),
 			}),
 			handler: internal.manager.tools.sendMessageToAgentAction,
+		}),
+		gitClone: createActionTool({
+			description:
+				"Clone a GitHub repository into an agent's sandbox. The repo is cloned with authentication so private repos work too.",
+			args: z.object({
+				agentId: z.string().describe("Agent whose sandbox to clone into"),
+				url: z.string().describe("Repository URL (e.g. https://github.com/user/repo)"),
+				path: z.string().optional().describe("Clone destination path (default: /home/user/repo)"),
+				branch: z.string().optional().describe("Branch to clone (default: main/default)"),
+			}),
+			handler: internal.manager.tools.gitCloneAction,
+		}),
+		gitPush: createActionTool({
+			description:
+				"Push committed changes from an agent's sandbox to the remote repository.",
+			args: z.object({
+				agentId: z.string().describe("Agent whose sandbox to push from"),
+				path: z.string().optional().describe("Repository path (default: /home/user/repo)"),
+			}),
+			handler: internal.manager.tools.gitPushAction,
+		}),
+		deployProject: createActionTool({
+			description:
+				"Deploy a project from an agent's sandbox to Vercel. Installs Vercel CLI if needed, then deploys. Returns the deployment URL.",
+			args: z.object({
+				agentId: z.string().describe("Agent whose sandbox to deploy from"),
+				path: z.string().optional().describe("Project path (default: /home/user)"),
+				prod: z.boolean().optional().describe("Deploy to production (default: preview)"),
+			}),
+			handler: internal.manager.tools.deployProjectAction,
+		}),
+		createPullRequest: createActionTool({
+			description:
+				"Create a GitHub pull request from an agent's sandbox. The repo must already be cloned and have commits pushed to a branch.",
+			args: z.object({
+				agentId: z.string().describe("Agent whose sandbox to create PR from"),
+				path: z.string().describe("Repository path in sandbox"),
+				title: z.string().describe("PR title"),
+				body: z.string().describe("PR description"),
+				base: z.string().optional().describe("Base branch (default: repo default)"),
+			}),
+			handler: internal.manager.tools.createPullRequestAction,
+		}),
+		createGitHubIssue: createActionTool({
+			description: "Create a GitHub issue. Can target any repo.",
+			args: z.object({
+				title: z.string().describe("Issue title"),
+				body: z.string().describe("Issue body (markdown)"),
+				labels: z.array(z.string()).optional().describe("Labels to apply"),
+				repo: z.string().optional().describe("Target repo (owner/name). Required if not in a cloned repo."),
+				agentId: z.string().optional().describe("Agent whose sandbox to run in (for auth)"),
+			}),
+			handler: internal.manager.tools.createGitHubIssueAction,
 		}),
 		askUser: createActionTool({
 			description:

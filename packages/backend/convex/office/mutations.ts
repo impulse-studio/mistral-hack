@@ -52,10 +52,23 @@ export const ensureManager = mutation({
 			.first();
 		if (existing) return existing._id;
 
-		// Find the manager desk
+		// Find or create the manager desk
 		const desks = await ctx.db.query("desks").collect();
-		const mgrDesk = desks.find((d) => d.label === "manager");
-		if (!mgrDesk) throw new ConvexError("Manager desk not found — run initDesks first");
+		let mgrDesk = desks.find((d) => d.label === "manager");
+		if (!mgrDesk) {
+			// Auto-init desks if missing
+			if (desks.length === 0) {
+				const workerPositions = [
+					{ x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 }, { x: 4, y: 1 },
+					{ x: 1, y: 2 }, { x: 2, y: 2 }, { x: 3, y: 2 }, { x: 4, y: 2 },
+				];
+				for (const position of workerPositions) {
+					await ctx.db.insert("desks", { position });
+				}
+			}
+			const mgrId = await ctx.db.insert("desks", { position: { x: 0, y: 0 }, label: "manager" });
+			mgrDesk = (await ctx.db.get(mgrId))!;
+		}
 
 		// Create the manager agent
 		const agentId = await ctx.db.insert("agents", {

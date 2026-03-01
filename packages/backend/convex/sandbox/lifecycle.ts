@@ -42,8 +42,9 @@ export const createSandbox = internalAction({
 	args: {
 		agentId: v.optional(v.id("agents")),
 		name: v.optional(v.string()),
+		envVars: v.optional(v.any()),
 	},
-	handler: async (ctx, { agentId, name }): Promise<SandboxResult> => {
+	handler: async (ctx, { agentId, name, envVars }): Promise<SandboxResult> => {
 		try {
 			const daytona = getDaytona();
 			const volumeId = await ensureSharedVolume();
@@ -56,6 +57,7 @@ export const createSandbox = internalAction({
 						labels: agentId ? { agentId } : undefined,
 						autoStopInterval: 0,
 						autoDeleteInterval: -1,
+						envVars: envVars as Record<string, string> | undefined,
 					},
 					{ timeout: 60 },
 				),
@@ -194,14 +196,19 @@ export const ensureRunning = internalAction({
 	args: {
 		agentId: v.optional(v.id("agents")),
 		name: v.optional(v.string()),
+		envVars: v.optional(v.any()),
 	},
-	handler: async (ctx, { agentId, name }): Promise<SandboxResult> => {
+	handler: async (ctx, { agentId, name, envVars }): Promise<SandboxResult> => {
 		const sandboxRecord = agentId
 			? await ctx.runQuery(internal.sandbox.queries.getByAgentInternal, { agentId })
 			: await ctx.runQuery(internal.sandbox.queries.getInternal);
 
 		if (!sandboxRecord) {
-			return await ctx.runAction(internal.sandbox.lifecycle.createSandbox, { agentId, name });
+			return await ctx.runAction(internal.sandbox.lifecycle.createSandbox, {
+				agentId,
+				name,
+				envVars,
+			});
 		}
 
 		if (sandboxRecord.status === "running") {
@@ -223,17 +230,28 @@ export const ensureRunning = internalAction({
 					status: "error",
 					error: "Sandbox not found in Daytona",
 				});
-				return await ctx.runAction(internal.sandbox.lifecycle.createSandbox, { agentId, name });
+				return await ctx.runAction(internal.sandbox.lifecycle.createSandbox, {
+					agentId,
+					name,
+					envVars,
+				});
 			}
 		}
 
 		if (sandboxRecord.status === "stopped" || sandboxRecord.status === "archived") {
-			// Sandbox was deleted from Daytona on completion — create a fresh one
-			return await ctx.runAction(internal.sandbox.lifecycle.createSandbox, { agentId, name });
+			return await ctx.runAction(internal.sandbox.lifecycle.createSandbox, {
+				agentId,
+				name,
+				envVars,
+			});
 		}
 
 		if (sandboxRecord.status === "error") {
-			return await ctx.runAction(internal.sandbox.lifecycle.createSandbox, { agentId, name });
+			return await ctx.runAction(internal.sandbox.lifecycle.createSandbox, {
+				agentId,
+				name,
+				envVars,
+			});
 		}
 
 		// "creating" — already in progress

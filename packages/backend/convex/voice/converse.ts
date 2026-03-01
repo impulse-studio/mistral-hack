@@ -72,7 +72,7 @@ export const converse = httpAction(async (ctx, request) => {
 			headers: {
 				...cors,
 				"Content-Type": "audio/mpeg",
-				"X-Thread-Id": threadId,
+				"X-Thread-Id": threadId ?? "",
 				"X-Transcript": encodeURIComponent(transcript),
 				"X-Reply": encodeURIComponent(reply),
 				"Access-Control-Expose-Headers": "X-Thread-Id, X-Transcript, X-Reply",
