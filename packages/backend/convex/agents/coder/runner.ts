@@ -1,5 +1,5 @@
 import { internal } from "../../_generated/api";
-import { escapeShellArg } from "../../sandbox/helpers";
+import { escapeShellArg } from "../../sandbox/shellUtils";
 import type { RunnerCtx } from "../shared/types";
 
 // After Vibe generates code, discover and execute the entry point
