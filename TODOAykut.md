@@ -19,10 +19,10 @@
 
 ## Task Management
 
-- [ ] Task board with dependencies
-- [ ] Dependency system
-- [ ] Per-worker kanban in sidebar
-- [ ] What the task is, task threads
+- [x] Task board with dependencies
+- [x] Dependency system
+- [x] Per-worker kanban in sidebar
+- [x] What the task is, task threads
 
 ## Agent Orchestration
 
@@ -30,7 +30,7 @@
 - [ ] Creates custom agents with defined skill + personality, can delegate skills/tasks
 - [ ] Tools: spawn, steer (message), stop agent
 - [ ] Worker complete sends messages to the main agent
-- [ ] Message queuing
+- [x] Message queuing
 - [ ] Clock in / clock out with work duration
 
 ## Multi-Project System

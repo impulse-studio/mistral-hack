@@ -293,19 +293,29 @@ export const gitCloneAction = internalAction({
 	handler: async (
 		ctx,
 		{ agentId, url, path, branch },
-	): Promise<{ success: boolean; path: string; message: string }> => {
+	): Promise<{ success: boolean; path: string; message: string; error?: string }> => {
 		const clonePath = path ?? "/home/user/repo";
-		const result = await ctx.runAction(internal.sandbox.git.gitClone, {
-			url,
-			path: clonePath,
-			branch,
-			agentId: agentId as Id<"agents">,
-		});
-		return {
-			success: result.success,
-			path: result.path,
-			message: `Repository ${url} cloned to ${clonePath} in agent ${agentId}'s sandbox.`,
-		};
+		try {
+			const result = await ctx.runAction(internal.sandbox.git.gitClone, {
+				url,
+				path: clonePath,
+				branch,
+				agentId: agentId as Id<"agents">,
+			});
+			return {
+				success: result.success,
+				path: result.path,
+				message: `Repository ${url} cloned to ${clonePath} in agent ${agentId}'s sandbox.`,
+			};
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return {
+				success: false,
+				path: clonePath,
+				message: `FAILED to clone ${url}: ${error}`,
+				error,
+			};
+		}
 	},
 });
 
@@ -318,16 +328,25 @@ export const gitPushAction = internalAction({
 	handler: async (
 		ctx,
 		{ agentId, path },
-	): Promise<{ success: boolean; message: string }> => {
+	): Promise<{ success: boolean; message: string; error?: string }> => {
 		const repoPath = path ?? "/home/user/repo";
-		await ctx.runAction(internal.sandbox.git.gitPush, {
-			path: repoPath,
-			agentId: agentId as Id<"agents">,
-		});
-		return {
-			success: true,
-			message: `Changes pushed from ${repoPath} in agent ${agentId}'s sandbox.`,
-		};
+		try {
+			await ctx.runAction(internal.sandbox.git.gitPush, {
+				path: repoPath,
+				agentId: agentId as Id<"agents">,
+			});
+			return {
+				success: true,
+				message: `Changes pushed from ${repoPath} in agent ${agentId}'s sandbox.`,
+			};
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return {
+				success: false,
+				message: `FAILED to push from ${repoPath}: ${error}`,
+				error,
+			};
+		}
 	},
 });
 
@@ -341,19 +360,29 @@ export const deployProjectAction = internalAction({
 	handler: async (
 		ctx,
 		{ agentId, path, prod },
-	): Promise<{ success: boolean; deployUrl: string | null; message: string }> => {
-		const result = await ctx.runAction(internal.sandbox.deploy.deployToVercel, {
-			path,
-			prod,
-			agentId: agentId as Id<"agents">,
-		});
-		return {
-			success: result.success,
-			deployUrl: result.deployUrl,
-			message: result.deployUrl
-				? `Deployed to: ${result.deployUrl}`
-				: `Deploy finished (success=${result.success}).`,
-		};
+	): Promise<{ success: boolean; deployUrl: string | null; message: string; error?: string }> => {
+		try {
+			const result = await ctx.runAction(internal.sandbox.deploy.deployToVercel, {
+				path,
+				prod,
+				agentId: agentId as Id<"agents">,
+			});
+			return {
+				success: result.success,
+				deployUrl: result.deployUrl,
+				message: result.deployUrl
+					? `Deployed to: ${result.deployUrl}`
+					: `Deploy finished (success=${result.success}).`,
+			};
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return {
+				success: false,
+				deployUrl: null,
+				message: `FAILED to deploy: ${error}`,
+				error,
+			};
+		}
 	},
 });
 
@@ -369,21 +398,31 @@ export const createPullRequestAction = internalAction({
 	handler: async (
 		ctx,
 		{ agentId, path, title, body, base },
-	): Promise<{ success: boolean; prUrl: string | null; message: string }> => {
-		const result = await ctx.runAction(internal.sandbox.github.createPR, {
-			path,
-			title,
-			body,
-			base,
-			agentId: agentId as Id<"agents">,
-		});
-		return {
-			success: result.success,
-			prUrl: result.prUrl,
-			message: result.prUrl
-				? `PR created: ${result.prUrl}`
-				: `PR creation finished (success=${result.success}).`,
-		};
+	): Promise<{ success: boolean; prUrl: string | null; message: string; error?: string }> => {
+		try {
+			const result = await ctx.runAction(internal.sandbox.github.createPR, {
+				path,
+				title,
+				body,
+				base,
+				agentId: agentId as Id<"agents">,
+			});
+			return {
+				success: result.success,
+				prUrl: result.prUrl,
+				message: result.prUrl
+					? `PR created: ${result.prUrl}`
+					: `PR creation finished (success=${result.success}).`,
+			};
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return {
+				success: false,
+				prUrl: null,
+				message: `FAILED to create PR: ${error}`,
+				error,
+			};
+		}
 	},
 });
 
@@ -399,21 +438,31 @@ export const createGitHubIssueAction = internalAction({
 	handler: async (
 		ctx,
 		{ title, body, labels, repo, agentId },
-	): Promise<{ success: boolean; issueUrl: string | null; message: string }> => {
-		const result = await ctx.runAction(internal.sandbox.github.createIssue, {
-			title,
-			body,
-			labels,
-			repo,
-			agentId: agentId as Id<"agents"> | undefined,
-		});
-		return {
-			success: result.success,
-			issueUrl: result.issueUrl,
-			message: result.issueUrl
-				? `Issue created: ${result.issueUrl}`
-				: `Issue creation finished (success=${result.success}).`,
-		};
+	): Promise<{ success: boolean; issueUrl: string | null; message: string; error?: string }> => {
+		try {
+			const result = await ctx.runAction(internal.sandbox.github.createIssue, {
+				title,
+				body,
+				labels,
+				repo,
+				agentId: agentId as Id<"agents"> | undefined,
+			});
+			return {
+				success: result.success,
+				issueUrl: result.issueUrl,
+				message: result.issueUrl
+					? `Issue created: ${result.issueUrl}`
+					: `Issue creation finished (success=${result.success}).`,
+			};
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return {
+				success: false,
+				issueUrl: null,
+				message: `FAILED to create issue: ${error}`,
+				error,
+			};
+		}
 	},
 });
 

@@ -78,6 +78,8 @@ export async function runCoderTask(
 			type: "stderr" as const,
 			content: `Post-Vibe execution failed: ${msg}`,
 		});
+		// Re-throw so the runner marks the task as FAILED instead of SUCCESS
+		throw execError;
 	}
 
 	return result;

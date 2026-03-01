@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { runCoderTask } from "./coder/runner";
+import { runCopywriterTask } from "./copywriter/runner";
 import { runComputerUseTask } from "./browser/runner";
 import { runGeneralTask } from "./general/runner";
 import { roleHas } from "./shared/capabilities";
@@ -30,7 +31,9 @@ export const runSubAgent = internalAction({
 			taskId,
 		});
 		if (!depCheck.canStart) {
-			const names = depCheck.unmet.map((d: { title: string; status: string }) => `"${d.title}" (${d.status})`).join(", ");
+			const names = depCheck.unmet
+				.map((d: { title: string; status: string }) => `"${d.title}" (${d.status})`)
+				.join(", ");
 			const errorMsg = `Cannot start task "${task.title}" — unmet dependencies: ${names}`;
 			await ctx.runMutation(internal.tasks.mutations.updateStatusInternal, {
 				taskId,
@@ -99,6 +102,8 @@ export const runSubAgent = internalAction({
 				result = await runCoderTask(ctx, agentId, task);
 			} else if (agent.role === "browser" || agent.role === "designer") {
 				result = await runComputerUseTask(ctx, agentId, task);
+			} else if (agent.role === "copywriter") {
+				result = await runCopywriterTask(ctx, agentId, task);
 			} else {
 				result = await runGeneralTask(ctx, agentId, task, agent.role);
 			}

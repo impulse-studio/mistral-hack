@@ -63,6 +63,9 @@ export const createSandbox = internalAction({
 				),
 			);
 
+			// Ensure /home/user exists — Daytona sandboxes don't guarantee this path
+			await sandbox.process.executeCommand("mkdir -p /home/user");
+
 			const sandboxId: Id<"sandbox"> = await ctx.runMutation(
 				internal.sandbox.mutations.ensureSandboxInternal,
 				{ daytonaId: sandbox.id, agentId, name },

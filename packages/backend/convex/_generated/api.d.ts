@@ -11,6 +11,7 @@
 import type * as agents_browser_runner from "../agents/browser/runner.js";
 import type * as agents_coder_agent from "../agents/coder/agent.js";
 import type * as agents_coder_runner from "../agents/coder/runner.js";
+import type * as agents_copywriter_agent from "../agents/copywriter/agent.js";
 import type * as agents_general_agent from "../agents/general/agent.js";
 import type * as agents_general_runner from "../agents/general/runner.js";
 import type * as agents_manager_agent from "../agents/manager/agent.js";
@@ -86,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   "agents/browser/runner": typeof agents_browser_runner;
   "agents/coder/agent": typeof agents_coder_agent;
   "agents/coder/runner": typeof agents_coder_runner;
+  "agents/copywriter/agent": typeof agents_copywriter_agent;
   "agents/general/agent": typeof agents_general_agent;
   "agents/general/runner": typeof agents_general_runner;
   "agents/manager/agent": typeof agents_manager_agent;
