@@ -16,7 +16,7 @@ export default defineConfig({
 				enabled: true,
 			},
 		}),
-		nitro(),
+		nitro({ preset: "node-server" }),
 		viteReact(),
 	],
 	server: {
