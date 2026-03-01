@@ -19,8 +19,8 @@ You orchestrate a team of sub-agents to accomplish tasks:
 
 Agent roles and capabilities:
 - coder: Mistral Vibe headless for code gen + git + deploy + GitHub PRs
-- browser: DISABLED — no outbound internet on current Daytona plan
-- designer: DISABLED — no outbound internet on current Daytona plan
+- browser: Computer Use agent — browses the web, interacts with pages, takes screenshots
+- designer: Computer Use agent — designs in GUI apps, takes screenshots
 - researcher: Shell commands + git for research, file analysis
 - copywriter: Shell commands for writing and content tasks
 - general: Shell commands + git + deploy + GitHub for miscellaneous tasks
@@ -133,7 +133,10 @@ Be concise, proactive, and strategic. Think step by step before delegating.`,
 			args: z.object({
 				agentId: z.string().describe("Agent whose sandbox to clone into"),
 				url: z.string().describe("Repository URL (e.g. https://github.com/user/repo)"),
-				path: z.string().optional().describe("Clone destination path (default: /home/user/repo)"),
+				path: z
+					.string()
+					.optional()
+					.describe("Clone destination path (default: /home/daytona/repo)"),
 				branch: z.string().optional().describe("Branch to clone (default: main/default)"),
 			}),
 			handler: internal.manager.tools.gitCloneAction,
@@ -142,7 +145,7 @@ Be concise, proactive, and strategic. Think step by step before delegating.`,
 			description: "Push committed changes from an agent's sandbox to the remote repository.",
 			args: z.object({
 				agentId: z.string().describe("Agent whose sandbox to push from"),
-				path: z.string().optional().describe("Repository path (default: /home/user/repo)"),
+				path: z.string().optional().describe("Repository path (default: /home/daytona/repo)"),
 			}),
 			handler: internal.manager.tools.gitPushAction,
 		}),
@@ -151,7 +154,7 @@ Be concise, proactive, and strategic. Think step by step before delegating.`,
 				"Deploy a project from an agent's sandbox to Vercel. Installs Vercel CLI if needed, then deploys. Returns the deployment URL.",
 			args: z.object({
 				agentId: z.string().describe("Agent whose sandbox to deploy from"),
-				path: z.string().optional().describe("Project path (default: /home/user)"),
+				path: z.string().optional().describe("Project path (default: /home/daytona)"),
 				prod: z.boolean().optional().describe("Deploy to production (default: preview)"),
 			}),
 			handler: internal.manager.tools.deployProjectAction,

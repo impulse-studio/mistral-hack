@@ -190,17 +190,15 @@ function MasterAgentPanel({ className }: MasterAgentPanelProps) {
 						)}
 					</Button>
 
-					{/* Reset workers button */}
-					{workerAgents.length > 0 && (
-						<Button
-							variant="ghost"
-							onClick={handleReset}
-							disabled={isResetting}
-							className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 font-mono text-[9px] uppercase tracking-widest text-red-400 hover:text-red-300"
-						>
-							{isResetting ? "Resetting..." : "Reset"}
-						</Button>
-					)}
+					{/* Reset workers button — always visible so users can clear session state */}
+					<Button
+						variant="ghost"
+						onClick={handleReset}
+						disabled={isResetting}
+						className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 font-mono text-[9px] uppercase tracking-widest text-red-400 hover:text-red-300"
+					>
+						{isResetting ? "Resetting..." : "Reset"}
+					</Button>
 				</div>
 
 				<PixelDivider />

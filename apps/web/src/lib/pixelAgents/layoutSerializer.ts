@@ -10,6 +10,16 @@ import type {
 import { getCatalogEntry } from "./furnitureCatalog";
 import { getColorizedSprite } from "./colorize";
 
+let cachedCatImage: HTMLImageElement | null = null;
+function getCatImage(): HTMLImageElement | null {
+	if (cachedCatImage) return cachedCatImage;
+	if (typeof window === "undefined") return null;
+	const img = new Image();
+	img.src = "/assets/animated-sitting-cat.webp";
+	cachedCatImage = img;
+	return img;
+}
+
 /** Convert flat tile array from layout into 2D grid */
 export function layoutToTileMap(layout: OfficeLayout): TileTypeVal[][] {
 	const map: TileTypeVal[][] = [];
@@ -83,7 +93,12 @@ export function layoutToFurnitureInstances(furniture: PlacedFurniture[]): Furnit
 			);
 		}
 
-		instances.push({ sprite, x, y, zY });
+		const inst: FurnitureInstance = { sprite, x, y, zY };
+		if (item.type === FurnitureType.MISTRAL_CAT) {
+			const catImg = getCatImage();
+			if (catImg) inst.image = catImg;
+		}
+		instances.push(inst);
 	}
 	return instances;
 }

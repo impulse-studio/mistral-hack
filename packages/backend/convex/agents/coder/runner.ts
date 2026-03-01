@@ -1,14 +1,15 @@
 import { internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
 import { escapeShellArg } from "../../sandbox/shellUtils";
+import { SANDBOX_WORK_DIR } from "../../sandbox/constants";
 import type { RunnerCtx, RunnerResult } from "../shared/types";
 
-const WORK_DIR = "/home/user";
+const WORK_DIR = SANDBOX_WORK_DIR;
 
 // After Vibe generates code, discover and execute the entry point
 export async function verifyGeneratedCode(ctx: RunnerCtx, agentId: string): Promise<string> {
 	const listing = await ctx.runAction(internal.sandbox.codeExecution.listFiles, {
-		path: "/home/user",
+		path: WORK_DIR,
 		agentId,
 	});
 
@@ -37,8 +38,8 @@ export async function verifyGeneratedCode(ctx: RunnerCtx, agentId: string): Prom
 	const escapedName = escapeShellArg(found.name);
 	const cmd =
 		ext === "ts"
-			? `cd /home/user && npx tsx ${escapedName}`
-			: `cd /home/user && node ${escapedName}`;
+			? `cd ${WORK_DIR} && npx tsx ${escapedName}`
+			: `cd ${WORK_DIR} && node ${escapedName}`;
 
 	const execResult = await ctx.runAction(internal.sandbox.execute.runCommand, {
 		command: cmd,
@@ -73,7 +74,7 @@ async function autoCommit(
 ): Promise<string> {
 	const typedAgentId = agentId as Id<"agents">;
 
-	// Check if /home/user is already a git repo
+	// Check if WORK_DIR is already a git repo
 	const gitCheck = await ctx.runAction(internal.sandbox.execute.runCommand, {
 		command: `git -C ${WORK_DIR} rev-parse --git-dir 2>/dev/null`,
 		agentId,
@@ -101,13 +102,17 @@ async function autoCommit(
 			files: ["."],
 			agentId: typedAgentId,
 		});
-		await ctx.runAction(internal.sandbox.git.gitCommit, {
+		// gitCommit now returns { skipped: true } if nothing to commit instead of 400
+		const commitResult = await ctx.runAction(internal.sandbox.git.gitCommit, {
 			path: WORK_DIR,
 			message: commitMsg,
 			author: agentName,
 			email: "coder@ai-office.dev",
 			agentId: typedAgentId,
 		});
+		if (commitResult.skipped) {
+			return `[no changes to commit] on branch ${branchName}`;
+		}
 		return `[committed] on branch ${branchName}`;
 	}
 

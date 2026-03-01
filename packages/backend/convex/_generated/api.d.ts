@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as agents_agenticRunner from "../agents/agenticRunner.js";
 import type * as agents_browser_agent from "../agents/browser/agent.js";
 import type * as agents_browser_runner from "../agents/browser/runner.js";
 import type * as agents_coder_agent from "../agents/coder/agent.js";
@@ -21,6 +22,7 @@ import type * as agents_manager_tools from "../agents/manager/tools.js";
 import type * as agents_models from "../agents/models.js";
 import type * as agents_onComplete from "../agents/onComplete.js";
 import type * as agents_onCompleteActions from "../agents/onCompleteActions.js";
+import type * as agents_prompts from "../agents/prompts.js";
 import type * as agents_queries from "../agents/queries.js";
 import type * as agents_registry from "../agents/registry.js";
 import type * as agents_researcher_agent from "../agents/researcher/agent.js";
@@ -30,6 +32,14 @@ import type * as agents_runner from "../agents/runner.js";
 import type * as agents_shared_capabilities from "../agents/shared/capabilities.js";
 import type * as agents_shared_tools from "../agents/shared/tools.js";
 import type * as agents_shared_types from "../agents/shared/types.js";
+import type * as agents_skills_deploy from "../agents/skills/deploy.js";
+import type * as agents_skills_filesystem from "../agents/skills/filesystem.js";
+import type * as agents_skills_git from "../agents/skills/git.js";
+import type * as agents_skills_github from "../agents/skills/github.js";
+import type * as agents_skills_index from "../agents/skills/index.js";
+import type * as agents_skills_shell from "../agents/skills/shell.js";
+import type * as agents_skills_vibe from "../agents/skills/vibe.js";
+import type * as agents_skills_web from "../agents/skills/web.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
 import type * as debug from "../debug.js";
@@ -56,6 +66,7 @@ import type * as office_queries from "../office/queries.js";
 import type * as privateData from "../privateData.js";
 import type * as sandbox_codeExecution from "../sandbox/codeExecution.js";
 import type * as sandbox_computerUse from "../sandbox/computerUse.js";
+import type * as sandbox_constants from "../sandbox/constants.js";
 import type * as sandbox_deploy from "../sandbox/deploy.js";
 import type * as sandbox_execute from "../sandbox/execute.js";
 import type * as sandbox_git from "../sandbox/git.js";
@@ -65,6 +76,8 @@ import type * as sandbox_lifecycle from "../sandbox/lifecycle.js";
 import type * as sandbox_mutations from "../sandbox/mutations.js";
 import type * as sandbox_queries from "../sandbox/queries.js";
 import type * as sandbox_shellUtils from "../sandbox/shellUtils.js";
+import type * as sandbox_snapshotConfig from "../sandbox/snapshotConfig.js";
+import type * as sandbox_snapshots from "../sandbox/snapshots.js";
 import type * as sandbox_streamLogs from "../sandbox/streamLogs.js";
 import type * as sandbox_vibe from "../sandbox/vibe.js";
 import type * as sandbox_webFetch from "../sandbox/webFetch.js";
@@ -94,6 +107,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "agents/agenticRunner": typeof agents_agenticRunner;
   "agents/browser/agent": typeof agents_browser_agent;
   "agents/browser/runner": typeof agents_browser_runner;
   "agents/coder/agent": typeof agents_coder_agent;
@@ -107,6 +121,7 @@ declare const fullApi: ApiFromModules<{
   "agents/models": typeof agents_models;
   "agents/onComplete": typeof agents_onComplete;
   "agents/onCompleteActions": typeof agents_onCompleteActions;
+  "agents/prompts": typeof agents_prompts;
   "agents/queries": typeof agents_queries;
   "agents/registry": typeof agents_registry;
   "agents/researcher/agent": typeof agents_researcher_agent;
@@ -116,6 +131,14 @@ declare const fullApi: ApiFromModules<{
   "agents/shared/capabilities": typeof agents_shared_capabilities;
   "agents/shared/tools": typeof agents_shared_tools;
   "agents/shared/types": typeof agents_shared_types;
+  "agents/skills/deploy": typeof agents_skills_deploy;
+  "agents/skills/filesystem": typeof agents_skills_filesystem;
+  "agents/skills/git": typeof agents_skills_git;
+  "agents/skills/github": typeof agents_skills_github;
+  "agents/skills/index": typeof agents_skills_index;
+  "agents/skills/shell": typeof agents_skills_shell;
+  "agents/skills/vibe": typeof agents_skills_vibe;
+  "agents/skills/web": typeof agents_skills_web;
   auth: typeof auth;
   chat: typeof chat;
   debug: typeof debug;
@@ -142,6 +165,7 @@ declare const fullApi: ApiFromModules<{
   privateData: typeof privateData;
   "sandbox/codeExecution": typeof sandbox_codeExecution;
   "sandbox/computerUse": typeof sandbox_computerUse;
+  "sandbox/constants": typeof sandbox_constants;
   "sandbox/deploy": typeof sandbox_deploy;
   "sandbox/execute": typeof sandbox_execute;
   "sandbox/git": typeof sandbox_git;
@@ -151,6 +175,8 @@ declare const fullApi: ApiFromModules<{
   "sandbox/mutations": typeof sandbox_mutations;
   "sandbox/queries": typeof sandbox_queries;
   "sandbox/shellUtils": typeof sandbox_shellUtils;
+  "sandbox/snapshotConfig": typeof sandbox_snapshotConfig;
+  "sandbox/snapshots": typeof sandbox_snapshots;
   "sandbox/streamLogs": typeof sandbox_streamLogs;
   "sandbox/vibe": typeof sandbox_vibe;
   "sandbox/webFetch": typeof sandbox_webFetch;

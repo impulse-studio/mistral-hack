@@ -5,6 +5,7 @@ import type { Id } from "../../_generated/dataModel";
 import type { ToolCtx } from "@convex-dev/agent";
 import { agentPool } from "../../workpool";
 import { roleToModel } from "../models";
+import { SANDBOX_WORK_DIR } from "../../sandbox/constants";
 
 // ── Manager-Only Tools (createTool versions for @convex-dev/agent) ──
 
@@ -18,20 +19,41 @@ export const createTaskTool = createTool({
 		dependsOn: z
 			.array(z.string())
 			.optional()
-			.describe("Task IDs that must complete before this task can start"),
-		parentTaskId: z.string().optional().describe("Parent task ID for sub-task grouping"),
+			.describe("Task IDs (or exact task titles) that must complete before this task can start"),
+		parentTaskId: z
+			.string()
+			.optional()
+			.describe("Parent task ID (or exact title) for sub-task grouping"),
 	}),
 	execute: async (
 		ctx: ToolCtx,
 		{ title, description, estimatedMinutes, dependsOn, parentTaskId },
 	): Promise<{ taskId: string; title: string; message: string }> => {
+		// Resolve dependsOn refs (accepts both task IDs and task titles)
+		let resolvedDeps: Id<"tasks">[] | undefined;
+		if (dependsOn && dependsOn.length > 0) {
+			resolvedDeps = await ctx.runQuery(internal.tasks.queries.resolveTaskRefs, {
+				refs: dependsOn,
+			});
+			if (resolvedDeps.length === 0) resolvedDeps = undefined;
+		}
+
+		// Resolve parentTaskId (accepts both task ID and title)
+		let resolvedParent: Id<"tasks"> | undefined;
+		if (parentTaskId) {
+			const resolved = await ctx.runQuery(internal.tasks.queries.resolveTaskRefs, {
+				refs: [parentTaskId],
+			});
+			resolvedParent = resolved[0];
+		}
+
 		const taskId: Id<"tasks"> = await ctx.runMutation(internal.tasks.mutations.createInternal, {
 			title,
 			description,
 			createdBy: "manager" as const,
 			estimatedMinutes,
-			dependsOn: dependsOn as Id<"tasks">[] | undefined,
-			parentTaskId: parentTaskId as Id<"tasks"> | undefined,
+			dependsOn: resolvedDeps,
+			parentTaskId: resolvedParent,
 		});
 		return { taskId, title, message: `Task "${title}" created.` };
 	},
@@ -188,19 +210,21 @@ export const sendMessageToAgentTool = createTool({
 // ── Git, Deploy & GitHub Tools ──────────────────────────────────
 
 export const gitCloneTool = createTool({
-	description:
-		"Clone a GitHub repository into an agent's sandbox. Use this BEFORE assigning a coding task so the agent works inside the repo. Default path: /home/user/repo.",
+	description: `Clone a GitHub repository into an agent's sandbox. Use this BEFORE assigning a coding task so the agent works inside the repo. Default path: ${SANDBOX_WORK_DIR}/repo.`,
 	inputSchema: z.object({
 		agentId: z.string().describe("Agent whose sandbox to clone into"),
 		url: z.string().describe("Repository URL (e.g. https://github.com/org/repo)"),
-		path: z.string().optional().describe("Clone destination path (default: /home/user/repo)"),
+		path: z
+			.string()
+			.optional()
+			.describe(`Clone destination path (default: ${SANDBOX_WORK_DIR}/repo)`),
 		branch: z.string().optional().describe("Branch to checkout after clone"),
 	}),
 	execute: async (
 		ctx: ToolCtx,
 		{ agentId, url, path, branch },
 	): Promise<{ success: boolean; path: string; message: string; error?: string }> => {
-		const clonePath = path ?? "/home/user";
+		const clonePath = path ?? SANDBOX_WORK_DIR;
 		try {
 			const result = await ctx.runAction(internal.sandbox.git.gitClone, {
 				url,
@@ -230,13 +254,13 @@ export const gitPushTool = createTool({
 		"Push committed changes from an agent's sandbox. The coder auto-commits generated code on a feature branch — call this after a coder completes to push the branch upstream.",
 	inputSchema: z.object({
 		agentId: z.string().describe("Agent whose sandbox to push from"),
-		path: z.string().optional().describe("Repo path in sandbox (default: /home/user)"),
+		path: z.string().optional().describe(`Repo path in sandbox (default: ${SANDBOX_WORK_DIR})`),
 	}),
 	execute: async (
 		ctx: ToolCtx,
 		{ agentId, path },
 	): Promise<{ success: boolean; message: string; error?: string }> => {
-		const repoPath = path ?? "/home/user";
+		const repoPath = path ?? SANDBOX_WORK_DIR;
 		try {
 			await ctx.runAction(internal.sandbox.git.gitPush, {
 				path: repoPath,
@@ -258,7 +282,7 @@ export const createPullRequestTool = createTool({
 		"Create a GitHub pull request from an agent's sandbox repo. Requires gh CLI (auto-installed). The coder auto-creates a feature branch — call this after gitPush.",
 	inputSchema: z.object({
 		agentId: z.string().describe("Agent whose sandbox contains the repo"),
-		path: z.string().describe("Repo path in sandbox (e.g. /home/user)"),
+		path: z.string().describe(`Repo path in sandbox (e.g. ${SANDBOX_WORK_DIR})`),
 		title: z.string().describe("PR title"),
 		body: z.string().describe("PR description"),
 		base: z.string().optional().describe("Base branch (default: repo default branch)"),

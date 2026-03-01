@@ -3,11 +3,12 @@ import { z } from "zod";
 import { internal } from "../../_generated/api";
 import type { RunnerCtx, RunnerResult } from "../shared/types";
 import { mistral, REASONING_MODEL, MANAGER_MODEL } from "../models";
+import { SANDBOX_WORK_DIR, SHARED_WORKSPACE } from "../../sandbox/constants";
 
 type TaskRecord = { title: string; description?: string };
 
 const TIME_BUDGET_MS = 540_000; // 9 min — leave 60s margin before Convex 600s limit
-const MAX_STEPS = 8;
+const MAX_STEPS = 50;
 
 // ── Step schemas ────────────────────────────────────────────────
 
@@ -15,7 +16,9 @@ const stepSchema = z.discriminatedUnion("type", [
 	z.object({
 		type: z.literal("shell"),
 		description: z.string().describe("What this command investigates"),
-		command: z.string().describe("Shell command to run in /home/user (cd doesn't persist)"),
+		command: z
+			.string()
+			.describe(`Shell command to run in ${SANDBOX_WORK_DIR} (cd doesn't persist)`),
 	}),
 	z.object({
 		type: z.literal("web"),
@@ -55,7 +58,7 @@ export async function runResearcherTask(
 				content: `You are a research planner. Given a research task, produce steps to investigate it.
 
 Available step types:
-- "shell": Run a shell command in the sandbox (working dir: /home/user, shared: /home/company/)
+- "shell": Run a shell command in the sandbox (working dir: ${SANDBOX_WORK_DIR}, shared: ${SHARED_WORKSPACE}/)
   Good for: file analysis, git log, grep, find, wc, reading code, running scripts
   Note: cd does NOT persist between steps — use "cd /path && command"
 - "web": Fetch a URL and get readable text content (proxied through backend — full internet access)

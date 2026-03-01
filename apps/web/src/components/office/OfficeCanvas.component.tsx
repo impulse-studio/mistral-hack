@@ -40,7 +40,8 @@ const CLICKABLE_FURNITURE = new Set([
 
 /** Predefined paper positions relative to the first bookshelf (col 21, row 2).
  *  Two bookshelves side by side = 32px wide, 32px tall in world space.
- *  Papers appear on shelves and scattered nearby as documents accumulate. */
+ *  Tileset bookshelf: 16x32px, backgroundTiles=1 (top tile is bg).
+ *  Shelves span roughly sprite rows 2-26. Papers placed ON shelves. */
 const PAPER_SLOTS: Array<{
 	x: number;
 	y: number;
@@ -49,24 +50,20 @@ const PAPER_SLOTS: Array<{
 	color: string;
 	angle: number;
 }> = [
-	// Bottom shelf of bookshelf 1 (empty shelf, rows 24-30 of sprite)
-	{ x: 2, y: 25, w: 4, h: 5, color: "#f5f0e0", angle: 0.1 },
-	{ x: 8, y: 26, w: 3, h: 5, color: "#fff8e8", angle: -0.12 },
-	// Bottom shelf of bookshelf 2
-	{ x: 18, y: 24, w: 4, h: 5, color: "#f0ead0", angle: 0.18 },
-	{ x: 24, y: 26, w: 3, h: 5, color: "#fff5d5", angle: -0.08 },
-	// Middle shelves — papers peeking between books
-	{ x: 5, y: 17, w: 3, h: 4, color: "#fffae8", angle: 0.15 },
-	{ x: 22, y: 16, w: 3, h: 4, color: "#fff0d0", angle: -0.1 },
-	// Upper shelves
-	{ x: 12, y: 9, w: 3, h: 4, color: "#f5edd8", angle: 0.06 },
-	{ x: 27, y: 8, w: 3, h: 4, color: "#ffe8c0", angle: -0.14 },
-	// Sticking out the top
-	{ x: 7, y: -2, w: 3, h: 5, color: "#fffae8", angle: -0.2 },
-	{ x: 20, y: -3, w: 3, h: 5, color: "#f8f2e0", angle: 0.15 },
-	// Floor papers (below bookshelves, row 4 = y offset 32)
-	{ x: 0, y: 33, w: 4, h: 5, color: "#fff8e0", angle: 0.35 },
-	{ x: 14, y: 34, w: 4, h: 5, color: "#f5edd8", angle: -0.25 },
+	// ── Bookshelf 1 (center≈7) — 6 papers ──
+	{ x: 6, y: 2, w: 3, h: 4, color: "#f5f0e0", angle: 0.1 },
+	{ x: 7, y: 8, w: 3, h: 4, color: "#f0ead0", angle: -0.12 },
+	{ x: 5, y: 14, w: 3, h: 4, color: "#fffae8", angle: 0.15 },
+	{ x: 7, y: 20, w: 3, h: 4, color: "#f5edd8", angle: -0.08 },
+	{ x: 8, y: 5, w: 3, h: 4, color: "#fff8e0", angle: 0.2 },
+	{ x: 6, y: 11, w: 3, h: 4, color: "#fffae8", angle: -0.18 },
+	// ── Bookshelf 2 (center≈23) — 6 papers, mirrored Y ──
+	{ x: 22, y: 2, w: 3, h: 4, color: "#fff8e8", angle: -0.1 },
+	{ x: 21, y: 8, w: 3, h: 4, color: "#fff5d5", angle: 0.12 },
+	{ x: 23, y: 14, w: 3, h: 4, color: "#fff0d0", angle: -0.15 },
+	{ x: 21, y: 20, w: 3, h: 4, color: "#ffe8c0", angle: 0.08 },
+	{ x: 20, y: 5, w: 3, h: 4, color: "#f5edd8", angle: -0.2 },
+	{ x: 22, y: 11, w: 3, h: 4, color: "#f8f2e0", angle: 0.18 },
 ];
 
 /** Bookshelf-mgr-1 is at col 21, row 2 in the default layout */

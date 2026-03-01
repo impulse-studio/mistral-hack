@@ -27,17 +27,9 @@ export const gitClone = internalAction({
 			`git clone ${url} → ${path}${branch ? ` (branch: ${branch})` : ""}`,
 		);
 
-		await withRetry(() =>
-			sandbox.git.clone(url, path, branch, undefined, username, token),
-		);
+		await withRetry(() => sandbox.git.clone(url, path, branch, undefined, username, token));
 
-		await recordAndLog(
-			ctx,
-			sandboxRecord._id,
-			agentId,
-			"status",
-			`Repository cloned to ${path}`,
-		);
+		await recordAndLog(ctx, sandboxRecord._id, agentId, "status", `Repository cloned to ${path}`);
 
 		return { success: true, path };
 	},
@@ -99,9 +91,26 @@ export const gitCommit = internalAction({
 	handler: async (ctx, { path, message, author, email, agentId }) => {
 		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
 
-		await withRetry(() =>
-			sandbox.git.commit(path, message, author, email),
-		);
+		// Check if there are staged changes before committing
+		const status = await withRetry(() => sandbox.git.status(path));
+		const hasChanges =
+			status &&
+			(Array.isArray(status)
+				? status.length > 0
+				: typeof status === "object" && Object.keys(status).length > 0);
+
+		if (!hasChanges) {
+			await recordAndLog(
+				ctx,
+				sandboxRecord._id,
+				agentId,
+				"status",
+				"git commit skipped — nothing to commit",
+			);
+			return { success: true, skipped: true };
+		}
+
+		await withRetry(() => sandbox.git.commit(path, message, author, email));
 
 		await recordAndLog(
 			ctx,
@@ -128,13 +137,7 @@ export const gitPush = internalAction({
 
 		await withRetry(() => sandbox.git.push(path, username, token));
 
-		await recordAndLog(
-			ctx,
-			sandboxRecord._id,
-			agentId,
-			"command",
-			`git push (${path})`,
-		);
+		await recordAndLog(ctx, sandboxRecord._id, agentId, "command", `git push (${path})`);
 
 		return { success: true };
 	},
@@ -153,13 +156,7 @@ export const gitPull = internalAction({
 
 		await withRetry(() => sandbox.git.pull(path, username, token));
 
-		await recordAndLog(
-			ctx,
-			sandboxRecord._id,
-			agentId,
-			"command",
-			`git pull (${path})`,
-		);
+		await recordAndLog(ctx, sandboxRecord._id, agentId, "command", `git pull (${path})`);
 
 		return { success: true };
 	},

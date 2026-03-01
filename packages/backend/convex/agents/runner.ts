@@ -3,11 +3,8 @@
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
-import { runCoderTask } from "./coder/runner";
-// import { runComputerUseTask } from "./browser/runner"; // Disabled: no outbound internet on Daytona Tier 1/2
-import { runCopywriterTask } from "./copywriter/runner";
-import { runGeneralTask } from "./general/runner";
-import { runResearcherTask } from "./researcher/runner";
+import { runComputerUseTask } from "./browser/runner";
+import { runAgenticTask } from "./agenticRunner";
 import { roleHas } from "./shared/capabilities";
 import type { RunnerResult } from "./shared/types";
 
@@ -98,24 +95,12 @@ export const runSubAgent = internalAction({
 				envVars: Object.keys(envVars).length > 0 ? envVars : undefined,
 			});
 
-			// Dispatch to role-specific runner — each returns { success, result }
+			// Dispatch: browser/designer use vision-action loop, all others use agentic runner
 			let outcome: RunnerResult;
-			if (agent.role === "coder") {
-				outcome = await runCoderTask(ctx, agentId, task, agent.name);
-			} else if (agent.role === "researcher") {
-				outcome = await runResearcherTask(ctx, agentId, task);
-			} else if (agent.role === "copywriter") {
-				outcome = await runCopywriterTask(ctx, agentId, task);
-			} else if (agent.role === "browser" || agent.role === "designer") {
-				// Disabled: Daytona Tier 1/2 blocks outbound internet, making browser agent useless.
-				// Re-enable once on a plan with unrestricted network or self-hosted Daytona.
-				outcome = {
-					success: false,
-					result:
-						"Browser agent is disabled — Daytona sandbox has no outbound internet access (Tier 1/2 restriction).",
-				};
+			if (agent.role === "browser" || agent.role === "designer") {
+				outcome = await runComputerUseTask(ctx, agentId, task);
 			} else {
-				outcome = await runGeneralTask(ctx, agentId, task, agent.role);
+				outcome = await runAgenticTask(ctx, agentId, task, agent.role, agent.name);
 			}
 
 			const { success: taskSuccess, result } = outcome;

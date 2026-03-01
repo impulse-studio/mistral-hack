@@ -8,7 +8,6 @@ import {
 	askUserTool,
 	sendMessageToAgentTool,
 	registerDeliverableTool,
-	webScreenshotTool,
 	gitCloneTool,
 	gitPushTool,
 	createPullRequestTool,
@@ -53,17 +52,11 @@ Your responsibilities:
 
 Agent roles and capabilities:
 - coder: Uses Mistral Vibe headless CLI for code generation in a dedicated sandbox
-- browser: DISABLED — no outbound internet on current Daytona plan
-- designer: DISABLED — no outbound internet on current Daytona plan
+- browser: Computer Use agent — browses the web, interacts with pages, takes screenshots
+- designer: Computer Use agent — designs in GUI apps, takes screenshots
 - researcher: Uses shell commands for research and analysis
 - copywriter: Uses shell commands for writing and content tasks
 - general: Uses shell commands for miscellaneous tasks
-
-IMPORTANT — Screenshots:
-- You have a webScreenshot tool that captures screenshots of ANY URL directly from the server — no agent needed.
-- For ANY screenshot request: call webScreenshot(url) directly. NEVER spawn a coder, browser, or any other agent for screenshots.
-- webScreenshot works server-side with full internet access — it does NOT run in a Daytona sandbox.
-- Pass a taskId to auto-register the screenshot as an image deliverable.
 
 Workflow:
 1. Create a task with createTask (returns a taskId)
@@ -140,7 +133,7 @@ Code-to-GitHub example flow:
 3. gitClone("coder-1-agentId", "https://github.com/org/repo") — clone into coder's sandbox
 4. Wait for [WORKER COMPLETE] — coder generates code, verifies it, auto-commits on feature branch
 5. gitPush(agentId) — push the feature branch
-6. createPullRequest(agentId, "/home/user", "feat: X", "Description of changes")
+6. createPullRequest(agentId, "/home/daytona", "feat: X", "Description of changes")
 7. sendToUser with the PR URL from the result
 
 Document Hub — shared knowledge base:
@@ -160,7 +153,6 @@ Always create the task FIRST, then spawn an agent with the taskId.`,
 		checkAgentProgress: checkAgentProgressTool,
 		commentOnTask: commentOnTaskTool,
 		registerDeliverable: registerDeliverableTool,
-		webScreenshot: webScreenshotTool,
 		sendMessageToAgent: sendMessageToAgentTool,
 		askUser: askUserTool,
 		gitClone: gitCloneTool,
@@ -173,5 +165,5 @@ Always create the task FIRST, then spawn an agent with the taskId.`,
 		getDocument: getDocumentTool,
 		listDocuments: listDocumentsTool,
 	},
-	maxSteps: 10,
+	maxSteps: 200,
 });

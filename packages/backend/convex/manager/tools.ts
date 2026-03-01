@@ -6,6 +6,7 @@ import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { agentPool } from "../workpool";
 import { roleToModel } from "../agents/models";
+import { SANDBOX_WORK_DIR } from "../sandbox/constants";
 
 // Tool action: spawn a sub-agent and optionally enqueue it on the workpool
 export const spawnAgentAction = internalAction({
@@ -84,13 +85,31 @@ export const createTaskAction = internalAction({
 		title: string;
 		message: string;
 	}> => {
+		// Resolve dependsOn refs (accepts both task IDs and task titles)
+		let resolvedDeps: Id<"tasks">[] | undefined;
+		if (args.dependsOn && args.dependsOn.length > 0) {
+			resolvedDeps = await ctx.runQuery(internal.tasks.queries.resolveTaskRefs, {
+				refs: args.dependsOn,
+			});
+			if (resolvedDeps.length === 0) resolvedDeps = undefined;
+		}
+
+		// Resolve parentTaskId
+		let resolvedParent: Id<"tasks"> | undefined;
+		if (args.parentTaskId) {
+			const resolved = await ctx.runQuery(internal.tasks.queries.resolveTaskRefs, {
+				refs: [args.parentTaskId],
+			});
+			resolvedParent = resolved[0];
+		}
+
 		const taskId: Id<"tasks"> = await ctx.runMutation(internal.tasks.mutations.createInternal, {
 			title: args.title,
 			description: args.description,
 			createdBy: "manager",
 			estimatedMinutes: args.estimatedMinutes,
-			dependsOn: args.dependsOn as Id<"tasks">[] | undefined,
-			parentTaskId: args.parentTaskId as Id<"tasks"> | undefined,
+			dependsOn: resolvedDeps,
+			parentTaskId: resolvedParent,
 		});
 
 		return {
@@ -118,46 +137,59 @@ export const checkProgressAction = internalAction({
 		recentLogs: Array<{ type: string; content: string; timestamp: number }>;
 		message: string;
 	}> => {
-		const typedAgentId = agentId as Id<"agents">;
-		const agent = await ctx.runQuery(internal.office.queries.getAgentInternal, {
-			agentId: typedAgentId,
-		});
-		if (!agent) {
+		try {
+			const typedAgentId = agentId as Id<"agents">;
+			const agent = await ctx.runQuery(internal.office.queries.getAgentInternal, {
+				agentId: typedAgentId,
+			});
+			if (!agent) {
+				return {
+					agentId,
+					status: "not_found",
+					name: "",
+					role: "",
+					currentTask: null,
+					recentLogs: [],
+					message: `Agent ${agentId} not found.`,
+				};
+			}
+
+			let currentTask: { title: string; status: string } | null = null;
+			if (agent.currentTaskId) {
+				const task = await ctx.runQuery(internal.tasks.queries.getInternal, {
+					taskId: agent.currentTaskId,
+				});
+				if (task) {
+					currentTask = { title: task.title, status: task.status };
+				}
+			}
+
+			const logs = await ctx.runQuery(internal.agents.queries.getRecentLogs, {
+				agentId: typedAgentId,
+				limit: 10,
+			});
+
 			return {
 				agentId,
-				status: "not_found",
+				status: agent.status,
+				name: agent.name,
+				role: agent.role,
+				currentTask,
+				recentLogs: logs,
+				message: `Agent "${agent.name}" is ${agent.status}.${currentTask ? ` Working on: ${currentTask.title} (${currentTask.status})` : ""}`,
+			};
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return {
+				agentId,
+				status: "error",
 				name: "",
 				role: "",
 				currentTask: null,
 				recentLogs: [],
-				message: `Agent ${agentId} not found.`,
+				message: `Failed to check agent ${agentId}: ${error}. Make sure you're using an agent ID, not a task ID.`,
 			};
 		}
-
-		let currentTask: { title: string; status: string } | null = null;
-		if (agent.currentTaskId) {
-			const task = await ctx.runQuery(internal.tasks.queries.getInternal, {
-				taskId: agent.currentTaskId,
-			});
-			if (task) {
-				currentTask = { title: task.title, status: task.status };
-			}
-		}
-
-		const logs = await ctx.runQuery(internal.agents.queries.getRecentLogs, {
-			agentId: typedAgentId,
-			limit: 10,
-		});
-
-		return {
-			agentId,
-			status: agent.status,
-			name: agent.name,
-			role: agent.role,
-			currentTask,
-			recentLogs: logs,
-			message: `Agent "${agent.name}" is ${agent.status}.${currentTask ? ` Working on: ${currentTask.title} (${currentTask.status})` : ""}`,
-		};
 	},
 });
 
@@ -294,7 +326,7 @@ export const gitCloneAction = internalAction({
 		ctx,
 		{ agentId, url, path, branch },
 	): Promise<{ success: boolean; path: string; message: string; error?: string }> => {
-		const clonePath = path ?? "/home/user/repo";
+		const clonePath = path ?? `${SANDBOX_WORK_DIR}/repo`;
 		try {
 			const result = await ctx.runAction(internal.sandbox.git.gitClone, {
 				url,
@@ -329,7 +361,7 @@ export const gitPushAction = internalAction({
 		ctx,
 		{ agentId, path },
 	): Promise<{ success: boolean; message: string; error?: string }> => {
-		const repoPath = path ?? "/home/user/repo";
+		const repoPath = path ?? `${SANDBOX_WORK_DIR}/repo`;
 		try {
 			await ctx.runAction(internal.sandbox.git.gitPush, {
 				path: repoPath,
@@ -480,22 +512,31 @@ export const updateTaskStatusAction = internalAction({
 		status: string;
 		message: string;
 	}> => {
-		await ctx.runMutation(internal.tasks.mutations.updateStatusInternal, {
-			taskId: taskId as Id<"tasks">,
-			status: status as
-				| "backlog"
-				| "todo"
-				| "waiting"
-				| "in_progress"
-				| "review"
-				| "done"
-				| "failed",
-		});
+		try {
+			await ctx.runMutation(internal.tasks.mutations.updateStatusInternal, {
+				taskId: taskId as Id<"tasks">,
+				status: status as
+					| "backlog"
+					| "todo"
+					| "waiting"
+					| "in_progress"
+					| "review"
+					| "done"
+					| "failed",
+			});
 
-		return {
-			taskId,
-			status,
-			message: `Task ${taskId} updated to "${status}".`,
-		};
+			return {
+				taskId,
+				status,
+				message: `Task ${taskId} updated to "${status}".`,
+			};
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return {
+				taskId,
+				status,
+				message: `Failed to update task ${taskId}: ${error}. Make sure you're using a task ID, not an agent ID.`,
+			};
+		}
 	},
 });
