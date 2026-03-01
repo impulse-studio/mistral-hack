@@ -312,6 +312,29 @@ export const userQuestionDoc = v.object({
 	...userQuestionFields,
 });
 
+export const integrationConnectionStatusValidator = v.union(
+	v.literal("active"),
+	v.literal("expired"),
+	v.literal("revoked"),
+);
+
+export const integrationConnectionFields = {
+	userId: v.string(), // better-auth user ID
+	toolkitSlug: v.string(), // e.g. "GMAIL", "SLACK"
+	title: v.string(), // human label
+	status: integrationConnectionStatusValidator,
+	accessToken: v.optional(v.string()),
+	refreshToken: v.optional(v.string()),
+	expiresAt: v.optional(v.number()),
+	createdAt: v.number(),
+};
+
+export const integrationConnectionDoc = v.object({
+	_id: v.id("integrationConnections"),
+	_creationTime: v.number(),
+	...integrationConnectionFields,
+});
+
 export const userPreferencesFields = {
 	userId: v.string(), // better-auth user ID
 	onboardingCompleted: v.boolean(),
@@ -381,6 +404,11 @@ export default defineSchema({
 
 	// User preferences — per-user settings (onboarding, etc.)
 	userPreferences: defineTable(userPreferencesFields).index("by_user", ["userId"]),
+
+	// Integration connections — OAuth connections to external services
+	integrationConnections: defineTable(integrationConnectionFields)
+		.index("by_user", ["userId"])
+		.index("by_user_toolkit", ["userId", "toolkitSlug"]),
 
 	// Documents — shared knowledge base (agent notes, specs, uploads)
 	documents: defineTable(documentFields)
