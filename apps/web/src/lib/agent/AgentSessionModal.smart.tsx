@@ -14,20 +14,27 @@ import type { AgentSessionAgent, AgentSessionTask } from "./AgentSessionPanel.co
 
 function mapLogToTerminalText(type: string, content: string): string {
 	switch (type) {
-		case "command":
+		case "command": {
 			return `$ ${content}`;
-		case "stderr":
+		}
+		case "stderr": {
 			return `[stderr] ${content}`;
-		case "status":
+		}
+		case "status": {
 			return `[status] ${content}`;
-		case "tool_call":
+		}
+		case "tool_call": {
 			return `[tool] ${content}`;
-		case "tool_result":
+		}
+		case "tool_result": {
 			return `[tool-result] ${content}`;
-		case "screenshot":
+		}
+		case "screenshot": {
 			return `[screenshot] ${content}`;
-		default:
+		}
+		default: {
 			return content;
+		}
 	}
 }
 
