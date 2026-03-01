@@ -1,13 +1,11 @@
 "use node";
 
 import { v } from "convex/values";
-import { createMistral } from "@ai-sdk/mistral";
 import { generateText, tool } from "ai";
 import { z } from "zod";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
-
-const mistral = createMistral();
+import { mistral } from "./models";
 
 /**
  * Agent responds to a user comment on a completed/waiting task.

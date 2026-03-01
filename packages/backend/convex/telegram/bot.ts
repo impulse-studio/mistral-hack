@@ -4,7 +4,7 @@ import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import type { ActionCtx } from "../_generated/server";
 import { internalAction } from "../_generated/server";
-import { managerAgent } from "../agent";
+import { managerAgent } from "../agents/manager/agent";
 import { TelegramService, type TelegramMessage } from "./TelegramService";
 
 // ── Convex action: process a Telegram update ─────────────

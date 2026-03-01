@@ -3,7 +3,7 @@
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
-import { managerAgent } from "../agent";
+import { managerAgent } from "../agents/manager/agent";
 
 // ── Manager mailbox processor (action — must be in "use node" file) ──
 

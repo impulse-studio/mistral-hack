@@ -16,7 +16,7 @@ import {
 	mutation,
 	query,
 } from "./_generated/server";
-import { managerAgent } from "./agent";
+import { managerAgent } from "./agents/manager/agent";
 import { streamToSpeech } from "./voice/elevenLabsStream";
 
 // ── Shared thread (single Manager thread for all channels) ───

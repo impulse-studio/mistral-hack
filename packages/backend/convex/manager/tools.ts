@@ -5,15 +5,7 @@ import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { agentPool } from "../workpool";
-
-const roleToModel: Record<string, string> = {
-	coder: "codestral-latest",
-	browser: "mistral-large-latest",
-	designer: "mistral-large-latest",
-	researcher: "mistral-small-latest",
-	copywriter: "mistral-small-latest",
-	general: "mistral-small-latest",
-};
+import { roleToModel } from "../agents/models";
 
 // Tool action: spawn a sub-agent and optionally enqueue it on the workpool
 export const spawnAgentAction = internalAction({

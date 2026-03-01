@@ -2,7 +2,7 @@
 
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
-import { managerAgent } from "../agent";
+import { managerAgent } from "./manager/agent";
 
 // Wake the manager agent by streaming a prompt message into its thread
 export const notifyManagerAction = internalAction({

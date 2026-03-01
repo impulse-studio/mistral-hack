@@ -1,15 +1,13 @@
 "use node";
 
-import { createMistral } from "@ai-sdk/mistral";
 import { streamHandlerAction, createActionTool } from "convex-durable-agents";
 import { z } from "zod";
 import { components, internal } from "../_generated/api";
-
-const mistral = createMistral();
+import { mistral, MANAGER_MODEL } from "../agents/models";
 
 // Manager's durable agent handler — survives crashes and restarts
 export const handler = streamHandlerAction(components.durable_agents, {
-	model: mistral("mistral-large-latest"),
+	model: mistral(MANAGER_MODEL),
 	system: `You are the Manager of an AI development office.
 
 You orchestrate a team of sub-agents to accomplish tasks:
