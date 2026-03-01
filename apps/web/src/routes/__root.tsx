@@ -41,7 +41,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 	component: RootDocument,
 	beforeLoad: async () => {
 		if (typeof window === "undefined") {
-			return { isAuthenticated: false, token: null };
+			return { isAuthenticated: true, token: null };
 		}
 		const { data: session } = await authClient.getSession();
 		return {

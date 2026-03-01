@@ -22,6 +22,13 @@ export default defineConfig({
 	server: {
 		port: 3003,
 		host: "0.0.0.0",
+		proxy: {
+			"/api/auth": {
+				target: "https://fast-aardvark-774.eu-west-1.convex.site",
+				changeOrigin: true,
+				secure: true,
+			},
+		},
 	},
 	ssr: {
 		noExternal: ["@convex-dev/better-auth", "@noble/ciphers", "pixelarticons"],
