@@ -22,7 +22,10 @@ export const add = mutation({
 
 		// Auto-notify agents via mailbox when a user or system comments
 		if (args.author === "user" || args.author === "system") {
-			const payload = `[COMMENT on "${task.title}"] ${args.content}`;
+			// Agent-targeted payload: context only, agent has its own reply/escalate logic
+			const agentPayload = `[COMMENT on "${task.title}"] ${args.content}`;
+			// Manager-targeted payload: explicit instruction to reply to the user
+			const managerPayload = `[USER REPLY NEEDED on task "${task.title}" (${args.taskId})] User said: "${args.content}" — Reply to the user by commenting on this task with commentOnTask. Write a helpful, user-facing response (not internal notes).`;
 			const status = task.status;
 			const isDoneOrWaiting = status === "done" || status === "waiting";
 
@@ -32,7 +35,7 @@ export const add = mutation({
 				await ctx.scheduler.runAfter(0, internal.mailbox.mutations.enqueue, {
 					recipientId: task.assignedTo,
 					type: "notification" as const,
-					payload,
+					payload: agentPayload,
 					taskId: args.taskId,
 					priority: 0,
 				});
@@ -46,7 +49,7 @@ export const add = mutation({
 					await ctx.scheduler.runAfter(0, internal.mailbox.mutations.enqueue, {
 						recipientId: manager._id,
 						type: "notification" as const,
-						payload,
+						payload: managerPayload,
 						taskId: args.taskId,
 						priority: -1,
 					});
@@ -56,7 +59,7 @@ export const add = mutation({
 				await ctx.scheduler.runAfter(0, internal.mailbox.mutations.enqueue, {
 					recipientId: task.assignedTo,
 					type: "notification" as const,
-					payload,
+					payload: agentPayload,
 					taskId: args.taskId,
 					priority: 0,
 				});
@@ -70,7 +73,7 @@ export const add = mutation({
 					await ctx.scheduler.runAfter(0, internal.mailbox.mutations.enqueue, {
 						recipientId: manager._id,
 						type: "notification" as const,
-						payload,
+						payload: managerPayload,
 						taskId: args.taskId,
 						priority: 0,
 					});
