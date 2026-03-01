@@ -432,6 +432,9 @@ export function createDefaultLayout(): OfficeLayout {
 		// Kitchen decor
 		{ uid: "plant-k", type: FurnitureType.PLANT, col: 28, row: 10 },
 		{ uid: "lamp-k", type: FurnitureType.LAMP, col: 27, row: 14 },
+
+		// ═══ MISTRAL CAT (kitchen corner) ═══
+		{ uid: "mistral-cat", type: FurnitureType.MISTRAL_CAT, col: 28, row: 14 },
 	];
 
 	return { version: 1, cols: COLS, rows: ROWS, tiles, tileColors, furniture };

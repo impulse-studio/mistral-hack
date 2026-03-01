@@ -13,6 +13,7 @@ import {
 	LAPTOP_SPRITE,
 	LAPTOP_OFF_SPRITE,
 	COFFEE_MACHINE_SPRITE,
+	MISTRAL_CAT_SPRITE,
 } from "./spriteData";
 
 export interface LoadedAssetData {
@@ -161,6 +162,15 @@ export const FURNITURE_CATALOG: CatalogEntryWithCategory[] = [
 		sprite: COFFEE_MACHINE_SPRITE,
 		isDesk: false,
 		category: "misc",
+	},
+	{
+		type: FurnitureType.MISTRAL_CAT,
+		label: "Mistral Cat",
+		footprintW: 1,
+		footprintH: 1,
+		sprite: MISTRAL_CAT_SPRITE,
+		isDesk: false,
+		category: "decor",
 	},
 ];
 

@@ -15,6 +15,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { authClient } from "@/lib/auth-client";
+import { DocumentHubSmart } from "@/lib/document-hub/DocumentHub.smart";
 import { GamesGameArcadeModal } from "@/lib/games/GameArcadeModal.component";
 import { KanbanAgentModalSmart } from "@/lib/kanban/AgentKanbanModal.smart";
 import { KanbanTaskDetailSmart } from "@/lib/kanban/TaskDetailModal.smart";
@@ -91,6 +92,9 @@ function OfficeContent() {
 	const [showWorkerBoards, setShowWorkerBoards] = useState(false);
 	const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 	const [showArcade, setShowArcade] = useState(false);
+	const [showDocs, setShowDocs] = useState(false);
+	const [catSpeech, setCatSpeech] = useState<string | null>(null);
+	const catSpeechTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const [tilesetReady, setTilesetReady] = useState(false);
 	const officeRef = useRef<OfficeState | null>(null);
 	const agentMapRef = useRef(new Map<string, number>()); // convex agent _id → canvas id
@@ -205,6 +209,13 @@ function OfficeContent() {
 	const handleClickFurniture = useCallback((uid: string) => {
 		if (uid === "game-table" || uid === "game-laptop") {
 			setShowArcade(true);
+		} else if (uid === "bookshelf-mgr-1" || uid === "bookshelf-mgr-2") {
+			setShowDocs(true);
+		} else if (uid === "mistral-cat") {
+			const text = Math.random() < 0.9 ? "miau~" : "*hiss!*";
+			setCatSpeech(text);
+			if (catSpeechTimerRef.current) clearTimeout(catSpeechTimerRef.current);
+			catSpeechTimerRef.current = setTimeout(() => setCatSpeech(null), 1500);
 		}
 	}, []);
 
@@ -410,6 +421,31 @@ function OfficeContent() {
 
 			{/* Game arcade modal (triggered by clicking game table) */}
 			<GamesGameArcadeModal open={showArcade} onClose={() => setShowArcade(false)} />
+
+			{/* Cat speech bubble */}
+			{catSpeech && (
+				<div className="pointer-events-none absolute inset-0 z-40 flex items-end justify-end p-20">
+					<div
+						className="animate-in fade-in zoom-in-95 rounded-sm border border-amber-500/50 bg-black/80 px-3 py-1.5 font-mono text-sm text-amber-400 shadow-lg"
+						style={{ imageRendering: "pixelated" }}
+					>
+						{catSpeech}
+					</div>
+				</div>
+			)}
+
+			{/* Document Hub modal (triggered by clicking any desk) */}
+			<Dialog open={showDocs} onOpenChange={setShowDocs}>
+				<DialogContent className="flex h-[85vh] w-[90vw] max-w-[1200px] flex-col">
+					<DialogHeader>
+						<DialogTitle>Document Hub</DialogTitle>
+						<DialogClose render={<Button variant="default" size="icon-sm" />}>×</DialogClose>
+					</DialogHeader>
+					<div className="min-h-0 flex-1 overflow-hidden">
+						<DocumentHubSmart />
+					</div>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

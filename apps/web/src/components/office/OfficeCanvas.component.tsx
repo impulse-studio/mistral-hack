@@ -30,7 +30,13 @@ function computeFitZoom(
 }
 
 /** Furniture UIDs that show pointer cursor on hover and fire onClickFurniture */
-const CLICKABLE_FURNITURE = new Set(["game-table", "game-laptop"]);
+const CLICKABLE_FURNITURE = new Set([
+	"game-table",
+	"game-laptop",
+	"bookshelf-mgr-1",
+	"bookshelf-mgr-2",
+	"mistral-cat",
+]);
 
 interface OfficeCanvasProps {
 	officeState: OfficeState;

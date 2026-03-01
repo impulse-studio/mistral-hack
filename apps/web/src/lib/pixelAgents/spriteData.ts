@@ -923,6 +923,42 @@ export const COFFEE_MACHINE_SPRITE: SpriteData = (() => {
 	];
 })();
 
+// ── Mistral Cat Sprite ─────────────────────────────────────────
+
+/** Mistral cat: 16x16 pixel art sitting cat in Mistral brand gradient colors.
+ *  Inspired by the Le Chat mascot — pointy ears, big eyes, curled tail.
+ *  Gradient: yellow ears → orange face → deep orange body → red paws.
+ */
+export const MISTRAL_CAT_SPRITE: SpriteData = (() => {
+	const Y = "#FFD800"; // yellow (ear tips)
+	const P = "#FFE566"; // pale (inner ear)
+	const O = "#FFAF00"; // orange (face)
+	const N = "#FF6B8A"; // pink (nose)
+	const D = "#FF8205"; // deep orange (body)
+	const L = "#FFD0A0"; // light (chest)
+	const R = "#FA500F"; // red-orange (paws)
+	const B = "#1A1A1A"; // black (eyes)
+	const W = "#FFFFFF"; // white (eye shine)
+	return [
+		[_, _, _, _, Y, _, _, _, _, _, _, Y, _, _, _, _],
+		[_, _, _, Y, Y, Y, _, _, _, _, Y, Y, Y, _, _, _],
+		[_, _, Y, Y, P, Y, O, O, O, O, Y, P, Y, Y, _, _],
+		[_, _, O, O, O, O, O, O, O, O, O, O, O, O, _, _],
+		[_, _, O, O, B, W, O, O, O, O, W, B, O, O, _, _],
+		[_, _, O, O, O, O, O, N, O, O, O, O, O, O, _, _],
+		[_, _, _, D, O, O, O, O, O, O, O, O, D, _, _, _],
+		[_, _, _, _, D, D, D, D, D, D, D, D, _, _, _, _],
+		[_, _, _, D, D, L, L, L, L, L, L, D, D, _, _, _],
+		[_, _, D, D, D, D, L, L, L, L, D, D, D, D, _, _],
+		[_, _, D, D, D, D, D, D, D, D, D, D, D, D, _, _],
+		[_, R, R, D, D, D, D, D, D, D, D, D, D, R, R, _],
+		[_, R, R, _, _, D, D, D, D, D, D, _, _, R, R, _],
+		[_, _, _, _, _, _, _, _, _, _, _, _, _, R, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+	];
+})();
+
 // ── Speech Bubble Sprites ───────────────────────────────────────
 
 /** Permission bubble: white square with "..." in amber, and a tail pointer (11x13) */
