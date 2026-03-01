@@ -100,8 +100,8 @@ const updateTaskStatusTool = createTool({
 	inputSchema: z.object({
 		taskId: z.string().describe("Task ID"),
 		status: z
-			.enum(["backlog", "todo", "in_progress", "review", "done", "failed"])
-			.describe("New status"),
+			.enum(["backlog", "todo", "waiting", "in_progress", "review", "done", "failed"])
+			.describe("New status. Use 'waiting' when the task needs user input before it can continue."),
 	}),
 	execute: async (ctx: ToolCtx, { taskId, status }) => {
 		await ctx.runMutation(internal.tasks.mutations.updateStatusInternal, {
@@ -196,7 +196,7 @@ const sendMessageToAgentTool = createTool({
 		priority: z
 			.number()
 			.optional()
-			.describe("0=normal (default), 1=high, 2=critical (always processed next)"),
+			.describe("-1=low (background), 0=normal (default), 1=high, 2=critical (always next)"),
 	}),
 	execute: async (
 		ctx: ToolCtx,
@@ -302,6 +302,12 @@ When handling complex tasks:
 3. Only spawn agents for tasks with no unmet dependencies
 4. When you receive [DEPENDENCY RESOLVED] notifications, spawn agents for newly unblocked tasks
 5. Continue until all sub-tasks are complete, then report the full result
+
+Waiting for user input:
+- Use updateTaskStatus with status "waiting" when a task needs user input before it can continue
+- This pauses the task and shows it in the "Waiting" column on the kanban board
+- The user will see the task is waiting and can provide input via comments
+- Once the user responds, move the task back to "in_progress" or the appropriate status
 
 Agent reuse — idle agents stay alive after completing a task:
 - Use sendMessageToAgent to send follow-up work to idle agents instead of spawning new ones

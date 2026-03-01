@@ -25,6 +25,7 @@ export const agentStatusValidator = v.union(
 export const taskStatusValidator = v.union(
 	v.literal("backlog"),
 	v.literal("todo"),
+	v.literal("waiting"),
 	v.literal("in_progress"),
 	v.literal("review"),
 	v.literal("done"),
@@ -152,7 +153,7 @@ export const agentMailboxFields = {
 	status: mailboxMessageStatusValidator,
 	payload: v.string(),
 	taskId: v.optional(v.id("tasks")),
-	priority: v.number(), // 0=normal, 1=high, 2=critical (always next)
+	priority: v.number(), // -1=low (background), 0=normal, 1=high, 2=critical (always next)
 	createdAt: v.number(),
 	processedAt: v.optional(v.number()),
 };

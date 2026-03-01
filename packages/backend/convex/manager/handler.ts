@@ -76,8 +76,10 @@ Be concise, proactive, and strategic. Think step by step before delegating.`,
 			args: z.object({
 				taskId: z.string().describe("Task ID"),
 				status: z
-					.enum(["backlog", "todo", "in_progress", "review", "done", "failed"])
-					.describe("New status"),
+					.enum(["backlog", "todo", "waiting", "in_progress", "review", "done", "failed"])
+					.describe(
+						"New status. Use 'waiting' when the task needs user input before it can continue.",
+					),
 			}),
 			handler: internal.manager.tools.updateTaskStatusAction,
 		}),
@@ -108,7 +110,7 @@ Be concise, proactive, and strategic. Think step by step before delegating.`,
 				priority: z
 					.number()
 					.optional()
-					.describe("0=normal (default), 1=high, 2=critical (always processed next)"),
+					.describe("-1=low (background), 0=normal (default), 1=high, 2=critical (always next)"),
 			}),
 			handler: internal.manager.tools.sendMessageToAgentAction,
 		}),
