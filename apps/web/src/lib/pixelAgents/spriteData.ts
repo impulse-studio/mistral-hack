@@ -56,7 +56,7 @@ export const DESK_SQUARE_SPRITE: SpriteData = (() => {
 	return rows;
 })();
 
-/** Plant in pot: 16x24 */
+/** Plant in pot: 16x32 (1×2 tiles) */
 export const PLANT_SPRITE: SpriteData = (() => {
 	const G = "#3D8B37";
 	const D = "#2D6B27";
@@ -64,6 +64,12 @@ export const PLANT_SPRITE: SpriteData = (() => {
 	const P = "#B85C3A";
 	const R = "#8B4422";
 	return [
+		[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
 		[_, _, _, _, _, _, G, G, _, _, _, _, _, _, _, _],
 		[_, _, _, _, _, G, G, G, G, _, _, _, _, _, _, _],
 		[_, _, _, _, G, G, D, G, G, G, _, _, _, _, _, _],
@@ -87,6 +93,8 @@ export const PLANT_SPRITE: SpriteData = (() => {
 		[_, _, _, _, R, P, P, P, P, P, R, _, _, _, _, _],
 		[_, _, _, _, _, R, P, P, P, R, _, _, _, _, _, _],
 		[_, _, _, _, _, _, R, R, R, _, _, _, _, _, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
 		[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
 	];
 })();
@@ -1005,13 +1013,13 @@ export const BUBBLE_WAITING_SPRITE: SpriteData = (() => {
 	];
 })();
 
-/** Coffee break bubble: white square with coffee cup icon, and a tail pointer (11x13) */
+/** Coffee break bubble: dark square with coffee cup icon, and a tail pointer (11x13) */
 export const BUBBLE_COFFEE_SPRITE: SpriteData = (() => {
-	const B = "#555566"; // border
-	const F = "#EEEEFF"; // fill
-	const C = "#8B5A2B"; // coffee brown
-	const W = "#FFFFFF"; // cup white
-	const S = "#AAAAAA"; // steam grey
+	const B = "#333344"; // border
+	const F = "#2A2A3A"; // dark fill
+	const C = "#D4935A"; // coffee brown (lighter for contrast)
+	const W = "#CCCCDD"; // cup light
+	const S = "#778899"; // steam grey-blue
 	return [
 		[_, B, B, B, B, B, B, B, B, B, _],
 		[B, F, F, F, F, S, F, F, F, F, B],
@@ -1021,6 +1029,122 @@ export const BUBBLE_COFFEE_SPRITE: SpriteData = (() => {
 		[B, F, F, F, W, C, W, W, F, F, B],
 		[B, F, F, F, W, C, W, F, F, F, B],
 		[B, F, F, F, W, W, W, F, F, F, B],
+		[B, F, F, F, F, F, F, F, F, F, B],
+		[_, B, B, B, B, B, B, B, B, B, _],
+		[_, _, _, _, B, B, B, _, _, _, _],
+		[_, _, _, _, _, B, _, _, _, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _],
+	];
+})();
+
+/** Gaming bubble: white square with game controller icon, and a tail pointer (11x13) */
+export const BUBBLE_GAMING_SPRITE: SpriteData = (() => {
+	const B = "#555566"; // border
+	const F = "#EEEEFF"; // fill
+	const G = "#4466CC"; // controller blue
+	const D = "#333344"; // dark (buttons/sticks)
+	return [
+		[_, B, B, B, B, B, B, B, B, B, _],
+		[B, F, F, F, F, F, F, F, F, F, B],
+		[B, F, F, F, F, F, F, F, F, F, B],
+		[B, F, F, G, G, G, G, G, F, F, B],
+		[B, F, G, G, D, G, G, D, G, F, B],
+		[B, F, G, D, D, G, D, D, G, F, B],
+		[B, F, G, G, D, G, G, D, G, F, B],
+		[B, F, F, G, G, G, G, G, F, F, B],
+		[B, F, F, F, F, F, F, F, F, F, B],
+		[_, B, B, B, B, B, B, B, B, B, _],
+		[_, _, _, _, B, B, B, _, _, _, _],
+		[_, _, _, _, _, B, _, _, _, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _],
+	];
+})();
+
+/** Hand/petting bubble: white square with open hand icon, and a tail pointer (11x13) */
+export const BUBBLE_HAND_SPRITE: SpriteData = (() => {
+	const B = "#555566"; // border
+	const F = "#EEEEFF"; // fill
+	const K = "#FFCC99"; // skin tone
+	const N = "#DDAA77"; // nail/outline
+	return [
+		[_, B, B, B, B, B, B, B, B, B, _],
+		[B, F, F, F, N, N, N, F, F, F, B],
+		[B, F, F, N, K, K, K, N, F, F, B],
+		[B, F, F, N, K, K, K, N, F, F, B],
+		[B, F, N, K, K, K, K, K, N, F, B],
+		[B, F, N, K, K, K, K, K, N, F, B],
+		[B, F, F, N, K, K, K, N, F, F, B],
+		[B, F, F, F, N, K, N, F, F, F, B],
+		[B, F, F, F, F, N, F, F, F, F, B],
+		[_, B, B, B, B, B, B, B, B, B, _],
+		[_, _, _, _, B, B, B, _, _, _, _],
+		[_, _, _, _, _, B, _, _, _, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _],
+	];
+})();
+
+/** Heart bubble: white square with red heart icon, and a tail pointer (11x13) */
+export const BUBBLE_HEART_SPRITE: SpriteData = (() => {
+	const B = "#555566"; // border
+	const F = "#EEEEFF"; // fill
+	const R = "#EE3344"; // heart red
+	return [
+		[_, B, B, B, B, B, B, B, B, B, _],
+		[B, F, F, F, F, F, F, F, F, F, B],
+		[B, F, F, R, R, F, R, R, F, F, B],
+		[B, F, R, R, R, R, R, R, R, F, B],
+		[B, F, R, R, R, R, R, R, R, F, B],
+		[B, F, F, R, R, R, R, R, F, F, B],
+		[B, F, F, F, R, R, R, F, F, F, B],
+		[B, F, F, F, F, R, F, F, F, F, B],
+		[B, F, F, F, F, F, F, F, F, F, B],
+		[_, B, B, B, B, B, B, B, B, B, _],
+		[_, _, _, _, B, B, B, _, _, _, _],
+		[_, _, _, _, _, B, _, _, _, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _],
+	];
+})();
+
+/** Drink bubble: white square with water glass icon, and a tail pointer (11x13) */
+export const BUBBLE_DRINK_SPRITE: SpriteData = (() => {
+	const B = "#555566"; // border
+	const F = "#EEEEFF"; // fill
+	const W = "#88CCEE"; // water blue
+	const G = "#AABBCC"; // glass edge
+	return [
+		[_, B, B, B, B, B, B, B, B, B, _],
+		[B, F, F, F, F, F, F, F, F, F, B],
+		[B, F, F, F, G, G, G, F, F, F, B],
+		[B, F, F, F, G, W, G, F, F, F, B],
+		[B, F, F, F, G, W, G, F, F, F, B],
+		[B, F, F, F, G, W, G, F, F, F, B],
+		[B, F, F, F, G, W, G, F, F, F, B],
+		[B, F, F, F, G, G, G, F, F, F, B],
+		[B, F, F, F, F, F, F, F, F, F, B],
+		[_, B, B, B, B, B, B, B, B, B, _],
+		[_, _, _, _, B, B, B, _, _, _, _],
+		[_, _, _, _, _, B, _, _, _, _, _],
+		[_, _, _, _, _, _, _, _, _, _, _],
+	];
+})();
+
+/** Food bubble: white square with sandwich/snack icon, and a tail pointer (11x13) */
+export const BUBBLE_FOOD_SPRITE: SpriteData = (() => {
+	const B = "#555566"; // border
+	const F = "#EEEEFF"; // fill
+	const R = "#CC8833"; // bread top
+	const L = "#44AA44"; // lettuce green
+	const M = "#CC5544"; // meat/tomato
+	const D = "#DDAA55"; // bread bottom
+	return [
+		[_, B, B, B, B, B, B, B, B, B, _],
+		[B, F, F, F, F, F, F, F, F, F, B],
+		[B, F, F, F, R, R, R, F, F, F, B],
+		[B, F, F, R, R, R, R, R, F, F, B],
+		[B, F, F, L, L, L, L, L, F, F, B],
+		[B, F, F, M, M, M, M, M, F, F, B],
+		[B, F, F, D, D, D, D, D, F, F, B],
+		[B, F, F, F, D, D, D, F, F, F, B],
 		[B, F, F, F, F, F, F, F, F, F, B],
 		[_, B, B, B, B, B, B, B, B, B, _],
 		[_, _, _, _, B, B, B, _, _, _, _],

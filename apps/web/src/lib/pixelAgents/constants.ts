@@ -115,6 +115,46 @@ export const EXIT_TILES: Array<{ col: number; row: number }> = [
 	{ col: 3, row: 15 },
 	{ col: 4, row: 15 },
 ];
+// ── Gaming Table ────────────────────────────────────────────
+/** Tile where agent stands to play at the gaming table (in front of game-table desk) */
+export const GAMING_STAND_COL = 9;
+export const GAMING_STAND_ROW = 14;
+/** Direction agent faces while gaming (UP = toward the desk) */
+export const GAMING_FACE_DIR = 3; // Direction.UP
+/** Min/max duration an agent plays games (seconds) */
+export const GAMING_DURATION_MIN_SEC = 30;
+export const GAMING_DURATION_MAX_SEC = 90;
+/** How often we check if an idle agent should start gaming (seconds) */
+export const GAMING_CHECK_INTERVAL_SEC = 5;
+/** Probability per check that an idle agent starts gaming */
+export const GAMING_CHANCE = 0.15;
+
+// ── Nuzzle Cat ─────────────────────────────────────────────
+/** How often we check if an idle agent should nuzzle the cat (seconds) */
+export const NUZZLE_CHECK_INTERVAL_SEC = 8;
+/** Probability per check that an idle agent starts nuzzling */
+export const NUZZLE_CHANCE = 0.1;
+/** Duration of "hand" (petting) bubble phase (seconds) */
+export const NUZZLE_HAND_DURATION_SEC = 2.0;
+/** Duration of "heart" bubble phase (seconds) */
+export const NUZZLE_HEART_DURATION_SEC = 2.0;
+
+// ── Drink Cooler ───────────────────────────────────────────
+/** How often we check if an idle agent should get a drink (seconds) */
+export const DRINK_CHECK_INTERVAL_SEC = 10;
+/** Probability per check that an idle agent gets a drink */
+export const DRINK_CHANCE = 0.08;
+/** Duration agent stands at cooler drinking (seconds) */
+export const DRINK_DURATION_SEC = 6;
+
+// ── Food (Fridge) ──────────────────────────────────────────
+/** How often we check if an idle agent should get food (seconds) */
+export const FOOD_CHECK_INTERVAL_SEC = 12;
+/** Probability per check that an idle agent gets food */
+export const FOOD_CHANCE = 0.07;
+/** Duration agent stands at fridge getting food (seconds) */
+export const FOOD_DURATION_SEC = 8;
+
 export const CHARACTER_HIT_HALF_WIDTH = 8;
 export const CHARACTER_HIT_HEIGHT = 24;
 export const TOOL_OVERLAY_VERTICAL_OFFSET = 32;

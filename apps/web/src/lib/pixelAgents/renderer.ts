@@ -13,6 +13,11 @@ import {
 	BUBBLE_PERMISSION_SPRITE,
 	BUBBLE_WAITING_SPRITE,
 	BUBBLE_COFFEE_SPRITE,
+	BUBBLE_GAMING_SPRITE,
+	BUBBLE_HAND_SPRITE,
+	BUBBLE_HEART_SPRITE,
+	BUBBLE_DRINK_SPRITE,
+	BUBBLE_FOOD_SPRITE,
 } from "./spriteData";
 import { getCharacterSprite } from "./characters";
 import { renderMatrixEffect } from "./matrixEffect";
@@ -523,7 +528,17 @@ export function renderBubbles(
 				? BUBBLE_PERMISSION_SPRITE
 				: ch.bubbleType === "coffee"
 					? BUBBLE_COFFEE_SPRITE
-					: BUBBLE_WAITING_SPRITE;
+					: ch.bubbleType === "gaming"
+						? BUBBLE_GAMING_SPRITE
+						: ch.bubbleType === "hand"
+							? BUBBLE_HAND_SPRITE
+							: ch.bubbleType === "heart"
+								? BUBBLE_HEART_SPRITE
+								: ch.bubbleType === "drink"
+									? BUBBLE_DRINK_SPRITE
+									: ch.bubbleType === "food"
+										? BUBBLE_FOOD_SPRITE
+										: BUBBLE_WAITING_SPRITE;
 
 		// Compute opacity: permission = full, waiting = fade in last 0.5s
 		let alpha = 1.0;
