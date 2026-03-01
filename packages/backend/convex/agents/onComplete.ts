@@ -16,29 +16,46 @@ export const onSubAgentComplete = internalMutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { agentId, taskId, success, result, error }) => {
-		// Update task with result or error (idempotent: check current state first)
+		// Save result/error on the task — always write these fields regardless of
+		// current status so the error message is never lost to a race condition.
 		const task = await ctx.db.get(taskId);
-		if (task && task.status !== "done" && task.status !== "failed") {
-			if (success && result) {
-				await ctx.db.patch(taskId, { result });
-			}
-			if (!success && error) {
-				await ctx.db.patch(taskId, { error });
+		if (task) {
+			const patch: Record<string, unknown> = {};
+			if (result) patch.result = result;
+			if (!success && error) patch.error = error;
+			if (Object.keys(patch).length > 0) {
+				await ctx.db.patch(taskId, patch);
 			}
 		}
 
-		// Transition agent to idle — keep desk and sandbox warm for mailbox reuse
+		// Transition agent based on outcome:
+		// - Success → idle (keep desk and sandbox warm for mailbox reuse)
+		// - Failure → keep "failed" status so the UI reflects it and manager sees it
 		const agent = await ctx.db.get(agentId);
-		if (agent && agent.status !== "despawning" && agent.status !== "idle") {
-			await ctx.db.patch(agentId, {
-				status: "idle",
-				currentTaskId: undefined,
-				completedAt: Date.now(),
-			});
+		if (agent && agent.status !== "despawning") {
+			if (success) {
+				// Go idle — ready for follow-up work via mailbox
+				if (agent.status !== "idle") {
+					await ctx.db.patch(agentId, {
+						status: "idle",
+						currentTaskId: undefined,
+						completedAt: Date.now(),
+					});
+				}
+			} else {
+				// Stay failed — clear task assignment but preserve failure state
+				await ctx.db.patch(agentId, {
+					status: "failed",
+					currentTaskId: undefined,
+					completedAt: Date.now(),
+				});
+			}
 		}
 
-		// Schedule mailbox check — agent may have queued follow-up work
-		await ctx.scheduler.runAfter(0, internal.mailbox.process.processMailbox, { agentId });
+		// Schedule mailbox check only on success — failed agents shouldn't pick up new work
+		if (success) {
+			await ctx.scheduler.runAfter(0, internal.mailbox.process.processMailbox, { agentId });
+		}
 
 		// Build notification message for the manager
 		const agentName = agent?.name ?? "Unknown";

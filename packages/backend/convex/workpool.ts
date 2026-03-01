@@ -6,12 +6,10 @@ import { components } from "./_generated/api";
 export const agentPool = new Workpool(components.agentWorkpool, {
 	maxParallelism: 5, // max 5 agents working simultaneously
 	logLevel: "INFO",
-	retryActionsByDefault: true,
-	defaultRetryBehavior: {
-		maxAttempts: 3,
-		initialBackoffMs: 1000,
-		base: 2,
-	},
+	// No retries: the runner handles failures explicitly (sets task/agent status,
+	// notifies manager via onSubAgentComplete). Retrying would re-run on
+	// already-failed state, causing duplicate notifications and status thrashing.
+	retryActionsByDefault: false,
 });
 
 // Bridge to route durable agent execution through workpool

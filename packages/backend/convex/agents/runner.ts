@@ -9,6 +9,7 @@ import { runCopywriterTask } from "./copywriter/runner";
 import { runGeneralTask } from "./general/runner";
 import { runResearcherTask } from "./researcher/runner";
 import { roleHas } from "./shared/capabilities";
+import type { RunnerResult } from "./shared/types";
 
 // Sub-agent runner — executed by the workpool for each sub-agent
 export const runSubAgent = internalAction({
@@ -97,25 +98,21 @@ export const runSubAgent = internalAction({
 				envVars: Object.keys(envVars).length > 0 ? envVars : undefined,
 			});
 
-			// Dispatch to role-specific runner
-			let result: string;
+			// Dispatch to role-specific runner — each returns { success, result }
+			let outcome: RunnerResult;
 			if (agent.role === "coder") {
-				result = await runCoderTask(ctx, agentId, task);
+				outcome = await runCoderTask(ctx, agentId, task, agent.name);
 			} else if (agent.role === "researcher") {
-				result = await runResearcherTask(ctx, agentId, task);
+				outcome = await runResearcherTask(ctx, agentId, task);
 			} else if (agent.role === "copywriter") {
-				result = await runCopywriterTask(ctx, agentId, task);
+				outcome = await runCopywriterTask(ctx, agentId, task);
 			} else if (agent.role === "browser" || agent.role === "designer") {
-				result = await runComputerUseTask(ctx, agentId, task);
+				outcome = await runComputerUseTask(ctx, agentId, task);
 			} else {
-				result = await runGeneralTask(ctx, agentId, task, agent.role);
+				outcome = await runGeneralTask(ctx, agentId, task, agent.role);
 			}
 
-			// 3. Detect partial failures from the result summary.
-			// Role runners return strings like "0/5 steps succeeded" or "[FAIL]"
-			// when individual steps fail but the runner didn't throw outright.
-			const hasFailures = /\b0\/\d+ steps succeeded\b/.test(result) || /\[FAIL\]/.test(result);
-			const taskSuccess = !hasFailures;
+			const { success: taskSuccess, result } = outcome;
 			const finalStatus = taskSuccess ? "done" : "failed";
 
 			await ctx.runMutation(internal.tasks.mutations.updateStatusInternal, {

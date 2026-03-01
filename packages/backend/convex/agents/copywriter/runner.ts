@@ -2,7 +2,7 @@ import { generateText } from "ai";
 import { internal } from "../../_generated/api";
 import { escapeShellArg } from "../../sandbox/shellUtils";
 import { mistral, REASONING_MODEL } from "../models";
-import type { RunnerCtx } from "../shared/types";
+import type { RunnerCtx, RunnerResult } from "../shared/types";
 
 // Sanitize a title into a safe filename: lowercase, hyphens, .md
 function toFilename(title: string): string {
@@ -31,6 +31,7 @@ async function gatherContext(
 			const result = await ctx.runAction(internal.sandbox.execute.runCommand, {
 				command: `cat ${escapeShellArg(filePath)} 2>/dev/null | head -c 10000`,
 				agentId,
+				stream: false,
 			});
 			if (result.result && result.result.trim()) {
 				chunks.push(`--- ${filePath} ---\n${result.result}`);
@@ -47,7 +48,7 @@ export async function runCopywriterTask(
 	ctx: RunnerCtx,
 	agentId: string,
 	task: { title: string; description?: string },
-): Promise<string> {
+): Promise<RunnerResult> {
 	const description = task.description ?? "";
 
 	// 1. Context gathering
@@ -107,6 +108,7 @@ export async function runCopywriterTask(
 	await ctx.runAction(internal.sandbox.execute.runCommand, {
 		command: `mkdir -p /home/company/outputs && cat > ${escapeShellArg(outputPath)} << 'COPYWRITER_EOF'\n${refined}\nCOPYWRITER_EOF`,
 		agentId,
+		stream: false,
 	});
 
 	await ctx.runMutation(internal.logs.mutations.append, {
@@ -115,5 +117,5 @@ export async function runCopywriterTask(
 		content: `Saved output to ${outputPath}`,
 	});
 
-	return `Content saved to ${outputPath}:\n\n${refined}`;
+	return { success: true, result: `Content saved to ${outputPath}:\n\n${refined}` };
 }

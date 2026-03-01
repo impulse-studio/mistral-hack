@@ -2,7 +2,7 @@ import { generateObject } from "ai";
 import { createMistral } from "@ai-sdk/mistral";
 import { z } from "zod";
 import { internal } from "../../_generated/api";
-import type { RunnerCtx } from "../shared/types";
+import type { RunnerCtx, RunnerResult } from "../shared/types";
 import { MANAGER_MODEL } from "../models";
 
 type TaskRecord = { title: string; description?: string };
@@ -67,7 +67,7 @@ export async function runComputerUseTask(
 	ctx: RunnerCtx,
 	agentId: string,
 	task: TaskRecord,
-): Promise<string> {
+): Promise<RunnerResult> {
 	const mistral = createMistral();
 	const model = mistral(MANAGER_MODEL);
 
@@ -80,23 +80,88 @@ export async function runComputerUseTask(
 	const display = displayInfo.displays?.[0];
 	const resolution = display ? `${display.width}x${display.height}` : "unknown";
 
-	// 3. Extract URL from task and launch Firefox if needed
+	// 3. Ensure a browser is installed, then launch it
+	const browserPath = await ensureBrowser(ctx, agentId);
+	let browserLaunched = false;
+
+	// Detect the X display from the Xvfb process
+	const xDisplay = await detectDisplay(ctx, agentId);
+
+	// Container-safe flags for headless environments
+	const containerFlags = browserPath.includes("chrom")
+		? "--no-sandbox --disable-gpu --disable-dev-shm-usage --no-first-run --no-default-browser-check --start-maximized"
+		: "";
+
 	const urlMatch = (task.description ?? task.title).match(/https?:\/\/[^\s"')]+/);
-	if (urlMatch) {
-		await ctx.runAction(internal.sandbox.execute.runBackground, {
-			command: `firefox "${urlMatch[0]}"`,
-			agentId,
-		});
-		await log(ctx, agentId, "command", `Launched Firefox: ${urlMatch[0]}`);
-		await delay(3000); // wait for browser to open
-	} else {
-		// Launch Firefox to homepage for general browsing tasks
-		await ctx.runAction(internal.sandbox.execute.runBackground, {
-			command: "firefox",
-			agentId,
-		});
-		await log(ctx, agentId, "command", "Launched Firefox");
+	const target = urlMatch ? `"${urlMatch[0]}"` : "";
+	const launchCmd = `DISPLAY=${xDisplay} ${browserPath} ${containerFlags} ${target}`.trim();
+
+	await ctx.runAction(internal.sandbox.execute.runBackground, {
+		command: launchCmd,
+		agentId,
+	});
+	await log(ctx, agentId, "command", `Launched browser: ${launchCmd}`);
+
+	// Wait for the browser process + window to appear (poll up to 15s)
+	for (let attempt = 0; attempt < 5; attempt++) {
 		await delay(3000);
+
+		// First check if the browser process is still alive
+		const procCheck = await ctx.runAction(internal.sandbox.execute.runCommand, {
+			command: `pgrep -f "${browserPath.split("/").pop()}" > /dev/null && echo ALIVE || echo DEAD`,
+			agentId,
+			stream: false,
+		});
+		const procStatus = (procCheck.result as string).trim();
+
+		if (procStatus === "DEAD") {
+			await log(ctx, agentId, "stderr", `Browser process not found (attempt ${attempt + 1})`);
+			if (attempt < 3) {
+				// Retry with different approach
+				await ctx.runAction(internal.sandbox.execute.runBackground, {
+					command: launchCmd,
+					agentId,
+				});
+				await log(ctx, agentId, "status", `Retrying browser launch (attempt ${attempt + 2})`);
+				continue;
+			}
+			break;
+		}
+
+		// Process is alive — check for window by title
+		try {
+			const windowInfo = await ctx.runAction(internal.sandbox.computerUse.getWindows, {
+				agentId,
+			});
+			const windows = windowInfo.windows as Array<{ title?: string; name?: string }> | undefined;
+			const browserWindows = windows?.filter((w) => {
+				const t = (w.title ?? w.name ?? "").toLowerCase();
+				return (
+					t.includes("chromium") ||
+					t.includes("chrome") ||
+					t.includes("firefox") ||
+					/\.\w{2,}/.test(t)
+				);
+			});
+			if (browserWindows && browserWindows.length > 0) {
+				const names = browserWindows.map((w) => w.title ?? w.name).join(", ");
+				await log(ctx, agentId, "status", `Browser window detected: ${names}`);
+				browserLaunched = true;
+				break;
+			}
+		} catch {
+			// getWindows may fail if CU is still starting
+		}
+		await log(ctx, agentId, "status", `Waiting for browser window... (attempt ${attempt + 1})`);
+	}
+
+	if (!browserLaunched) {
+		await log(
+			ctx,
+			agentId,
+			"stderr",
+			"No browser window detected after retries — proceeding with vision loop",
+		);
 	}
 
 	// 4. Vision-action loop
@@ -130,6 +195,9 @@ Screen resolution: ${resolution}. You see a screenshot and decide the next actio
 Task: ${task.title}
 ${task.description ? `Details: ${task.description}` : ""}
 
+Context: A browser has already been launched via command line${urlMatch ? ` with URL ${urlMatch[0]}` : ""}. ${browserLaunched ? "The browser window should be visible on screen." : "The browser may still be loading — look for it or wait."}
+If you see the desktop without a browser window, try clicking on the taskbar at the bottom or use Alt+Tab to find it.
+
 Previous actions this session:
 ${actionLog.length > 0 ? actionLog.map((a, idx) => `${idx + 1}. ${a}`).join("\n") : "None yet — this is the first step."}
 
@@ -138,7 +206,8 @@ Rules:
 - Click coordinates must be within the screen bounds (${resolution})
 - Use "done" when the task is complete or you have gathered the needed information
 - Use "wait" if a page is loading
-- Be precise with click coordinates — aim for the center of UI elements`,
+- Be precise with click coordinates — aim for the center of UI elements
+- Do NOT open the Applications menu to find the browser — it was already launched`,
 				},
 				{
 					role: "user",
@@ -175,10 +244,88 @@ Rules:
 
 	if (!finalResult) {
 		finalResult = `Reached max iterations (${MAX_ITERATIONS}). Actions taken:\n${actionLog.join("\n")}`;
-		await log(ctx, agentId, "status", `Max iterations reached (${MAX_ITERATIONS})`);
+		await log(
+			ctx,
+			agentId,
+			"stderr",
+			`Max iterations reached (${MAX_ITERATIONS}) — task incomplete`,
+		);
+		return { success: false, result: finalResult };
 	}
 
-	return finalResult;
+	return { success: true, result: finalResult };
+}
+
+// Detect the X display from running Xvfb process (default :0)
+async function detectDisplay(ctx: RunnerCtx, agentId: string): Promise<string> {
+	try {
+		const result = await ctx.runAction(internal.sandbox.execute.runCommand, {
+			command:
+				"ps aux | grep 'Xvfb :[0-9]' | grep -v grep | head -1 | sed 's/.*Xvfb \\(:[0-9]*\\).*/\\1/'",
+			agentId,
+			stream: false,
+		});
+		const display = (result.result as string).trim();
+		if (display && display.startsWith(":")) return display;
+	} catch {
+		// fall through to default
+	}
+	return ":0";
+}
+
+// Ensure a browser is available in the sandbox, installing one if needed.
+// Returns the command to launch the browser.
+async function ensureBrowser(ctx: RunnerCtx, agentId: string): Promise<string> {
+	// Check which browsers are available
+	const checkResult = await ctx.runAction(internal.sandbox.execute.runCommand, {
+		command:
+			"which firefox || which chromium-browser || which chromium || which google-chrome || echo NONE",
+		agentId,
+		stream: false,
+	});
+
+	const browserPath = (checkResult.result as string).trim();
+
+	if (browserPath && browserPath !== "NONE") {
+		await log(ctx, agentId, "status", `Browser found: ${browserPath}`);
+		return browserPath;
+	}
+
+	// No browser found — install one
+	await log(ctx, agentId, "status", "No browser found, installing chromium...");
+
+	// Try common package managers
+	const installResult = await ctx.runAction(internal.sandbox.execute.runCommand, {
+		command:
+			"(apt-get update -qq && apt-get install -y -qq chromium-browser 2>/dev/null) || " +
+			"(apt-get update -qq && apt-get install -y -qq chromium 2>/dev/null) || " +
+			"(dnf install -y chromium 2>/dev/null) || " +
+			"(apk add --no-cache chromium 2>/dev/null) || " +
+			"echo INSTALL_FAILED",
+		agentId,
+		stream: false,
+	});
+
+	const installOutput = (installResult.result as string).trim();
+	if (installOutput.endsWith("INSTALL_FAILED")) {
+		await log(ctx, agentId, "stderr", "Failed to install browser — will attempt with xdg-open");
+		return "xdg-open";
+	}
+
+	// Find the installed browser
+	const recheck = await ctx.runAction(internal.sandbox.execute.runCommand, {
+		command: "which chromium-browser || which chromium || which google-chrome",
+		agentId,
+		stream: false,
+	});
+
+	const installed = (recheck.result as string).trim();
+	if (installed) {
+		await log(ctx, agentId, "status", `Browser installed: ${installed}`);
+		return `${installed} --no-sandbox`;
+	}
+
+	return "xdg-open";
 }
 
 // Execute a single action on the sandbox

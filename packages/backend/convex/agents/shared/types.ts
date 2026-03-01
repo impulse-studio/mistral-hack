@@ -6,3 +6,10 @@ export type RunnerCtx = {
 	runMutation: CallableFunction;
 	runQuery: CallableFunction;
 };
+
+// Explicit result type from role runners — eliminates fragile regex-based
+// success detection in the main runner.
+export type RunnerResult = {
+	success: boolean;
+	result: string;
+};

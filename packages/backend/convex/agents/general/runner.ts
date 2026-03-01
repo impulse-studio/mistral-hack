@@ -2,7 +2,7 @@ import { createMistral } from "@ai-sdk/mistral";
 import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import { internal } from "../../_generated/api";
-import type { RunnerCtx } from "../shared/types";
+import type { RunnerCtx, RunnerResult } from "../shared/types";
 import { MANAGER_MODEL } from "../models";
 
 const MAX_RETRIES_PER_STEP = 2;
@@ -15,15 +15,18 @@ const planSchema = z.object({
 				command: z.string(),
 			}),
 		)
-		.max(10),
+		.max(6),
 });
+
+const TIME_BUDGET_MS = 540_000; // 9 minutes — leave 60s safety margin before Convex 600s limit
 
 export async function runGeneralTask(
 	ctx: RunnerCtx,
 	agentId: string,
 	task: { title: string; description?: string },
 	role: string,
-): Promise<string> {
+): Promise<RunnerResult> {
+	const startTime = Date.now();
 	const mistralClient = createMistral();
 
 	// ── Phase 1: Planning ──────────────────────────────────────
@@ -41,7 +44,7 @@ export async function runGeneralTask(
 			{
 				role: "system",
 				content:
-					"You are a task planner. Given a task, produce a sequence of shell commands to accomplish it. Each step should have a description and a shell command. The working directory is /home/user. The shared workspace is /home/company/. Save outputs to /home/company/outputs/. Keep steps concise and practical.",
+					"You are a task planner. Given a task, produce a sequence of shell commands to accomplish it. Each step should have a description and a shell command. The working directory is /home/user. The shared workspace is /home/company/. Save outputs to /home/company/outputs/. IMPORTANT: Each command runs in an independent shell — `cd` does NOT persist between steps. Use `cd /path && command` to run in a specific directory. Prefer fewer steps that combine related operations.",
 			},
 			{
 				role: "user",
@@ -65,6 +68,16 @@ export async function runGeneralTask(
 	}> = [];
 
 	for (let i = 0; i < plan.steps.length; i++) {
+		// Time budget guard — break early to allow summary generation
+		if (Date.now() - startTime > TIME_BUDGET_MS) {
+			await ctx.runMutation(internal.logs.mutations.append, {
+				agentId,
+				type: "status" as const,
+				content: `[${role}] Time budget reached — skipping remaining ${plan.steps.length - i} steps`,
+			});
+			break;
+		}
+
 		const step = plan.steps[i];
 		await ctx.runMutation(internal.logs.mutations.append, {
 			agentId,
@@ -88,6 +101,7 @@ export async function runGeneralTask(
 			const execResult = await ctx.runAction(internal.sandbox.execute.runCommand, {
 				command,
 				agentId,
+				stream: false,
 			});
 
 			lastOutput = execResult.result ?? "(no output)";
@@ -160,11 +174,6 @@ export async function runGeneralTask(
 		content: `[${role}] Done — ${succeeded}/${results.length} steps succeeded`,
 	});
 
-	// If zero steps succeeded, the task genuinely failed — throw so the main
-	// runner propagates failure status to the manager.
-	if (succeeded === 0 && results.length > 0) {
-		throw new Error(`All ${results.length} steps failed.\n\n${summary}`);
-	}
-
-	return summary;
+	const allFailed = succeeded === 0 && results.length > 0;
+	return { success: !allFailed, result: summary };
 }
