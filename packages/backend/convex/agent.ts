@@ -8,13 +8,17 @@ import { agentPool } from "./workpool";
 
 const mistral = createMistral();
 
+// Magistral models have native reasoning — the AI SDK automatically
+// parses reasoningText from the response. No providerOptions needed.
+const REASONING_MODEL = "magistral-medium-latest";
+
 const roleToModel: Record<string, string> = {
 	coder: "codestral-latest",
 	browser: "mistral-large-latest",
 	designer: "mistral-large-latest",
-	researcher: "mistral-small-latest",
-	copywriter: "mistral-small-latest",
-	general: "mistral-small-latest",
+	researcher: REASONING_MODEL,
+	copywriter: REASONING_MODEL,
+	general: REASONING_MODEL,
 };
 
 // ── Manager Tools ────────────────────────────────────────────
@@ -161,6 +165,26 @@ const checkAgentProgressTool = createTool({
 	},
 });
 
+const commentOnTaskTool = createTool({
+	description:
+		"Add a comment to a task. Use this to leave notes, progress updates, feedback, or context on any task.",
+	inputSchema: z.object({
+		taskId: z.string().describe("Task ID to comment on"),
+		content: z.string().describe("Comment text"),
+	}),
+	execute: async (
+		ctx: ToolCtx,
+		{ taskId, content },
+	): Promise<{ commentId: string; message: string }> => {
+		const commentId = await ctx.runMutation(internal.tasks.comments.addInternal, {
+			taskId: taskId as Id<"tasks">,
+			content,
+			author: "manager" as const,
+		});
+		return { commentId, message: `Comment added to task.` };
+	},
+});
+
 const registerDeliverableTool = createTool({
 	description:
 		"Register a deliverable produced by a task. Use this after a worker completes a task that produced an output file, document, or URL. The deliverable will appear in the manager dashboard.",
@@ -229,6 +253,11 @@ Worker completion notifications:
 - When a worker produces output (files, reports, URLs), use registerDeliverable to record it
 - Report final results to the user when all work is done
 
+Task comments:
+- Use commentOnTask to leave notes, progress updates, or feedback on any task
+- Comment when you make decisions about a task (e.g., choosing an approach, noting blockers)
+- Workers' completion results are automatically logged, but add your own synthesis as comments
+
 Deliverables:
 - Use registerDeliverable to record any outputs produced by completed tasks
 - Types: pdf, html, markdown, url, file, image
@@ -250,6 +279,7 @@ Always create the task FIRST, then spawn an agent with the taskId.`,
 		spawnAgent: spawnAgentTool,
 		updateTaskStatus: updateTaskStatusTool,
 		checkAgentProgress: checkAgentProgressTool,
+		commentOnTask: commentOnTaskTool,
 		registerDeliverable: registerDeliverableTool,
 	},
 	maxSteps: 10,
@@ -265,13 +295,13 @@ Be precise, write clean code, and test your work.`,
 	maxSteps: 15,
 });
 
-// General worker agent — fast and cheap for misc tasks
+// General worker agent — uses Magistral for reasoning through tasks
 export const generalAgent = new Agent(components.agent, {
 	name: "Worker",
-	languageModel: mistral("mistral-small-latest"),
-	instructions: `You are a general-purpose worker agent.
+	languageModel: mistral(REASONING_MODEL),
+	instructions: `You are a general-purpose worker agent with strong reasoning capabilities.
 You handle research, copywriting, analysis, and other non-code tasks.
-Be thorough but efficient.`,
+Think step by step through complex problems. Be thorough but efficient.`,
 	maxSteps: 10,
 });
 
@@ -288,7 +318,7 @@ export const agentRegistry = {
 export const modelMap = {
 	manager: "mistral-large-latest",
 	coder: "codestral-latest",
-	general: "mistral-small-latest",
+	general: REASONING_MODEL,
 	routing: "ministral-8b-latest",
-	reasoning: "magistral-medium-latest",
+	reasoning: REASONING_MODEL,
 } as const;
