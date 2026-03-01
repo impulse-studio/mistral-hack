@@ -312,6 +312,17 @@ export const userQuestionDoc = v.object({
 	...userQuestionFields,
 });
 
+export const userPreferencesFields = {
+	userId: v.string(), // better-auth user ID
+	onboardingCompleted: v.boolean(),
+};
+
+export const userPreferencesDoc = v.object({
+	_id: v.id("userPreferences"),
+	_creationTime: v.number(),
+	...userPreferencesFields,
+});
+
 // ── Schema ──────────────────────────────────────────────
 
 export default defineSchema({
@@ -367,6 +378,9 @@ export default defineSchema({
 
 	// User questions — structured questions from manager to user
 	userQuestions: defineTable(userQuestionFields).index("by_thread_status", ["threadId", "status"]),
+
+	// User preferences — per-user settings (onboarding, etc.)
+	userPreferences: defineTable(userPreferencesFields).index("by_user", ["userId"]),
 
 	// Documents — shared knowledge base (agent notes, specs, uploads)
 	documents: defineTable(documentFields)

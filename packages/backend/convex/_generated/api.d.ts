@@ -77,6 +77,8 @@ import type * as tasks_queries from "../tasks/queries.js";
 import type * as telegram_TelegramService from "../telegram/TelegramService.js";
 import type * as telegram_bot from "../telegram/bot.js";
 import type * as telegram_webhook from "../telegram/webhook.js";
+import type * as userPreferences_mutations from "../userPreferences/mutations.js";
+import type * as userPreferences_queries from "../userPreferences/queries.js";
 import type * as userQuestions_mutations from "../userQuestions/mutations.js";
 import type * as userQuestions_queries from "../userQuestions/queries.js";
 import type * as voice_converse from "../voice/converse.js";
@@ -161,6 +163,8 @@ declare const fullApi: ApiFromModules<{
   "telegram/TelegramService": typeof telegram_TelegramService;
   "telegram/bot": typeof telegram_bot;
   "telegram/webhook": typeof telegram_webhook;
+  "userPreferences/mutations": typeof userPreferences_mutations;
+  "userPreferences/queries": typeof userPreferences_queries;
   "userQuestions/mutations": typeof userQuestions_mutations;
   "userQuestions/queries": typeof userQuestions_queries;
   "voice/converse": typeof voice_converse;

@@ -1,13 +1,13 @@
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import {
 	Dialog,
+	DialogClose,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
-	DialogClose,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { GamesSnakeGame } from "@/lib/games/snake/SnakeGame.component";
 import { GamesTetrisTetrisGame } from "@/lib/games/tetris/TetrisGame.component";
 
@@ -36,7 +36,7 @@ export function GamesGameArcadeModal({ open, onClose }: GameArcadeModalProps) {
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent className="flex max-h-[90vh] w-auto max-w-[90vw] flex-col items-center">
-				<DialogHeader>
+				<DialogHeader className="w-full">
 					<DialogTitle className="font-mono text-xs uppercase tracking-widest">
 						Arcade Table
 					</DialogTitle>

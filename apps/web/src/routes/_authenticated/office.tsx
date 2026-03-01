@@ -20,6 +20,7 @@ import { GamesGameArcadeModal } from "@/lib/games/GameArcadeModal.component";
 import { KanbanAgentModalSmart } from "@/lib/kanban/AgentKanbanModal.smart";
 import { KanbanTaskDetailSmart } from "@/lib/kanban/TaskDetailModal.smart";
 import { MasterAgentPanel } from "@/lib/master-agent-panel/MasterAgentPanel.component";
+import { OnboardingOverlay } from "@/lib/onboarding/OnboardingOverlay";
 import { initTileset } from "@/lib/pixelAgents/initTileset";
 import { OfficeState } from "@/lib/pixelAgents/officeState";
 
@@ -42,6 +43,9 @@ interface ConvexAgent {
 const EMPTY_TASKS: never[] = [];
 const EMPTY_TERMINAL: never[] = [];
 const EMPTY_REASONING: never[] = [];
+
+const PIXELATED_STYLE = { imageRendering: "pixelated" } as const;
+const DIALOG_CLOSE_BUTTON = <Button variant="default" size="icon-sm" />;
 
 /** Reserved canvas ID for the always-present manager character */
 const MANAGER_CANVAS_ID = 0;
@@ -400,7 +404,7 @@ function OfficeContent() {
 				<DialogContent className="flex h-[85vh] w-[90vw] max-w-[1200px] flex-col">
 					<DialogHeader>
 						<DialogTitle>Manager Office</DialogTitle>
-						<DialogClose render={<Button variant="default" size="icon-sm" />}>×</DialogClose>
+						<DialogClose render={DIALOG_CLOSE_BUTTON}>×</DialogClose>
 					</DialogHeader>
 					<div className="min-h-0 flex-1 overflow-hidden p-4">
 						<MasterAgentPanel />
@@ -424,12 +428,15 @@ function OfficeContent() {
 			{/* Game arcade modal (triggered by clicking game table) */}
 			<GamesGameArcadeModal open={showArcade} onClose={() => setShowArcade(false)} />
 
+			{/* Onboarding overlay (self-hides once completed) */}
+			<OnboardingOverlay />
+
 			{/* Cat speech bubble */}
 			{catSpeech && (
 				<div className="pointer-events-none absolute inset-0 z-40 flex items-end justify-end p-20">
 					<div
 						className="animate-in fade-in zoom-in-95 rounded-sm border border-amber-500/50 bg-black/80 px-3 py-1.5 font-mono text-sm text-amber-400 shadow-lg"
-						style={{ imageRendering: "pixelated" }}
+						style={PIXELATED_STYLE}
 					>
 						{catSpeech}
 					</div>
@@ -441,7 +448,7 @@ function OfficeContent() {
 				<DialogContent className="flex h-[85vh] w-[90vw] max-w-[1200px] flex-col">
 					<DialogHeader>
 						<DialogTitle>Document Hub</DialogTitle>
-						<DialogClose render={<Button variant="default" size="icon-sm" />}>×</DialogClose>
+						<DialogClose render={DIALOG_CLOSE_BUTTON}>×</DialogClose>
 					</DialogHeader>
 					<div className="min-h-0 flex-1 overflow-hidden">
 						<DocumentHubSmart />
