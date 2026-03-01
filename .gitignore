@@ -51,4 +51,4 @@ coverage
 tmp
 temp
 .vercel
-convex/
+# Convex — nothing to ignore, source + generated types are committed
