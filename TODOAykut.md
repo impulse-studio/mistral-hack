@@ -60,3 +60,10 @@
 - [ ] Speech bubbles
 - [ ] Easter eggs
 - [ ] Linear integration — task management like Linear, link Linear, assign agents
+
+//FREE
+
+Queue for messages
+❯ when we add a comment to a task, will an agent be notified immedietly? also can we add a systme that if we commit 
+
+after queue system contact agent 1

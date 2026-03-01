@@ -126,3 +126,43 @@ export const deadLetterAll = internalMutation({
 		return null;
 	},
 });
+
+// TEMPORARY: Re-route a dead-lettered message to the manager
+export const rerouteToManager = mutation({
+	args: {
+		deadLetterId: v.id("agentMailbox"),
+		managerId: v.id("agents"),
+	},
+	returns: v.id("agentMailbox"),
+	handler: async (ctx, { deadLetterId, managerId }) => {
+		const original = await ctx.db.get(deadLetterId);
+		if (!original) throw new Error("Message not found");
+		if (original.status !== "dead_letter") throw new Error("Message is not dead-lettered");
+
+		// Mark original as processed
+		await ctx.db.patch(deadLetterId, { status: "done", processedAt: Date.now() });
+
+		// Create new message for manager
+		const messageId = await ctx.db.insert("agentMailbox", {
+			recipientId: managerId,
+			senderId: original.senderId,
+			type: original.type,
+			status: "pending",
+			payload: original.payload,
+			taskId: original.taskId,
+			priority: original.priority,
+			threadMessageId: original.threadMessageId,
+			createdAt: Date.now(),
+		});
+
+		// Kick the manager processor
+		const manager = await ctx.db.get(managerId);
+		if (manager && manager.status === "idle") {
+			await ctx.scheduler.runAfter(0, internal.manager.queueAction.processManagerMailbox, {
+				agentId: managerId,
+			});
+		}
+
+		return messageId;
+	},
+});
