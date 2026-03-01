@@ -1,6 +1,6 @@
 import { api } from "@mistral-hack/backend/convex/_generated/api";
 import { useQuery } from "convex/react";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -10,6 +10,7 @@ import {
 	type KanbanBoardFilters,
 	type KanbanBoardTask,
 } from "../kanban/KanbanBoard.component";
+import { KanbanTaskDetailSmart } from "../kanban/TaskDetailModal.smart";
 
 const KANBAN_FILTERS: KanbanBoardFilters = {
 	statuses: ["backlog", "todo", "in_progress", "review", "done"],
@@ -66,6 +67,8 @@ interface MasterAgentPanelProps {
 
 function MasterAgentPanel({ className }: MasterAgentPanelProps) {
 	const kanbanData = useQuery(api.tasks.queries.getKanban);
+	const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
 	const tasks = useMemo(
 		() =>
 			kanbanData
@@ -73,6 +76,14 @@ function MasterAgentPanel({ className }: MasterAgentPanelProps) {
 				: [],
 		[kanbanData],
 	);
+
+	const handleTaskClick = useCallback((id: string) => {
+		setSelectedTaskId(id);
+	}, []);
+
+	const handleCloseDetail = useCallback(() => {
+		setSelectedTaskId(null);
+	}, []);
 
 	return (
 		<div className={cn("flex h-full gap-4", className)}>
@@ -89,9 +100,12 @@ function MasterAgentPanel({ className }: MasterAgentPanelProps) {
 					filters={KANBAN_FILTERS}
 					readOnly
 					allowDragOut
+					onTaskClick={handleTaskClick}
 					className="h-full"
 				/>
 			</div>
+
+			<KanbanTaskDetailSmart taskId={selectedTaskId} onClose={handleCloseDetail} />
 		</div>
 	);
 }

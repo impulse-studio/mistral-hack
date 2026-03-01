@@ -1,12 +1,14 @@
 import { api } from "@mistral-hack/backend/convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
+import { useCallback, useState } from "react";
 
 import {
 	KanbanBoard,
 	type KanbanBoardFilters,
 	type KanbanBoardTask,
 } from "@/lib/kanban/KanbanBoard.component";
+import { KanbanTaskDetailSmart } from "@/lib/kanban/TaskDetailModal.smart";
 
 export const Route = createFileRoute("/_authenticated/kanban")({
 	component: RouteComponent,
@@ -63,6 +65,15 @@ function mapKanbanToTasks(
 
 function RouteComponent() {
 	const kanbanData = useQuery(api.tasks.queries.getKanban);
+	const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
+	const handleTaskClick = useCallback((id: string) => {
+		setSelectedTaskId(id);
+	}, []);
+
+	const handleCloseDetail = useCallback(() => {
+		setSelectedTaskId(null);
+	}, []);
 
 	if (kanbanData === undefined) {
 		return (
@@ -83,8 +94,10 @@ function RouteComponent() {
 				tasks={tasks}
 				filters={readonlyFilters}
 				readOnly
+				onTaskClick={handleTaskClick}
 				className="h-full"
 			/>
+			<KanbanTaskDetailSmart taskId={selectedTaskId} onClose={handleCloseDetail} />
 		</div>
 	);
 }

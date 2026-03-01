@@ -13,13 +13,13 @@ import { cn } from "@/lib/utils";
 
 // ── Types ────────────────────────────────────────────────
 
-export interface KanbanKanbanTaskSubtaskItemItem {
+export interface KanbanTaskSubtaskItem {
 	id: string;
 	title: string;
 	done: boolean;
 }
 
-export interface KanbanKanbanTaskComment {
+export interface KanbanTaskComment {
 	id: string;
 	author: "user" | "manager" | "agent" | "system";
 	agentName?: string;
@@ -27,7 +27,7 @@ export interface KanbanKanbanTaskComment {
 	createdAt: number;
 }
 
-export interface KanbanKanbanTaskAssignee {
+export interface KanbanTaskAssignee {
 	name: string;
 	initials: string;
 	color?: string;
