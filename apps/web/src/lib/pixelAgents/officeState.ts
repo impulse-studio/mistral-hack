@@ -254,11 +254,10 @@ export class OfficeState {
 			seat.assigned = true;
 			ch = createCharacter(id, palette, seatId, seat, hueShift);
 
-			// Workers spawn in the lounge, not at their desk.
+			// Workers spawn at the entrance door, not at their desk.
 			// They'll walk to their seat when setAgentActive(true) is called.
-			if (!skipSpawnEffect && this.loungeWalkableTiles.length > 0) {
-				const spawn =
-					this.loungeWalkableTiles[Math.floor(Math.random() * this.loungeWalkableTiles.length)];
+			if (!skipSpawnEffect) {
+				const spawn = EXIT_TILES[Math.floor(Math.random() * EXIT_TILES.length)];
 				ch.x = spawn.col * TILE_SIZE + TILE_SIZE / 2;
 				ch.y = spawn.row * TILE_SIZE + TILE_SIZE / 2;
 				ch.tileCol = spawn.col;

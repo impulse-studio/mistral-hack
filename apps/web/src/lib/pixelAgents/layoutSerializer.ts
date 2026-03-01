@@ -269,6 +269,12 @@ export function createDefaultLayout(): OfficeLayout {
 		for (let c = 0; c < COLS; c++) {
 			// Outer boundary
 			if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1) {
+				// Entrance door opening in bottom wall (cols 2-4)
+				if (r === ROWS - 1 && c >= 2 && c <= 4) {
+					tiles.push(F4);
+					tileColors.push(DOORWAY_COLOR);
+					continue;
+				}
 				tiles.push(W);
 				tileColors.push(WALL_FACE_COLOR);
 				continue;
