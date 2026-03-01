@@ -55,7 +55,19 @@ export const processMailbox = internalAction({
 					break;
 				}
 				case "directive": {
-					// Log the directive (future: pass to agent LLM)
+					// If the agent has a waiting task, resume it
+					if (message.taskId) {
+						const task = await ctx.runQuery(internal.tasks.queries.getInternal, {
+							taskId: message.taskId,
+						});
+						if (task?.status === "waiting") {
+							await ctx.runMutation(internal.tasks.mutations.updateStatusInternal, {
+								taskId: message.taskId,
+								status: "in_progress",
+							});
+						}
+					}
+					// Log the directive
 					await ctx.runMutation(internal.logs.mutations.append, {
 						agentId,
 						type: "status" as const,
@@ -70,6 +82,19 @@ export const processMailbox = internalAction({
 						type: "status" as const,
 						content: `[NOTIFICATION] ${message.payload}`,
 					});
+
+					// If this is a worker agent with a task-linked notification (user comment),
+					// trigger the agent LLM to respond or escalate
+					if (message.taskId) {
+						const agent = await ctx.runQuery(internal.office.queries.getAgentInternal, { agentId });
+						if (agent && agent.type === "worker") {
+							await ctx.scheduler.runAfter(0, internal.agents.respondToComment.respondToComment, {
+								agentId,
+								taskId: message.taskId,
+								commentPayload: message.payload,
+							});
+						}
+					}
 					break;
 				}
 				case "result": {

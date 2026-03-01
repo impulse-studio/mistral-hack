@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation } from "../_generated/server";
+import { mutation, query, internalMutation, internalQuery } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { taskCommentAuthorValidator, taskCommentDoc } from "../schema";
 
@@ -23,9 +23,21 @@ export const add = mutation({
 		// Auto-notify agents via mailbox when a user or system comments
 		if (args.author === "user" || args.author === "system") {
 			const payload = `[COMMENT on "${task.title}"] ${args.content}`;
+			const status = task.status;
+			const isDoneOrWaiting = status === "done" || status === "waiting";
 
-			if (task.status === "done" || task.status === "waiting") {
-				// Finished/waiting tasks → low-priority background notification to manager
+			if (isDoneOrWaiting && task.assignedTo) {
+				// Done/waiting tasks with an assigned agent → send directly to the agent
+				// The agent can decide to reply as a comment or escalate to manager
+				await ctx.scheduler.runAfter(0, internal.mailbox.mutations.enqueue, {
+					recipientId: task.assignedTo,
+					type: "notification" as const,
+					payload,
+					taskId: args.taskId,
+					priority: 0,
+				});
+			} else if (isDoneOrWaiting) {
+				// Done/waiting but no agent assigned → fallback to manager
 				const manager = await ctx.db
 					.query("agents")
 					.withIndex("by_type", (q) => q.eq("type", "manager"))
@@ -39,7 +51,7 @@ export const add = mutation({
 						priority: -1,
 					});
 				}
-			} else if (task.status === "in_progress" && task.assignedTo) {
+			} else if (status === "in_progress" && task.assignedTo) {
 				// Active task → normal-priority notification to the working agent
 				await ctx.scheduler.runAfter(0, internal.mailbox.mutations.enqueue, {
 					recipientId: task.assignedTo,
@@ -67,6 +79,17 @@ export const add = mutation({
 		}
 
 		return commentId;
+	},
+});
+
+export const listByTaskInternal = internalQuery({
+	args: { taskId: v.id("tasks") },
+	returns: v.array(taskCommentDoc),
+	handler: async (ctx, { taskId }) => {
+		return await ctx.db
+			.query("taskComments")
+			.withIndex("by_task_time", (q) => q.eq("taskId", taskId))
+			.collect();
 	},
 });
 
