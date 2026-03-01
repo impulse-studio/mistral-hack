@@ -24,6 +24,7 @@ import { Route as AuthenticatedSnapshotsRouteImport } from './routes/_authentica
 import { Route as AuthenticatedOfficeRouteImport } from './routes/_authenticated/office'
 import { Route as AuthenticatedManagerRouteImport } from './routes/_authenticated/manager'
 import { Route as AuthenticatedKanbanRouteImport } from './routes/_authenticated/kanban'
+import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
 import { Route as AuthenticatedDocsRouteImport } from './routes/_authenticated/docs'
 import { Route as AuthenticatedAiRouteImport } from './routes/_authenticated/ai'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -102,6 +103,12 @@ const AuthenticatedKanbanRoute = AuthenticatedKanbanRouteImport.update({
   path: '/kanban',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedIntegrationsRoute =
+  AuthenticatedIntegrationsRouteImport.update({
+    id: '/integrations',
+    path: '/integrations',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedDocsRoute = AuthenticatedDocsRouteImport.update({
   id: '/docs',
   path: '/docs',
@@ -124,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof SignUpRoute
   '/ai': typeof AuthenticatedAiRoute
   '/docs': typeof AuthenticatedDocsRoute
+  '/integrations': typeof AuthenticatedIntegrationsRoute
   '/kanban': typeof AuthenticatedKanbanRoute
   '/manager': typeof AuthenticatedManagerRoute
   '/office': typeof AuthenticatedOfficeRoute
@@ -143,6 +151,7 @@ export interface FileRoutesByTo {
   '/sign-up': typeof SignUpRoute
   '/ai': typeof AuthenticatedAiRoute
   '/docs': typeof AuthenticatedDocsRoute
+  '/integrations': typeof AuthenticatedIntegrationsRoute
   '/kanban': typeof AuthenticatedKanbanRoute
   '/manager': typeof AuthenticatedManagerRoute
   '/office': typeof AuthenticatedOfficeRoute
@@ -164,6 +173,7 @@ export interface FileRoutesById {
   '/sign-up': typeof SignUpRoute
   '/_authenticated/ai': typeof AuthenticatedAiRoute
   '/_authenticated/docs': typeof AuthenticatedDocsRoute
+  '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
   '/_authenticated/kanban': typeof AuthenticatedKanbanRoute
   '/_authenticated/manager': typeof AuthenticatedManagerRoute
   '/_authenticated/office': typeof AuthenticatedOfficeRoute
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/ai'
     | '/docs'
+    | '/integrations'
     | '/kanban'
     | '/manager'
     | '/office'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/ai'
     | '/docs'
+    | '/integrations'
     | '/kanban'
     | '/manager'
     | '/office'
@@ -224,6 +236,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/_authenticated/ai'
     | '/_authenticated/docs'
+    | '/_authenticated/integrations'
     | '/_authenticated/kanban'
     | '/_authenticated/manager'
     | '/_authenticated/office'
@@ -359,6 +372,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKanbanRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/integrations': {
+      id: '/_authenticated/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof AuthenticatedIntegrationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/docs': {
       id: '/_authenticated/docs'
       path: '/docs'
@@ -386,6 +406,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedAiRoute: typeof AuthenticatedAiRoute
   AuthenticatedDocsRoute: typeof AuthenticatedDocsRoute
+  AuthenticatedIntegrationsRoute: typeof AuthenticatedIntegrationsRoute
   AuthenticatedKanbanRoute: typeof AuthenticatedKanbanRoute
   AuthenticatedManagerRoute: typeof AuthenticatedManagerRoute
   AuthenticatedOfficeRoute: typeof AuthenticatedOfficeRoute
@@ -396,6 +417,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAiRoute: AuthenticatedAiRoute,
   AuthenticatedDocsRoute: AuthenticatedDocsRoute,
+  AuthenticatedIntegrationsRoute: AuthenticatedIntegrationsRoute,
   AuthenticatedKanbanRoute: AuthenticatedKanbanRoute,
   AuthenticatedManagerRoute: AuthenticatedManagerRoute,
   AuthenticatedOfficeRoute: AuthenticatedOfficeRoute,

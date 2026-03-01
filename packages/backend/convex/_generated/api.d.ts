@@ -50,6 +50,8 @@ import type * as documents_mutations from "../documents/mutations.js";
 import type * as documents_queries from "../documents/queries.js";
 import type * as healthCheck from "../healthCheck.js";
 import type * as http from "../http.js";
+import type * as integrations_actions from "../integrations/actions.js";
+import type * as integrations_queries from "../integrations/queries.js";
 import type * as logs_mutations from "../logs/mutations.js";
 import type * as logs_queries from "../logs/queries.js";
 import type * as mailbox_mutations from "../mailbox/mutations.js";
@@ -151,6 +153,8 @@ declare const fullApi: ApiFromModules<{
   "documents/queries": typeof documents_queries;
   healthCheck: typeof healthCheck;
   http: typeof http;
+  "integrations/actions": typeof integrations_actions;
+  "integrations/queries": typeof integrations_queries;
   "logs/mutations": typeof logs_mutations;
   "logs/queries": typeof logs_queries;
   "mailbox/mutations": typeof mailbox_mutations;
