@@ -63,7 +63,7 @@
 - [x] Mistral cat _(kitchen corner sprite)_
 - [x] Speech bubbles _(permission + waiting bubbles above agent heads)_
 - [ ] ~Partial~ Easter eggs. _Mistral cat is one, no others found._
-- [ ] ~Partial~ Linear integration — task management like Linear, link Linear, assign agents. _Phase 1 read-only: LinearService + 4 manager tools (setTeam, getIssue, listIssues, searchIssues). Write operations and agent assignment pending._
+- [ ] Linear integration — task management like Linear, link Linear, assign agents
 
 ## Queue & Notifications
 

@@ -14,10 +14,6 @@ import {
 	createPullRequestTool,
 	deployProjectTool,
 	createGitHubIssueTool,
-	linearSetTeamTool,
-	linearGetIssueTool,
-	linearListIssuesTool,
-	linearSearchIssuesTool,
 } from "./tools";
 import {
 	updateTaskStatusTool,
@@ -147,13 +143,6 @@ Code-to-GitHub example flow:
 6. createPullRequest(agentId, "/home/user", "feat: X", "Description of changes")
 7. sendToUser with the PR URL from the result
 
-Linear integration — external issue tracker:
-- Use linearSetTeam to configure which Linear team to work with (stored in config, persists across sessions)
-- Use linearSearchIssues to find issues by keyword
-- Use linearListIssues to browse issues filtered by status, assignee, or label
-- Use linearGetIssue to fetch full details of a specific issue (e.g. "ENG-123")
-- When a user references a Linear issue, fetch it first, then create internal tasks based on its content
-
 Document Hub — shared knowledge base:
 - Use searchDocuments before complex tasks to find existing context
 - Use createDocument to save research findings, summaries, or reference material
@@ -183,10 +172,6 @@ Always create the task FIRST, then spawn an agent with the taskId.`,
 		searchDocuments: searchDocumentsTool,
 		getDocument: getDocumentTool,
 		listDocuments: listDocumentsTool,
-		linearSetTeam: linearSetTeamTool,
-		linearGetIssue: linearGetIssueTool,
-		linearListIssues: linearListIssuesTool,
-		linearSearchIssues: linearSearchIssuesTool,
 	},
 	maxSteps: 10,
 });
