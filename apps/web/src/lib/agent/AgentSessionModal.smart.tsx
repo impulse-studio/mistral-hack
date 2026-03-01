@@ -3,8 +3,8 @@ import type { GenericId } from "convex/values";
 import { useQuery } from "convex/react";
 import { useMemo } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
+import { DIALOG_CLOSE_BUTTON_GHOST } from "@/components/ui/modal-close-buttons";
 import type { TerminalLine } from "@/lib/terminal/TerminalOutput.component";
 
 import { AgentSessionPanel } from "./AgentSessionPanel.component";
@@ -119,13 +119,7 @@ function AgentSessionModalSmart({ agentId, open, onClose }: AgentSessionModalSma
 			<DialogContent className="flex h-[80vh] w-full max-w-2xl flex-col overflow-hidden p-0">
 				{/* Close button */}
 				<div className="absolute right-3 top-3 z-10">
-					<DialogClose
-						render={
-							<Button variant="ghost" size="icon-xs" className="border-2 border-border bg-card" />
-						}
-					>
-						&times;
-					</DialogClose>
+					<DialogClose render={DIALOG_CLOSE_BUTTON_GHOST}>&times;</DialogClose>
 				</div>
 
 				{agent && (

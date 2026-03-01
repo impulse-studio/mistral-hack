@@ -9,6 +9,17 @@ import { PixelProgress } from "@/lib/pixel/PixelProgress";
 import { PixelTooltip } from "@/lib/pixel/PixelTooltip";
 import { cn } from "@/lib/utils";
 
+function BlockedByTooltipContent({ names }: { names: string[] }) {
+	return (
+		<div className="space-y-0.5">
+			<span className="font-semibold">Blocked by:</span>
+			{names.map((name) => (
+				<div key={name}>• {name}</div>
+			))}
+		</div>
+	);
+}
+
 const kanbanItemVariants = cva(
 	"group/kanban-item relative cursor-pointer border-2 border-border bg-card p-2.5 shadow-pixel inset-shadow-pixel hover:border-muted-foreground/40 hover:shadow-pixel-hover hover:inset-shadow-pixel-hover hover:-translate-x-px hover:-translate-y-px",
 	{
@@ -165,6 +176,14 @@ function KanbanItem({
 		subtasksTotal !== undefined && subtasksTotal > 0 && subtasksDone !== undefined;
 	const subtasksDoneAll = hasSubtasks && subtasksDone === subtasksTotal;
 
+	const blockedByTooltipContent = useMemo(
+		() =>
+			blockedByNames && blockedByNames.length > 0 ? (
+				<BlockedByTooltipContent names={blockedByNames} />
+			) : null,
+		[blockedByNames],
+	);
+
 	return (
 		<div
 			data-slot="kanban-item"
@@ -208,17 +227,7 @@ function KanbanItem({
 				<div className="mb-2 flex flex-wrap gap-1">
 					{blocked &&
 						(blockedByNames && blockedByNames.length > 0 ? (
-							<PixelTooltip
-								content={
-									<div className="space-y-0.5">
-										<span className="font-semibold">Blocked by:</span>
-										{blockedByNames.map((name) => (
-											<div key={name}>• {name}</div>
-										))}
-									</div>
-								}
-								side="top"
-							>
+							<PixelTooltip content={blockedByTooltipContent} side="top">
 								<PixelBadge color="red" variant="solid">
 									Blocked
 								</PixelBadge>

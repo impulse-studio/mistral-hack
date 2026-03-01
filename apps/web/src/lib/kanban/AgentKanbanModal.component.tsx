@@ -1,5 +1,5 @@
 import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { DIALOG_CLOSE_BUTTON_GHOST } from "@/components/ui/modal-close-buttons";
 import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
 import { PixelBadge } from "@/lib/pixel/PixelBadge";
 import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
@@ -115,13 +115,7 @@ function AgentKanbanModal({
 					<PixelText as="h2" variant="heading">
 						Worker Boards
 					</PixelText>
-					<DialogClose
-						render={
-							<Button variant="ghost" size="icon-xs" className="border-2 border-border bg-card" />
-						}
-					>
-						&times;
-					</DialogClose>
+					<DialogClose render={DIALOG_CLOSE_BUTTON_GHOST}>&times;</DialogClose>
 				</div>
 
 				{/* Agent boards */}

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DIALOG_CLOSE_BUTTON_DEFAULT } from "@/components/ui/modal-close-buttons";
 import { Drawer, DrawerClose, DrawerContent } from "@/components/ui/drawer";
 import { AgentChat } from "@/lib/agent/AgentChat.component";
 import type { AgentChatMessage } from "@/lib/agent/AgentChat.component";
@@ -54,6 +55,9 @@ interface OfficeAgentPanelProps {
 }
 
 type OfficeAgentPanelTab = "tasks" | "chat" | "terminal" | "screen" | "files";
+
+const EMPTY_MESSAGES: AgentChatMessage[] = [];
+const EMPTY_DELIVERABLES: OfficeAgentPanelDeliverable[] = [];
 
 const AGENT_PANEL_STATUS_GLOW: Record<string, "green" | "cyan" | "muted" | "red" | "yellow"> = {
 	working: "green",
@@ -141,13 +145,7 @@ export function OfficeAgentPanel({
 									</div>
 								</div>
 							</div>
-							<DrawerClose
-								render={
-									<Button variant="default" size="icon-xs" className="text-muted-foreground" />
-								}
-							>
-								&times;
-							</DrawerClose>
+							<DrawerClose render={DIALOG_CLOSE_BUTTON_DEFAULT}>&times;</DrawerClose>
 						</div>
 
 						<PixelDivider />
@@ -177,7 +175,7 @@ export function OfficeAgentPanel({
 						<div className="flex-1 overflow-auto p-4">
 							{activeTab === "chat" && (
 								<AgentChat
-									messages={chatMessages ?? []}
+									messages={chatMessages ?? EMPTY_MESSAGES}
 									title={`${agent.name} conversation`}
 									streaming={isPulsing}
 									className="h-full"
@@ -196,7 +194,7 @@ export function OfficeAgentPanel({
 								<OfficeAgentPanelScreen screenshotUrl={latestScreenshotUrl ?? null} />
 							)}
 							{activeTab === "files" && (
-								<OfficeAgentPanelDeliverables deliverables={deliverables ?? []} />
+								<OfficeAgentPanelDeliverables deliverables={deliverables ?? EMPTY_DELIVERABLES} />
 							)}
 						</div>
 					</>
@@ -219,6 +217,53 @@ const AGENT_PANEL_TASK_BADGE_COLOR: Record<
 	done: "green",
 	failed: "red",
 };
+
+function BlockedByTooltipContent({ names }: { names: string[] }) {
+	return (
+		<div className="space-y-0.5">
+			<span className="font-semibold">Blocked by:</span>
+			{names.map((name) => (
+				<div key={name}>• {name}</div>
+			))}
+		</div>
+	);
+}
+
+function OfficeAgentPanelTaskRow({ task }: { task: OfficeAgentPanelTask }) {
+	const tooltipContent = useMemo(
+		() =>
+			task.blockedByNames && task.blockedByNames.length > 0 ? (
+				<BlockedByTooltipContent names={task.blockedByNames} />
+			) : null,
+		[task.blockedByNames],
+	);
+	return (
+		<PixelBorderBox className="px-3 py-2">
+			<div className="flex items-center justify-between gap-2">
+				<PixelText variant="body" className="text-[9px]">
+					{task.title}
+				</PixelText>
+				<div className="flex items-center gap-1">
+					{task.blocked &&
+						(task.blockedByNames && task.blockedByNames.length > 0 ? (
+							<PixelTooltip content={tooltipContent} side="left">
+								<PixelBadge color="red" size="sm">
+									Blocked
+								</PixelBadge>
+							</PixelTooltip>
+						) : (
+							<PixelBadge color="red" size="sm">
+								Blocked
+							</PixelBadge>
+						))}
+					<PixelBadge color={AGENT_PANEL_TASK_BADGE_COLOR[task.status] ?? "muted"} size="sm">
+						{task.status.replace("_", " ")}
+					</PixelBadge>
+				</div>
+			</div>
+		</PixelBorderBox>
+	);
+}
 
 function OfficeAgentPanelTasks({ tasks }: { tasks: OfficeAgentPanelTask[] }) {
 	if (tasks.length === 0) {
@@ -247,40 +292,7 @@ function OfficeAgentPanelTasks({ tasks }: { tasks: OfficeAgentPanelTask[] }) {
 				/>
 			</div>
 			{tasks.map((t) => (
-				<PixelBorderBox key={t.id} className="px-3 py-2">
-					<div className="flex items-center justify-between gap-2">
-						<PixelText variant="body" className="text-[9px]">
-							{t.title}
-						</PixelText>
-						<div className="flex items-center gap-1">
-							{t.blocked &&
-								(t.blockedByNames && t.blockedByNames.length > 0 ? (
-									<PixelTooltip
-										content={
-											<div className="space-y-0.5">
-												<span className="font-semibold">Blocked by:</span>
-												{t.blockedByNames.map((name) => (
-													<div key={name}>• {name}</div>
-												))}
-											</div>
-										}
-										side="left"
-									>
-										<PixelBadge color="red" size="sm">
-											Blocked
-										</PixelBadge>
-									</PixelTooltip>
-								) : (
-									<PixelBadge color="red" size="sm">
-										Blocked
-									</PixelBadge>
-								))}
-							<PixelBadge color={AGENT_PANEL_TASK_BADGE_COLOR[t.status] ?? "muted"} size="sm">
-								{t.status.replace("_", " ")}
-							</PixelBadge>
-						</div>
-					</div>
-				</PixelBorderBox>
+				<OfficeAgentPanelTaskRow key={t.id} task={t} />
 			))}
 		</div>
 	);

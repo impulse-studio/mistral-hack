@@ -3,6 +3,7 @@ import { Streamdown } from "streamdown";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
+import { DIALOG_CLOSE_BUTTON_GHOST } from "@/components/ui/modal-close-buttons";
 import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
 import { PixelBadge } from "@/lib/pixel/PixelBadge";
 import { PixelDivider } from "@/lib/pixel/PixelDivider";
@@ -216,13 +217,7 @@ function KanbanTaskDetail({
 							{statusInfo.label}
 						</PixelBadge>
 					</div>
-					<DialogClose
-						render={
-							<Button variant="ghost" size="icon-xs" className="border-2 border-border bg-card" />
-						}
-					>
-						&times;
-					</DialogClose>
+					<DialogClose render={DIALOG_CLOSE_BUTTON_GHOST}>&times;</DialogClose>
 				</div>
 
 				{/* ── Body ── */}

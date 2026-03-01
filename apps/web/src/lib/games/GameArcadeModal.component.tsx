@@ -2,8 +2,9 @@ import { useState } from "react";
 
 import { ChevronLeft } from "pixelarticons/react";
 
-import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
+import { DIALOG_CLOSE_BUTTON_GHOST, PIXELATED_STYLE } from "@/components/ui/modal-close-buttons";
 import { PixelText } from "@/lib/pixel/PixelText";
 import { GamesSnakeGame } from "@/lib/games/snake/SnakeGame.component";
 import { GamesTetrisTetrisGame } from "@/lib/games/tetris/TetrisGame.component";
@@ -44,7 +45,7 @@ export function GamesGameArcadeModal({ open, onClose }: GameArcadeModalProps) {
 							onClick={() => setActiveGame(null)}
 							className="border-2 border-border bg-card"
 						>
-							<ChevronLeft className="size-4" style={{ imageRendering: "pixelated" }} />
+							<ChevronLeft className="size-4" style={PIXELATED_STYLE} />
 						</Button>
 					) : (
 						<span className="size-6" />
@@ -54,13 +55,7 @@ export function GamesGameArcadeModal({ open, onClose }: GameArcadeModalProps) {
 						Arcade Table
 					</PixelText>
 
-					<DialogClose
-						render={
-							<Button variant="ghost" size="icon-xs" className="border-2 border-border bg-card" />
-						}
-					>
-						&times;
-					</DialogClose>
+					<DialogClose render={DIALOG_CLOSE_BUTTON_GHOST}>&times;</DialogClose>
 				</div>
 
 				{/* ── Game selector grid ──────────────────── */}
