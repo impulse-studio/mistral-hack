@@ -403,14 +403,23 @@ export function OfficeCanvas({
 				src="/assets/cat-walking-white.gif"
 				alt=""
 				className="pointer-events-none absolute"
-				style={{ imageRendering: "pixelated" }}
+				style={{
+					imageRendering: "pixelated",
+					width: CAT_RENDER_WIDTH * ZOOM_MIN,
+					height: CAT_RENDER_WIDTH * ZOOM_MIN * 0.8,
+				}}
 			/>
 			<img
 				ref={catSitRef}
 				src="/assets/animated-sitting-cat.webp"
 				alt=""
 				className="pointer-events-none absolute"
-				style={{ imageRendering: "pixelated", display: "none" }}
+				style={{
+					imageRendering: "pixelated",
+					width: CAT_RENDER_WIDTH * ZOOM_MIN,
+					height: CAT_RENDER_WIDTH * ZOOM_MIN * 0.8,
+					display: "none",
+				}}
 			/>
 
 			{/* Zoom controls */}
