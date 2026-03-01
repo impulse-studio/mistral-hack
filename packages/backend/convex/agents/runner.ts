@@ -100,6 +100,8 @@ export const runSubAgent = internalAction({
 			let result: string;
 			if (agent.role === "coder") {
 				result = await runCoderTask(ctx, agentId, task);
+			} else if (agent.role === "copywriter") {
+				result = await runCopywriterTask(ctx, agentId, task);
 			} else if (agent.role === "browser" || agent.role === "designer") {
 				result = await runComputerUseTask(ctx, agentId, task);
 			} else if (agent.role === "copywriter") {
