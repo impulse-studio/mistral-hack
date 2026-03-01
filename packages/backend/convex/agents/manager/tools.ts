@@ -4,7 +4,7 @@ import { internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
 import type { ToolCtx } from "@convex-dev/agent";
 import { agentPool } from "../../workpool";
-import { roleToModel } from "../models";
+import { roleToModel, ROUTING_MODEL } from "../models";
 import { SANDBOX_WORK_DIR } from "../../sandbox/constants";
 
 // ── Manager-Only Tools (createTool versions for @convex-dev/agent) ──
@@ -132,7 +132,7 @@ export const spawnAgentTool = createTool({
 		taskId: z.string().optional().describe("Task ID to assign — agent starts working immediately"),
 	}),
 	execute: async (ctx: ToolCtx, { name, role, color, taskId }) => {
-		const model = roleToModel[role] ?? "mistral-small-latest";
+		const model = roleToModel[role] ?? ROUTING_MODEL;
 
 		const agentId: Id<"agents"> = await ctx.runMutation(
 			internal.office.mutations.spawnAgentInternal,

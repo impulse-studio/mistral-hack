@@ -1,4 +1,4 @@
-import { createMistral } from "@ai-sdk/mistral";
+import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import { internal } from "../../_generated/api";
@@ -28,7 +28,7 @@ export async function runGeneralTask(
 	role: string,
 ): Promise<RunnerResult> {
 	const startTime = Date.now();
-	const mistralClient = createMistral();
+	const mistralClient = createAmazonBedrock({ region: "us-west-2" });
 
 	// ── Phase 1: Planning ──────────────────────────────────────
 	await ctx.runMutation(internal.logs.mutations.append, {

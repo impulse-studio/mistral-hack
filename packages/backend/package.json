@@ -13,6 +13,7 @@
 		"dev:setup": "convex dev --configure --until-success"
 	},
 	"dependencies": {
+		"@ai-sdk/amazon-bedrock": "^4.0.69",
 		"@ai-sdk/mistral": "^3.0.21",
 		"@convex-dev/agent": "0.6.0-alpha.1",
 		"@convex-dev/better-auth": "catalog:",

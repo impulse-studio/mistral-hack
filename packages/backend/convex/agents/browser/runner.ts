@@ -1,5 +1,5 @@
 import { generateObject } from "ai";
-import { createMistral } from "@ai-sdk/mistral";
+import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { z } from "zod";
 import { internal } from "../../_generated/api";
 import type { RunnerCtx, RunnerResult } from "../shared/types";
@@ -68,8 +68,8 @@ export async function runComputerUseTask(
 	agentId: string,
 	task: TaskRecord,
 ): Promise<RunnerResult> {
-	const mistral = createMistral();
-	const model = mistral(MANAGER_MODEL);
+	const bedrock = createAmazonBedrock({ region: "us-west-2" });
+	const model = bedrock(MANAGER_MODEL);
 
 	// 1. Ensure Computer Use environment is started (Xvfb + xfce4 + VNC)
 	await ctx.runAction(internal.sandbox.lifecycle.ensureComputerUseStarted, { agentId });
