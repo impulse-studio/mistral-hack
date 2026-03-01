@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, internalMutation } from "../_generated/server";
 import { taskStatusValidator } from "../schema";
+import { getUnmetDependencies } from "./dependencies";
 
 export const create = mutation({
 	args: {
@@ -52,7 +53,15 @@ export const assign = mutation({
 	returns: v.null(),
 	handler: async (ctx, { taskId, agentId }) => {
 		const task = await ctx.db.get(taskId);
-		if (task?.assignedTo === agentId) return;
+		if (!task) throw new Error(`Task ${taskId} not found`);
+		if (task.assignedTo === agentId) return;
+
+		// Enforce dependency gate
+		const unmet = await getUnmetDependencies(ctx.db, task);
+		if (unmet.length > 0) {
+			const names = unmet.map((d) => `"${d.title}" (${d.status})`).join(", ");
+			throw new Error(`Cannot assign task "${task.title}" — unmet dependencies: ${names}`);
+		}
 
 		await ctx.db.patch(taskId, {
 			assignedTo: agentId,
@@ -150,7 +159,15 @@ export const assignInternal = internalMutation({
 	returns: v.null(),
 	handler: async (ctx, { taskId, agentId }) => {
 		const task = await ctx.db.get(taskId);
-		if (task?.assignedTo === agentId) return;
+		if (!task) throw new Error(`Task ${taskId} not found`);
+		if (task.assignedTo === agentId) return;
+
+		// Enforce dependency gate
+		const unmet = await getUnmetDependencies(ctx.db, task);
+		if (unmet.length > 0) {
+			const names = unmet.map((d) => `"${d.title}" (${d.status})`).join(", ");
+			throw new Error(`Cannot assign task "${task.title}" — unmet dependencies: ${names}`);
+		}
 
 		await ctx.db.patch(taskId, {
 			assignedTo: agentId,

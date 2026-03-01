@@ -76,12 +76,18 @@ export const onSubAgentComplete = internalMutation({
 		}
 
 		// Check for tasks blocked by this completed task
+		// Scan both "backlog" and "todo" — tasks with deps may sit in either status
 		if (success && task) {
-			const allTasks = await ctx.db
+			const backlogTasks = await ctx.db
+				.query("tasks")
+				.withIndex("by_status", (q) => q.eq("status", "backlog"))
+				.collect();
+			const todoTasks = await ctx.db
 				.query("tasks")
 				.withIndex("by_status", (q) => q.eq("status", "todo"))
 				.collect();
-			for (const blockedTask of allTasks) {
+			const candidates = [...backlogTasks, ...todoTasks];
+			for (const blockedTask of candidates) {
 				if (!blockedTask.dependsOn || blockedTask.dependsOn.length === 0) continue;
 				if (!blockedTask.dependsOn.includes(taskId)) continue;
 				// Check if all dependencies are done
@@ -95,7 +101,7 @@ export const onSubAgentComplete = internalMutation({
 					}
 				}
 				if (allDone && threadId) {
-					const depNotification = `[DEPENDENCY RESOLVED] Task "${blockedTask.title}" is now unblocked — all dependencies satisfied. You can spawn an agent for it.`;
+					const depNotification = `[DEPENDENCY RESOLVED] Task "${blockedTask.title}" (${blockedTask._id}) is now unblocked — all dependencies satisfied. You can spawn an agent for it.`;
 					await ctx.scheduler.runAfter(0, internal.agents.onComplete.notifyManagerMutation, {
 						threadId,
 						notification: depNotification,

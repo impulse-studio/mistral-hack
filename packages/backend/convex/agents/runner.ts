@@ -126,6 +126,35 @@ export const runSubAgent = internalAction({
 		});
 		if (!agent || !task) throw new Error("Agent or task not found");
 
+		// 1b. Dependency guard — prevent execution if deps are unmet
+		const depCheck = await ctx.runQuery(internal.tasks.dependencies.canStartInternal, {
+			taskId,
+		});
+		if (!depCheck.canStart) {
+			const names = depCheck.unmet.map((d) => `"${d.title}" (${d.status})`).join(", ");
+			const errorMsg = `Cannot start task "${task.title}" — unmet dependencies: ${names}`;
+			await ctx.runMutation(internal.tasks.mutations.updateStatusInternal, {
+				taskId,
+				status: "failed",
+			});
+			await ctx.runMutation(internal.office.mutations.updateAgentStatus, {
+				agentId,
+				status: "failed",
+			});
+			await ctx.runMutation(internal.logs.mutations.append, {
+				agentId,
+				type: "stderr" as const,
+				content: errorMsg,
+			});
+			await ctx.runMutation(internal.agents.onComplete.onSubAgentComplete, {
+				agentId,
+				taskId,
+				success: false,
+				error: errorMsg,
+			});
+			return { success: false, error: errorMsg };
+		}
+
 		// 2. Update statuses
 		await ctx.runMutation(internal.office.mutations.updateAgentStatus, {
 			agentId,
