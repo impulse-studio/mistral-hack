@@ -3,6 +3,7 @@ import { mutation, internalMutation } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { agentStatusValidator } from "../schema";
 import { agentPool } from "../workpool";
+import { MANAGER_MODEL } from "../agents/models";
 
 // Initialize desks for the pixel-art office (8 worker + 1 manager)
 export const initDesks = mutation({
@@ -84,7 +85,7 @@ export const ensureManager = mutation({
 			type: "manager",
 			role: "orchestrator",
 			status: "idle",
-			model: "mistral-large-latest",
+			model: MANAGER_MODEL,
 			deskId: mgrDesk._id,
 			color: "#FF7000",
 			position: mgrDesk.position,
@@ -318,7 +319,10 @@ export const despawnAgentInternal = internalMutation({
 	},
 });
 
-// Full session reset — stop everything: agents, sandboxes, workpool, tasks, chat
+// Full session reset — KILL SWITCH. Stops everything immediately:
+// agents, manager, workpool, mailboxes, sandboxes, tasks, chat.
+// In-flight actions that complete after this will see "despawning" status
+// and bail out without re-enqueuing work.
 export const resetAllWorkers = mutation({
 	args: {},
 	returns: v.number(),
@@ -348,26 +352,40 @@ export const resetAllWorkers = mutation({
 			}
 		}
 
-		// ── 3. Reset manager to idle (don't delete — it's permanent) ──
+		// ── 3. Hard-stop manager ──
+		// Set to "despawning" (not "idle") so any in-flight processManagerMailbox
+		// or post-reset enqueue will bail out instead of re-scheduling.
 		const manager = await ctx.db
 			.query("agents")
 			.withIndex("by_type", (q) => q.eq("type", "manager"))
 			.first();
-		if (manager && manager.status !== "idle") {
+		if (manager) {
 			await ctx.db.patch(manager._id, {
-				status: "idle",
+				status: "despawning",
 				currentTaskId: undefined,
 				reasoning: undefined,
 			});
 		}
 
-		// ── 4. Nuke ALL sandboxes (Daytona + DB) in one shot ──
-		// cleanupAllSandboxes calls daytona.list() and deletes everything,
-		// then marks all DB records as archived — catches orphaned sandboxes too.
+		// Reset manager display status
+		const managerStatusConfig = await ctx.db
+			.query("systemConfig")
+			.withIndex("by_key", (q) => q.eq("key", "manager-status"))
+			.first();
+		if (managerStatusConfig) {
+			await ctx.db.patch(managerStatusConfig._id, { value: "idle" });
+		}
+
+		// ── 4. Delete all continuations (prevent resume after reset) ──
+		const allContinuations = await ctx.db.query("continuations").collect();
+		for (const c of allContinuations) {
+			await ctx.db.delete(c._id);
+		}
+
+		// ── 5. Nuke ALL sandboxes (Daytona + DB) in one shot ──
 		await ctx.scheduler.runAfter(0, internal.sandbox.lifecycle.cleanupAllSandboxes);
 
-		// ── 5. Mark all sandbox DB records as archived immediately ──
-		// (cleanupAllSandboxes will also do this, but we want instant UI feedback)
+		// Mark all sandbox DB records as archived immediately (instant UI feedback)
 		const allSandboxes = await ctx.db.query("sandbox").collect();
 		for (const sb of allSandboxes) {
 			if (sb.status !== "archived") {
@@ -375,7 +393,7 @@ export const resetAllWorkers = mutation({
 			}
 		}
 
-		// ── 6. Delete all mailbox messages (all agents) ──
+		// ── 6. Delete all mailbox messages (all agents, including manager) ──
 		const allMailbox = await ctx.db.query("agentMailbox").collect();
 		for (const msg of allMailbox) {
 			await ctx.db.delete(msg._id);
@@ -441,6 +459,15 @@ export const resetAllWorkers = mutation({
 			.first();
 		if (threadConfig) {
 			await ctx.db.delete(threadConfig._id);
+		}
+
+		// ── 13. Restore manager to idle (now that everything is wiped) ──
+		// Done LAST so any in-flight callbacks that ran during this mutation
+		// saw "despawning" and bailed out.
+		if (manager) {
+			await ctx.db.patch(manager._id, {
+				status: "idle",
+			});
 		}
 
 		return workers.length;

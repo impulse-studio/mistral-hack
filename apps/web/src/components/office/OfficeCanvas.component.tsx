@@ -3,9 +3,10 @@
  * without the editor-dependent OfficeCanvas from lib/pixelAgents.
  * Uses OfficeState + renderFrame + startGameLoop directly.
  */
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
-import { ZOOM_FIXED, CAT_RENDER_WIDTH } from "@/lib/pixelAgents/constants";
+import { PIXELATED_STYLE } from "@/components/ui/modal-close-buttons";
+import { CAT_RENDER_WIDTH, ZOOM_FIXED } from "@/lib/pixelAgents/constants";
 import { startGameLoop } from "@/lib/pixelAgents/gameLoop";
 import type { OfficeState } from "@/lib/pixelAgents/officeState";
 import { renderFrame } from "@/lib/pixelAgents/renderer";
@@ -126,6 +127,24 @@ export function OfficeCanvas({
 	const catWalkRef = useRef<HTMLImageElement>(null);
 	const catSitRef = useRef<HTMLImageElement>(null);
 	const catPrevWalkingRef = useRef(true); // mismatch with initial isWalking=false forces first-frame toggle
+
+	const catOverlayStyle = useMemo(
+		() => ({
+			...PIXELATED_STYLE,
+			width: CAT_RENDER_WIDTH * ZOOM_FIXED,
+			height: CAT_RENDER_WIDTH * ZOOM_FIXED * 0.8,
+		}),
+		[],
+	);
+	const catSitStyle = useMemo(
+		() => ({
+			...PIXELATED_STYLE,
+			width: CAT_RENDER_WIDTH * ZOOM_FIXED,
+			height: CAT_RENDER_WIDTH * ZOOM_FIXED * 0.8,
+			display: "none" as const,
+		}),
+		[],
+	);
 
 	useEffect(() => {
 		docCountRef.current = documentCount;
@@ -357,24 +376,14 @@ export function OfficeCanvas({
 				src="/assets/cat-walking-white.gif"
 				alt=""
 				className="pointer-events-none absolute"
-				style={{
-					imageRendering: "pixelated",
-					width: CAT_RENDER_WIDTH * ZOOM_FIXED,
-					height: CAT_RENDER_WIDTH * ZOOM_FIXED * 0.8,
-					display: "none",
-				}}
+				style={catOverlayStyle}
 			/>
 			<img
 				ref={catSitRef}
 				src="/assets/animated-sitting-cat.webp"
 				alt=""
 				className="pointer-events-none absolute"
-				style={{
-					imageRendering: "pixelated",
-					width: CAT_RENDER_WIDTH * ZOOM_FIXED,
-					height: CAT_RENDER_WIDTH * ZOOM_FIXED * 0.8,
-					display: "none",
-				}}
+				style={catSitStyle}
 			/>
 		</div>
 	);

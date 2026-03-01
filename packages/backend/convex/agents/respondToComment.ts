@@ -5,7 +5,7 @@ import { generateText, tool } from "ai";
 import { z } from "zod";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
-import { mistral } from "./models";
+import { mistral, MANAGER_MODEL } from "./models";
 
 /**
  * Agent responds to a user comment on a completed/waiting task.
@@ -62,7 +62,7 @@ You MUST call exactly one of these tools. Be concise and helpful.`;
 		let acted = false;
 
 		await generateText({
-			model: mistral(agent.model || "mistral-small-latest"),
+			model: mistral(agent.model || MANAGER_MODEL),
 			system: systemPrompt,
 			prompt: commentPayload,
 			tools: {

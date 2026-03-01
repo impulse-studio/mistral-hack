@@ -29,6 +29,9 @@ const BALL_BASE_SPEED = 3;
 const BALL_MAX_SPEED = 7;
 const BALL_SPEED_INCREMENT = 0.15;
 
+const PONG_SCORE_STYLE_PLAYER = { color: "#22eedd" } as const;
+const PONG_SCORE_STYLE_AI = { color: "#ff7000" } as const;
+
 // ── AI ──────────────────────────────────────────────
 const AI_BASE_SPEED = 2.5;
 const AI_SPEED_INCREMENT = 0.1;
@@ -461,7 +464,7 @@ function PongGame({ className }: PongGameProps) {
 			<div className="flex items-center justify-between border-2 border-border bg-card px-3 py-1.5 shadow-pixel inset-shadow-pixel">
 				<span
 					className="font-mono text-[10px] font-semibold uppercase tracking-widest"
-					style={{ color: "#22eedd" }}
+					style={PONG_SCORE_STYLE_PLAYER}
 				>
 					You: {playerScore}
 				</span>
@@ -470,7 +473,7 @@ function PongGame({ className }: PongGameProps) {
 				</span>
 				<span
 					className="font-mono text-[10px] font-semibold uppercase tracking-widest"
-					style={{ color: "#ff7000" }}
+					style={PONG_SCORE_STYLE_AI}
 				>
 					AI: {aiScore}
 				</span>

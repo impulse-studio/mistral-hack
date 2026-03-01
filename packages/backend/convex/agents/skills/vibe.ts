@@ -13,9 +13,30 @@ function cap(text: string): string {
 
 export function createVibeSkills(ctx: RunnerCtx, agentId: string) {
 	return {
+		install_vibe: tool({
+			description:
+				"Install Mistral Vibe CLI in the sandbox. Run this BEFORE run_vibe if run_vibe returns 'command not found' (exit 127). Requires network. MISTRAL_API_KEY must be set in the sandbox (it is passed automatically for coding agents).",
+			inputSchema: z.object({}),
+			execute: async () => {
+				await ctx.runMutation(internal.logs.mutations.append, {
+					agentId,
+					type: "tool_call" as const,
+					content: "install_vibe: Installing Mistral Vibe CLI...",
+				});
+				const result = await ctx.runAction(internal.sandbox.vibe.installVibe, { agentId });
+				const output = cap(result.output);
+				await ctx.runMutation(internal.logs.mutations.append, {
+					agentId,
+					type: "tool_result" as const,
+					content: `exit=${result.exitCode} | ${output.slice(0, 500)}`,
+				});
+				return { exitCode: result.exitCode, output };
+			},
+		}),
+
 		run_vibe: tool({
 			description:
-				"Run Mistral Vibe headless CLI to generate or scaffold code from a natural language prompt. Best for greenfield projects and large code generation tasks. The command runs in the specified working directory.",
+				"Run Mistral Vibe headless CLI to generate or scaffold code from a natural language prompt. Best for greenfield projects. Requires vibe to be installed — if you get 'command not found', run install_vibe first. MISTRAL_API_KEY is passed automatically. Uses --auto-approve for non-interactive mode.",
 			inputSchema: z.object({
 				prompt: z.string().describe("Natural language description of what to build"),
 				workingDir: z

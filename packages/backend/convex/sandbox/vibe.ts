@@ -4,8 +4,33 @@ import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { runCommandStreaming } from "./streamLogs";
-import { getDaytona, escapeShellArg, withRetry } from "./helpers";
+import { getDaytona, getRunning, escapeShellArg, withRetry } from "./helpers";
 import { SANDBOX_WORK_DIR } from "./constants";
+
+const VIBE_INSTALL_CMD = [
+	"which vibe > /dev/null 2>&1 || {",
+	"  curl -LsSf https://mistral.ai/vibe/install.sh | bash",
+	"  && VIBE_BIN=$(find $HOME/.local/bin /root/.local/bin -name vibe -type f 2>/dev/null | head -1)",
+	'  && test -n "$VIBE_BIN" && ln -sf "$VIBE_BIN" /usr/local/bin/vibe 2>/dev/null || sudo ln -sf "$VIBE_BIN" /usr/local/bin/vibe',
+	"}",
+].join(" ");
+
+export const installVibe = internalAction({
+	args: { agentId: v.id("agents") },
+	handler: async (ctx, { agentId }) => {
+		const { sandbox, sandboxRecord } = await getRunning(ctx, agentId);
+		const result = await sandbox.process.executeCommand(
+			VIBE_INSTALL_CMD,
+			undefined,
+			undefined,
+			120,
+		);
+		await ctx.runMutation(internal.sandbox.mutations.recordActivity, {
+			sandboxId: sandboxRecord._id,
+		});
+		return { exitCode: result.exitCode, output: result.result ?? "" };
+	},
+});
 
 // Run Mistral Vibe headless CLI inside the agent's Daytona sandbox
 export const runVibeHeadless = internalAction({
@@ -36,7 +61,7 @@ export const runVibeHeadless = internalAction({
 		// BUG 6 FIX: Use proper POSIX single-quote shell escaping
 		const escapedPrompt = escapeShellArg(prompt);
 		const escapedDir = escapeShellArg(dir);
-		const cmd = `cd ${escapedDir} && vibe --prompt ${escapedPrompt}`;
+		const cmd = `cd ${escapedDir} && vibe --prompt ${escapedPrompt} --auto-approve`;
 
 		// Log the command before streaming output
 		await ctx.runMutation(internal.logs.mutations.append, {

@@ -14,6 +14,7 @@
 ## Agent Capabilities
 
 - [x] Improve code agent capabilities _(Mistral Vibe headless, auto-verify, auto-commit on feature branches)_
+- [x] Daytona sandbox scaffolding fixes _(PTY for interactive CLIs, local workspace for npm install, coder snapshot with Vibe pre-installed)_
 - [x] Give more Daytona tools to agents depending on agent type _(role-based capability tiers in `capabilities.ts`)_
 - [x] Git operations — setup login to access git user credentials for agents _(full git toolkit, GitHub token injection)_
 - [x] Comment on the repo _(createIssue, addComment, createPR via gh CLI)_

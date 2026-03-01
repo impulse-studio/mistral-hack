@@ -1,7 +1,7 @@
 import { api } from "@mistral-hack/backend/convex/_generated/api";
 import type { GenericId } from "convex/values";
 import { useMutation, useQuery } from "convex/react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 import type {
 	KanbanTaskAssignee,
@@ -75,62 +75,85 @@ function KanbanTaskDetailSmart({
 
 	// ── Data mapping ────────────────────────────────────
 
-	const mappedSubtasks: KanbanTaskSubtaskItem[] | undefined =
-		subtasks && subtasks.length > 0
-			? subtasks.map((s) => ({
-					id: s._id,
-					title: s.title,
-					done: s.status === "done",
-					cancelled: s.status === "cancelled",
-				}))
-			: undefined;
+	const mappedSubtasks = useMemo<KanbanTaskSubtaskItem[] | undefined>(
+		() =>
+			subtasks && subtasks.length > 0
+				? subtasks.map((s) => ({
+						id: s._id,
+						title: s.title,
+						done: s.status === "done",
+						cancelled: s.status === "cancelled",
+					}))
+				: undefined,
+		[subtasks],
+	);
 
-	const mappedComments: KanbanTaskComment[] | undefined = comments?.map((c) => ({
-		id: c._id,
-		author: c.author,
-		content: c.content,
-		createdAt: c.createdAt,
-	}));
+	const mappedComments = useMemo<KanbanTaskComment[] | undefined>(
+		() =>
+			comments?.map((c) => ({
+				id: c._id,
+				author: c.author,
+				content: c.content,
+				createdAt: c.createdAt,
+			})),
+		[comments],
+	);
 
-	const mappedAssignee: KanbanTaskAssignee | undefined = agentData?.agent
-		? {
-				name: agentData.agent.name,
-				initials: agentData.agent.name.slice(0, 2).toUpperCase(),
-				color: agentData.agent.color,
-				status: KANBAN_AGENT_STATUS_MAP[agentData.agent.status],
-			}
-		: undefined;
+	const mappedAssignee = useMemo<KanbanTaskAssignee | undefined>(
+		() =>
+			agentData?.agent
+				? {
+						name: agentData.agent.name,
+						initials: agentData.agent.name.slice(0, 2).toUpperCase(),
+						color: agentData.agent.color,
+						status: KANBAN_AGENT_STATUS_MAP[agentData.agent.status],
+					}
+				: undefined,
+		[agentData?.agent],
+	);
 
-	const mappedDependencies:
-		| { dependsOn: KanbanTaskDependency[]; blocks: KanbanTaskDependency[] }
-		| undefined = depInfo
-		? {
-				dependsOn: depInfo.dependsOn.map((d) => ({
-					id: d.id,
-					title: d.title,
-					status: d.status,
-					done: d.status === "done",
-				})),
-				blocks: depInfo.blocks.map((d) => ({
-					id: d.id,
-					title: d.title,
-					status: d.status,
-					done: d.status === "done",
-				})),
-			}
-		: undefined;
+	const mappedDependencies = useMemo<
+		{ dependsOn: KanbanTaskDependency[]; blocks: KanbanTaskDependency[] } | undefined
+	>(
+		() =>
+			depInfo
+				? {
+						dependsOn: depInfo.dependsOn.map((d) => ({
+							id: d.id,
+							title: d.title,
+							status: d.status,
+							done: d.status === "done",
+						})),
+						blocks: depInfo.blocks.map((d) => ({
+							id: d.id,
+							title: d.title,
+							status: d.status,
+							done: d.status === "done",
+						})),
+					}
+				: undefined,
+		[depInfo],
+	);
 
-	const mappedLabels: Array<{ text: string; color: "orange" | "blue" | "muted" }> | undefined = task
-		? [
-				{
-					text: task.createdBy === "manager" ? "Manager" : "User",
-					color: task.createdBy === "manager" ? ("orange" as const) : ("blue" as const),
-				},
-				...(task.estimatedMinutes
-					? [{ text: `${task.estimatedMinutes}m`, color: "muted" as const }]
-					: []),
-			]
-		: undefined;
+	const mappedLabels = useMemo<
+		Array<{ text: string; color: "orange" | "blue" | "muted" }> | undefined
+	>(
+		() =>
+			task
+				? [
+						{
+							text: task.createdBy === "manager" ? "Manager" : "User",
+							color: task.createdBy === "manager" ? ("orange" as const) : ("blue" as const),
+						},
+						...(task.estimatedMinutes
+							? [{ text: `${task.estimatedMinutes}m`, color: "muted" as const }]
+							: []),
+					]
+				: undefined,
+		[task],
+	);
+
+	const commentsProp = useMemo(() => mappedComments ?? [], [mappedComments]);
 
 	return (
 		<KanbanTaskDetail
@@ -144,7 +167,7 @@ function KanbanTaskDetailSmart({
 			subtasks={mappedSubtasks}
 			dependencies={mappedDependencies}
 			assignee={mappedAssignee}
-			comments={mappedComments ?? []}
+			comments={commentsProp}
 			result={task?.result}
 			error={task?.error}
 			createdAt={task?.createdAt}

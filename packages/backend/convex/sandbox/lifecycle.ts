@@ -5,7 +5,12 @@ import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { getDaytona, withRetry } from "./helpers";
-import { SHARED_WORKSPACE, SANDBOX_GIT_USER, SANDBOX_GIT_EMAIL } from "./constants";
+import {
+	SHARED_WORKSPACE,
+	SANDBOX_GIT_USER,
+	SANDBOX_GIT_EMAIL,
+	CODER_SNAPSHOT_NAME,
+} from "./constants";
 
 const SHARED_VOLUME_NAME = "ai-office-workspace";
 const SHARED_VOLUME_MOUNT = SHARED_WORKSPACE;
@@ -27,19 +32,20 @@ async function provisionSandbox(sandbox: {
 	await sandbox.process.executeCommand("npm config set prefer-family ipv4").catch(() => {});
 
 	// Install Mistral Vibe CLI if not present (best-effort)
-	// The install script puts the binary in ~/.local/bin which may not be in PATH
-	// for CU desktop sessions, so we also symlink to /usr/local/bin.
+	// Agent can run install_vibe tool if this fails. MISTRAL_API_KEY is passed via envVars at sandbox creation.
 	await sandbox.process
 		.executeCommand(
 			[
 				"which vibe > /dev/null 2>&1 || {",
 				"  curl -LsSf https://mistral.ai/vibe/install.sh | bash",
 				"  && VIBE_BIN=$(find $HOME/.local/bin /root/.local/bin -name vibe -type f 2>/dev/null | head -1)",
-				'  && test -n "$VIBE_BIN" && sudo ln -sf "$VIBE_BIN" /usr/local/bin/vibe',
+				'  && test -n "$VIBE_BIN" && (ln -sf "$VIBE_BIN" /usr/local/bin/vibe 2>/dev/null || sudo ln -sf "$VIBE_BIN" /usr/local/bin/vibe)',
 				"}",
 			].join(" "),
 		)
-		.catch(() => {});
+		.catch((err) => {
+			console.warn("[provisionSandbox] Vibe install failed (agent can run install_vibe):", err);
+		});
 
 	// Install gh CLI if not present (best-effort — uses passwordless sudo)
 	await sandbox.process
@@ -106,27 +112,32 @@ export const createSandbox = internalAction({
 			const daytona = getDaytona();
 			const volumeId = await ensureSharedVolume();
 
-			// Use explicit override, else fall back to system default
-			const snapshotName =
-				snapshotOverride ??
-				(await ctx.runQuery(internal.systemConfig.get, {
-					key: "default_snapshot",
-				}));
+			const configSnapshot = await ctx.runQuery(internal.systemConfig.get, {
+				key: "default_snapshot",
+			});
+			const snapshotName = snapshotOverride ?? configSnapshot ?? CODER_SNAPSHOT_NAME;
 
 			const baseParams = {
 				language: "typescript" as const,
 				volumes: [{ volumeId, mountPath: SHARED_VOLUME_MOUNT }],
 				labels: agentId ? { agentId } : undefined,
-				autoStopInterval: 30, // minutes — Daytona-level safety net for orphaned sandboxes
+				autoStopInterval: 30,
 				autoDeleteInterval: -1,
 				envVars: envVars as Record<string, string> | undefined,
 			};
 
-			const sandbox = await withRetry(() =>
-				snapshotName
-					? daytona.create({ ...baseParams, snapshot: snapshotName }, { timeout: 60 })
-					: daytona.create(baseParams, { timeout: 60 }),
-			);
+			let sandbox;
+			try {
+				sandbox = await withRetry(() =>
+					daytona.create({ ...baseParams, snapshot: snapshotName }, { timeout: 60 }),
+				);
+			} catch (snapshotErr) {
+				console.warn(
+					`[createSandbox] Snapshot "${snapshotName}" failed, falling back to default:`,
+					snapshotErr instanceof Error ? snapshotErr.message : snapshotErr,
+				);
+				sandbox = await withRetry(() => daytona.create(baseParams, { timeout: 60 }));
+			}
 
 			// Provision sandbox (skip heavy installs if snapshot already has them)
 			await provisionSandbox(sandbox);

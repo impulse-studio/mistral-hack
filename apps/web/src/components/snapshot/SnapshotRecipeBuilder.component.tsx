@@ -24,8 +24,10 @@ interface SnapshotRecipeBuilderProps {
 
 export function SnapshotRecipeBuilder({ onCreated }: SnapshotRecipeBuilderProps) {
 	const createSnapshot = useAction(api.sandbox.snapshots.createSnapshot);
+	const createCoderSnapshot = useAction(api.sandbox.snapshots.createCoderSnapshot);
 
 	const [name, setName] = useState("mistral-snapshot");
+	const [isCreatingCoder, setIsCreatingCoder] = useState(false);
 	const [baseImage, setBaseImage] = useState("node:20");
 	const [customBaseImage, setCustomBaseImage] = useState("");
 	const [isCreating, setIsCreating] = useState(false);
@@ -122,10 +124,50 @@ export function SnapshotRecipeBuilder({ onCreated }: SnapshotRecipeBuilderProps)
 					)}
 				</div>
 
+				{/* Coder snapshot (pre-built with Vibe, Node, npm) */}
+				<div className="space-y-2">
+					<label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+						Pre-built Coder Snapshot
+					</label>
+					<button
+						type="button"
+						onClick={async () => {
+							setIsCreatingCoder(true);
+							setError(null);
+							try {
+								await createCoderSnapshot();
+								onCreated();
+							} catch (err) {
+								setError(err instanceof Error ? err.message : String(err));
+							} finally {
+								setIsCreatingCoder(false);
+							}
+						}}
+						disabled={isCreatingCoder || isCreating}
+						className="w-full h-9 text-xs font-mono uppercase tracking-widest border-2 border-cyan-500/50 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+					>
+						{isCreatingCoder ? (
+							<>
+								<Loader className="h-3 w-3 animate-spin" />
+								Creating ai-office-coder (Vibe + Node + npm)...
+							</>
+						) : (
+							<>
+								<Server className="h-3 w-3" />
+								Create Coder Snapshot (Vibe, Node, npm)
+							</>
+						)}
+					</button>
+					<p className="text-[10px] font-mono text-muted-foreground">
+						Pre-installs Mistral Vibe CLI, git, npm. Use as default for coding agents. Takes ~5–10
+						min.
+					</p>
+				</div>
+
 				{/* Info */}
 				<div className="text-[10px] font-mono text-muted-foreground bg-muted/30 border border-border p-2">
-					The snapshot caches the base image for faster sandbox startup. Tools (Vibe CLI, gh, git
-					config) are provisioned automatically at boot by the sandbox lifecycle.
+					The snapshot caches the base image for faster sandbox startup. The Coder snapshot includes
+					Vibe CLI; otherwise tools are provisioned at boot by the sandbox lifecycle.
 				</div>
 
 				{/* Error */}

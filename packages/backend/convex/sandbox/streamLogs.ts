@@ -79,6 +79,7 @@ export async function runCommandStreaming(
 							content: stderrChunk,
 						});
 					}
+					return undefined;
 				})
 				.catch((err) => {
 					console.warn("[streamLogs] flush failed:", err);

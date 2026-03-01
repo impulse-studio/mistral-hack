@@ -1,7 +1,7 @@
 import { api } from "@mistral-hack/backend/convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AgentSessionModalSmart } from "@/lib/agent/AgentSessionModal.smart";
@@ -33,13 +33,16 @@ function mapKanbanToTasks(
 ): KanbanBoardTask[] {
 	const orderedStatuses = ["backlog", "todo", "waiting", "in_progress", "review", "done", "failed"];
 
-	// Build a status lookup: taskId → status string
+	// Build lookup maps: taskId → status, taskId → title
 	const statusById = new Map<string, string>();
+	const titleById = new Map<string, string>();
 	for (const status of orderedStatuses) {
 		const group = kanbanData[status];
 		if (!Array.isArray(group)) continue;
 		for (const task of group) {
-			statusById.set(String(task._id ?? ""), status);
+			const taskId = String(task._id ?? "");
+			statusById.set(taskId, status);
+			titleById.set(taskId, String(task.title ?? "Untitled task"));
 		}
 	}
 
@@ -59,7 +62,11 @@ function mapKanbanToTasks(
 
 			// Check if any dependency is not done
 			const dependsOn = Array.isArray(task.dependsOn) ? (task.dependsOn as string[]) : [];
-			const blocked = dependsOn.some((depId) => statusById.get(depId) !== "done");
+			const unresolvedDeps = dependsOn.filter((depId) => statusById.get(depId) !== "done");
+			const blocked = unresolvedDeps.length > 0;
+			const blockedByNames = blocked
+				? unresolvedDeps.map((depId) => titleById.get(depId) ?? "Unknown task")
+				: undefined;
 
 			tasks.push({
 				id,
@@ -75,6 +82,7 @@ function mapKanbanToTasks(
 				],
 				assigneeInitials: extractAssigneeInitials(assigneeId),
 				blocked,
+				blockedByNames,
 			});
 		}
 	}
@@ -110,6 +118,20 @@ function RouteComponent() {
 		setSelectedAgentId(null);
 	}, []);
 
+	const headerAction = useMemo(
+		() => (
+			<Button
+				variant="elevated"
+				size="sm"
+				onClick={() => setAgentBoardOpen(true)}
+				className="font-mono text-[11px] font-semibold uppercase tracking-widest"
+			>
+				Worker Boards
+			</Button>
+		),
+		[],
+	);
+
 	if (kanbanData === undefined) {
 		return (
 			<div className="p-4">
@@ -131,16 +153,7 @@ function RouteComponent() {
 				readOnly
 				onTaskClick={handleTaskClick}
 				className="h-full"
-				headerAction={
-					<Button
-						variant="elevated"
-						size="sm"
-						onClick={() => setAgentBoardOpen(true)}
-						className="font-mono text-[11px] font-semibold uppercase tracking-widest"
-					>
-						Worker Boards
-					</Button>
-				}
+				headerAction={headerAction}
 			/>
 			<KanbanTaskDetailSmart taskId={selectedTaskId} onClose={handleCloseDetail} />
 			<KanbanAgentModalSmart

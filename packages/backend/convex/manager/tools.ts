@@ -5,7 +5,7 @@ import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { agentPool } from "../workpool";
-import { roleToModel } from "../agents/models";
+import { roleToModel, ROUTING_MODEL } from "../agents/models";
 import { SANDBOX_WORK_DIR } from "../sandbox/constants";
 
 // Tool action: spawn a sub-agent and optionally enqueue it on the workpool
@@ -26,7 +26,7 @@ export const spawnAgentAction = internalAction({
 		model: string;
 		message: string;
 	}> => {
-		const model = roleToModel[role] ?? "mistral-small-latest";
+		const model = roleToModel[role] ?? ROUTING_MODEL;
 
 		const agentId: Id<"agents"> = await ctx.runMutation(
 			internal.office.mutations.spawnAgentInternal,

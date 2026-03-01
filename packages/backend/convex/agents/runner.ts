@@ -19,12 +19,15 @@ export const runSubAgent = internalAction({
 		ctx,
 		{ agentId, taskId },
 	): Promise<{ success: boolean; result?: string; error?: string }> => {
-		// 1. Get records
+		// 1. Get records — bail out if agent is despawning (reset was triggered)
 		const agent = await ctx.runQuery(internal.office.queries.getAgentInternal, { agentId });
+		if (!agent || agent.status === "despawning") {
+			return { success: false, error: "Agent is despawning (reset triggered)" };
+		}
 		const task = await ctx.runQuery(internal.tasks.queries.getInternal, {
 			taskId,
 		});
-		if (!agent || !task) throw new Error("Agent or task not found");
+		if (!task) throw new Error("Task not found");
 
 		// 1b. Dependency guard — prevent execution if deps are unmet
 		const depCheck = await ctx.runQuery(internal.tasks.dependencies.canStartInternal, {

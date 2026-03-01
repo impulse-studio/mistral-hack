@@ -1,15 +1,15 @@
-import { createMistral } from "@ai-sdk/mistral";
+import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 
-// Single Mistral client instance — reused across all agent modules
-export const mistral = createMistral();
+// Bedrock provider — uses AWS_BEARER_TOKEN_BEDROCK env var for auth
+export const mistral = createAmazonBedrock({
+	region: "us-west-2",
+});
 
-// ── Model ID constants ──────────────────────────────────────
-export const MANAGER_MODEL = "mistral-large-latest";
-export const CODER_MODEL = "codestral-latest";
-export const ROUTING_MODEL = "ministral-8b-latest";
-// Magistral models have native reasoning — the AI SDK automatically
-// parses reasoningText from the response. No providerOptions needed.
-export const REASONING_MODEL = "magistral-medium-latest";
+// ── Model ID constants (Bedrock Mistral model IDs) ──────────
+export const MANAGER_MODEL = "mistral.mistral-large-3-675b-instruct";
+export const CODER_MODEL = "mistral.devstral-2-123b";
+export const ROUTING_MODEL = "mistral.ministral-3-8b-instruct";
+export const REASONING_MODEL = "mistral.magistral-small-2509";
 
 export const roleToModel: Record<string, string> = {
 	coder: CODER_MODEL,

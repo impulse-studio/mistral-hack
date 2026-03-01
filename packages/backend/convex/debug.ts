@@ -170,6 +170,25 @@ export const getWindows = action({
 
 // === Vibe Headless ===
 
+export const testVibeEnv = action({
+	args: { agentId: v.id("agents") },
+	handler: async (ctx, { agentId }): Promise<{ result: string; exitCode: number }> => {
+		return await ctx.runAction(internal.sandbox.execute.runCommand, {
+			command:
+				'which vibe 2>/dev/null && echo "VIBE_OK" || echo "VIBE_NOT_FOUND"; test -n "$MISTRAL_API_KEY" && echo "MISTRAL_KEY_SET" || echo "MISTRAL_KEY_MISSING"',
+			agentId,
+			stream: false,
+		});
+	},
+});
+
+export const installVibeDebug = action({
+	args: { agentId: v.id("agents") },
+	handler: async (ctx, { agentId }): Promise<{ exitCode: number; output: string }> => {
+		return await ctx.runAction(internal.sandbox.vibe.installVibe, { agentId });
+	},
+});
+
 export const runVibe = action({
 	args: {
 		agentId: v.id("agents"),

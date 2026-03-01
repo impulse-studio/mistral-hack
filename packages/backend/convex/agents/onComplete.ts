@@ -16,6 +16,11 @@ export const onSubAgentComplete = internalMutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { agentId, taskId, success, result, error }) => {
+		// Bail out if agent is despawning (reset was triggered) — don't enqueue
+		// notifications or schedule follow-up work after a reset.
+		const agentCheck = await ctx.db.get(agentId);
+		if (!agentCheck || agentCheck.status === "despawning") return null;
+
 		// Save result/error on the task — always write these fields regardless of
 		// current status so the error message is never lost to a race condition.
 		const task = await ctx.db.get(taskId);
