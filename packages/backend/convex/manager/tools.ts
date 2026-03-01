@@ -237,7 +237,14 @@ export const updateTaskStatusAction = internalAction({
 	}> => {
 		await ctx.runMutation(internal.tasks.mutations.updateStatusInternal, {
 			taskId: taskId as Id<"tasks">,
-			status: status as "backlog" | "todo" | "in_progress" | "review" | "done" | "failed",
+			status: status as
+				| "backlog"
+				| "todo"
+				| "waiting"
+				| "in_progress"
+				| "review"
+				| "done"
+				| "failed",
 		});
 
 		return {

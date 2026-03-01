@@ -62,6 +62,7 @@ export const getKanban = query({
 	returns: v.object({
 		backlog: v.array(taskDoc),
 		todo: v.array(taskDoc),
+		waiting: v.array(taskDoc),
 		in_progress: v.array(taskDoc),
 		review: v.array(taskDoc),
 		done: v.array(taskDoc),
@@ -72,6 +73,7 @@ export const getKanban = query({
 		const kanban = {
 			backlog: [] as typeof all,
 			todo: [] as typeof all,
+			waiting: [] as typeof all,
 			in_progress: [] as typeof all,
 			review: [] as typeof all,
 			done: [] as typeof all,

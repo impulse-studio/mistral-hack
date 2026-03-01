@@ -50,7 +50,7 @@ const meta = {
 		},
 		status: {
 			control: "select",
-			options: ["backlog", "todo", "in_progress", "review", "done", "failed"],
+			options: ["backlog", "todo", "waiting", "in_progress", "review", "done", "failed"],
 		},
 		onClose: { action: "closed" },
 		onOpenTerminal: { action: "openTerminal" },

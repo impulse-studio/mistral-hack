@@ -51,7 +51,7 @@ export interface KanbanTaskDetailProps {
 	onClose: () => void;
 	id: string;
 	title: string;
-	status: "backlog" | "todo" | "in_progress" | "review" | "done" | "failed";
+	status: "backlog" | "todo" | "waiting" | "in_progress" | "review" | "done" | "failed";
 	description?: string;
 	priority?: Priority;
 	labels?: Array<{ text: string; color: LabelColor }>;
@@ -90,6 +90,7 @@ const AGENT_STATUS_COLOR_MAP = {
 const STATUS_DISPLAY = {
 	backlog: { label: "Backlog", color: "muted" },
 	todo: { label: "Todo", color: "orange" },
+	waiting: { label: "Waiting", color: "purple" },
 	in_progress: { label: "In Progress", color: "cyan" },
 	review: { label: "Review", color: "yellow" },
 	done: { label: "Done", color: "green" },

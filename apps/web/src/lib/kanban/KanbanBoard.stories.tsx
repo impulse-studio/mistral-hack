@@ -84,7 +84,7 @@ export const Readonly: Story = {
 		tasks: sampleTasks,
 		readOnly: true,
 		filters: {
-			statuses: ["backlog", "todo", "in_progress", "review", "done"],
+			statuses: ["backlog", "todo", "waiting", "in_progress", "review", "done"],
 		},
 	},
 };
@@ -95,7 +95,7 @@ export const Interactive: Story = {
 		tasks: sampleTasks,
 		readOnly: false,
 		filters: {
-			statuses: ["backlog", "todo", "in_progress", "review", "done"],
+			statuses: ["backlog", "todo", "waiting", "in_progress", "review", "done"],
 		},
 	},
 	render: function InteractiveBoard(args) {

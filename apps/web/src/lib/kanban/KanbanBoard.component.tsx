@@ -12,7 +12,14 @@ import { KANBAN_DRAG_TYPE } from "./KanbanItem.component";
 
 const EMPTY_ITEMS: KanbanItemProps[] = [];
 
-type KanbanTaskStatus = "backlog" | "todo" | "in_progress" | "review" | "done" | "failed";
+type KanbanTaskStatus =
+	| "backlog"
+	| "todo"
+	| "waiting"
+	| "in_progress"
+	| "review"
+	| "done"
+	| "failed";
 type KanbanTaskPriority = NonNullable<KanbanItemProps["priority"]>;
 
 interface KanbanBoardTask {
@@ -57,6 +64,7 @@ const KANBAN_COLUMN_ORDER: Array<{
 }> = [
 	{ status: "backlog", title: "Backlog", accentColor: "muted-foreground" },
 	{ status: "todo", title: "Todo", accentColor: "orange-500" },
+	{ status: "waiting", title: "Waiting", accentColor: "purple-500" },
 	{ status: "in_progress", title: "In Progress", accentColor: "blue-500" },
 	{ status: "review", title: "Review", accentColor: "yellow-500" },
 	{ status: "done", title: "Done", accentColor: "green-500" },

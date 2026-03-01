@@ -13,7 +13,7 @@ import {
 import { KanbanTaskDetailSmart } from "../kanban/TaskDetailModal.smart";
 
 const KANBAN_FILTERS: KanbanBoardFilters = {
-	statuses: ["backlog", "todo", "in_progress", "review", "done"],
+	statuses: ["backlog", "todo", "waiting", "in_progress", "review", "done"],
 	search: "",
 };
 
@@ -26,7 +26,7 @@ function extractAssigneeInitials(assigneeId?: string) {
 function mapKanbanToTasks(
 	kanbanData: Record<string, Array<Record<string, unknown>>>,
 ): KanbanBoardTask[] {
-	const orderedStatuses = ["backlog", "todo", "in_progress", "review", "done", "failed"];
+	const orderedStatuses = ["backlog", "todo", "waiting", "in_progress", "review", "done", "failed"];
 	const tasks: KanbanBoardTask[] = [];
 
 	for (const status of orderedStatuses) {

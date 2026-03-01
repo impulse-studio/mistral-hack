@@ -356,13 +356,22 @@ function OfficeStatePanel() {
 
 // ── Tasks Board Panel ─────────────────────────────────────────
 
-const taskStatusOrder = ["backlog", "todo", "in_progress", "review", "done", "failed"] as const;
+const taskStatusOrder = [
+	"backlog",
+	"todo",
+	"waiting",
+	"in_progress",
+	"review",
+	"done",
+	"failed",
+] as const;
 
 type TaskStatus = (typeof taskStatusOrder)[number];
 
 const taskStatusLabels: Record<TaskStatus, string> = {
 	backlog: "Backlog",
 	todo: "To Do",
+	waiting: "Waiting",
 	in_progress: "In Progress",
 	review: "Review",
 	done: "Done",
@@ -372,6 +381,7 @@ const taskStatusLabels: Record<TaskStatus, string> = {
 const taskStatusColors: Record<TaskStatus, string> = {
 	backlog: "text-gray-400",
 	todo: "text-blue-400",
+	waiting: "text-purple-400",
 	in_progress: "text-yellow-400",
 	review: "text-purple-400",
 	done: "text-green-400",
