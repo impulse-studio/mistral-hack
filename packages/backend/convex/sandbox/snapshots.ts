@@ -1,8 +1,10 @@
 "use node";
 
+import { Image } from "@daytonaio/sdk";
 import { v } from "convex/values";
 import { action } from "../_generated/server";
 import { getDaytona, withRetry } from "./helpers";
+import { CODER_SNAPSHOT_NAME, SANDBOX_GIT_USER, SANDBOX_GIT_EMAIL } from "./constants";
 
 // Query/mutation for snapshot config live in snapshotConfig.ts (non-node)
 
@@ -113,5 +115,33 @@ export const deleteSnapshot = action({
 		const snapshot = await withRetry(() => daytona.snapshot.get(name));
 		await withRetry(() => daytona.snapshot.delete(snapshot));
 		console.log(`[deleteSnapshot] Deleted snapshot "${name}"`);
+	},
+});
+
+export const createCoderSnapshot = action({
+	args: {},
+	returns: snapshotReturnValidator,
+	handler: async (_ctx) => {
+		const daytona = getDaytona();
+		const image = Image.base("node:20-slim")
+			.runCommands(
+				"apt-get update && apt-get install -y git curl",
+				"npm config set prefer-family ipv4",
+				"curl -LsSf https://mistral.ai/vibe/install.sh | bash || true",
+				"test -f /root/.local/bin/vibe && ln -sf /root/.local/bin/vibe /usr/local/bin/vibe || true",
+				"test -f /home/daytona/.local/bin/vibe && ln -sf /home/daytona/.local/bin/vibe /usr/local/bin/vibe || true",
+				`git config --global user.name "${SANDBOX_GIT_USER}"`,
+				`git config --global user.email "${SANDBOX_GIT_EMAIL}"`,
+				"mkdir -p /home/daytona/projects",
+			)
+			.workdir("/home/daytona");
+
+		console.log(`[createCoderSnapshot] Creating snapshot "${CODER_SNAPSHOT_NAME}"...`);
+		const snapshot = await daytona.snapshot.create(
+			{ name: CODER_SNAPSHOT_NAME, image },
+			{ onLogs: (chunk) => console.log(`[snapshot-build] ${chunk}`), timeout: 600 },
+		);
+		console.log(`[createCoderSnapshot] Snapshot created with state: ${snapshot.state}`);
+		return serializeSnapshot(snapshot);
 	},
 });

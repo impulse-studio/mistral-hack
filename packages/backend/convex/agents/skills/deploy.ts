@@ -10,7 +10,12 @@ export function createDeploySkills(ctx: RunnerCtx, agentId: string) {
 			description:
 				"Deploy the project to Vercel. Automatically installs and configures the Vercel CLI if needed. Returns the deployment URL on success.",
 			inputSchema: z.object({
-				path: z.string().optional().describe(`Project directory (defaults to ${SANDBOX_WORK_DIR})`),
+				path: z
+					.string()
+					.optional()
+					.describe(
+						`Project root (directory with package.json). Default: ${SANDBOX_WORK_DIR}. For scaffolded apps use /home/daytona/projects/<app-name> or /home/company/<app-name>.`,
+					),
 				prod: z.boolean().optional().describe("Deploy to production (default: false = preview)"),
 			}),
 			execute: async ({ path, prod }) => {

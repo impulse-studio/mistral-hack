@@ -22,7 +22,12 @@ export const finishProcessing = internalMutation({
 	returns: v.null(),
 	handler: async (ctx, { agentId }) => {
 		const agent = await ctx.db.get(agentId);
-		if (agent && agent.status === "working") {
+		if (!agent) return null;
+
+		// If agent is despawning (reset was triggered), don't re-schedule anything
+		if (agent.status === "despawning") return null;
+
+		if (agent.status === "working") {
 			await ctx.db.patch(agentId, { status: "idle" });
 		}
 

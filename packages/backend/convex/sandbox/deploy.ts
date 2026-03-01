@@ -71,7 +71,7 @@ export const linkVercelProject = internalAction({
 		const { sandboxRecord } = await getRunning(ctx, agentId);
 		await ensureVercelCli(ctx, sandboxRecord._id, agentId);
 
-		let cmd = `cd ${path ?? SANDBOX_WORK_DIR} && vercel link --yes --token=$VERCEL_TOKEN`;
+		let cmd = `cd ${path ?? SANDBOX_WORK_DIR} && CI=1 VERCEL_TELEMETRY_DISABLED=1 vercel link --yes --token=$VERCEL_TOKEN`;
 		if (scope) cmd += ` --scope=${scope}`;
 		if (project) cmd += ` --project=${project}`;
 
@@ -115,7 +115,8 @@ export const deployToVercel = internalAction({
 		const { sandboxRecord } = await getRunning(ctx, agentId);
 		await ensureVercelCli(ctx, sandboxRecord._id, agentId);
 
-		let cmd = `cd ${path ?? SANDBOX_WORK_DIR} && vercel deploy --yes --token=$VERCEL_TOKEN`;
+		const deployPath = path ?? SANDBOX_WORK_DIR;
+		let cmd = `cd ${deployPath} && CI=1 VERCEL_TELEMETRY_DISABLED=1 vercel deploy --yes --token=$VERCEL_TOKEN`;
 		if (prod) cmd += " --prod";
 
 		await recordAndLog(

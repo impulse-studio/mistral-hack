@@ -11,6 +11,10 @@ export const processManagerMailbox = internalAction({
 	args: { agentId: v.id("agents") },
 	returns: v.null(),
 	handler: async (ctx, { agentId }) => {
+		// Bail out if manager is despawning (reset was triggered)
+		const mgr = await ctx.runQuery(internal.office.queries.getAgentInternal, { agentId });
+		if (!mgr || mgr.status === "despawning") return null;
+
 		// Acquire processing lock (prevents concurrent manager processing)
 		const locked = await ctx.runMutation(internal.manager.queue.tryStartProcessing, { agentId });
 		if (!locked) return null;

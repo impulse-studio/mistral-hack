@@ -12,6 +12,10 @@ export const processMailbox = internalAction({
 	args: { agentId: v.id("agents") },
 	returns: v.null(),
 	handler: async (ctx, { agentId }) => {
+		// Bail out if agent is despawning (reset was triggered)
+		const agent = await ctx.runQuery(internal.office.queries.getAgentInternal, { agentId });
+		if (!agent || agent.status === "despawning") return null;
+
 		// Dequeue the oldest pending message
 		const messageId = await ctx.runMutation(internal.mailbox.mutations.dequeue, {
 			agentId,
@@ -146,6 +150,12 @@ export const idleTimeoutCheck = internalAction({
 	args: { agentId: v.id("agents") },
 	returns: v.null(),
 	handler: async (ctx, { agentId }) => {
+		// Check agent status first — if already despawning (reset), do nothing
+		const agent = await ctx.runQuery(internal.office.queries.getAgentInternal, {
+			agentId,
+		});
+		if (!agent || agent.status === "despawning") return null;
+
 		// Check for pending messages
 		const pendingCount = await ctx.runQuery(internal.mailbox.queries.countPending, {
 			agentId,
@@ -157,11 +167,8 @@ export const idleTimeoutCheck = internalAction({
 			return null;
 		}
 
-		// Check agent is still idle or failed (both should be cleaned up)
-		const agent = await ctx.runQuery(internal.office.queries.getAgentInternal, {
-			agentId,
-		});
-		if (!agent || (agent.status !== "idle" && agent.status !== "failed")) return null;
+		// Agent must be idle or failed to be cleaned up
+		if (agent.status !== "idle" && agent.status !== "failed") return null;
 
 		// No messages, still idle/failed → despawn
 		await ctx.runMutation(internal.office.mutations.despawnAgentInternal, { agentId });
