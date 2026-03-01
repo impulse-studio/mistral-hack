@@ -10,11 +10,14 @@
 
 import type * as agent from "../agent.js";
 import type * as agents_onComplete from "../agents/onComplete.js";
+import type * as agents_onCompleteActions from "../agents/onCompleteActions.js";
 import type * as agents_queries from "../agents/queries.js";
 import type * as agents_runner from "../agents/runner.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
 import type * as debug from "../debug.js";
+import type * as deliverables_mutations from "../deliverables/mutations.js";
+import type * as deliverables_queries from "../deliverables/queries.js";
 import type * as healthCheck from "../healthCheck.js";
 import type * as http from "../http.js";
 import type * as logs_mutations from "../logs/mutations.js";
@@ -57,11 +60,14 @@ import type {
 declare const fullApi: ApiFromModules<{
   agent: typeof agent;
   "agents/onComplete": typeof agents_onComplete;
+  "agents/onCompleteActions": typeof agents_onCompleteActions;
   "agents/queries": typeof agents_queries;
   "agents/runner": typeof agents_runner;
   auth: typeof auth;
   chat: typeof chat;
   debug: typeof debug;
+  "deliverables/mutations": typeof deliverables_mutations;
+  "deliverables/queries": typeof deliverables_queries;
   healthCheck: typeof healthCheck;
   http: typeof http;
   "logs/mutations": typeof logs_mutations;

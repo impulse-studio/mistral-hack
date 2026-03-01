@@ -121,6 +121,28 @@ export const deskFields = {
 	occupiedBy: v.optional(v.id("agents")),
 };
 
+export const deliverableTypeValidator = v.union(
+	v.literal("pdf"),
+	v.literal("html"),
+	v.literal("markdown"),
+	v.literal("url"),
+	v.literal("file"),
+	v.literal("image"),
+);
+
+export const deliverableFields = {
+	taskId: v.id("tasks"),
+	agentId: v.optional(v.id("agents")),
+	type: deliverableTypeValidator,
+	title: v.string(),
+	filename: v.optional(v.string()),
+	storageId: v.optional(v.id("_storage")),
+	url: v.optional(v.string()),
+	mimeType: v.optional(v.string()),
+	sizeBytes: v.optional(v.number()),
+	createdAt: v.number(),
+};
+
 // ── Document validators (for returns) ───────────────────
 
 export const sandboxDoc = v.object({
@@ -157,6 +179,12 @@ export const deskDoc = v.object({
 	_id: v.id("desks"),
 	_creationTime: v.number(),
 	...deskFields,
+});
+
+export const deliverableDoc = v.object({
+	_id: v.id("deliverables"),
+	_creationTime: v.number(),
+	...deliverableFields,
 });
 
 // ── Schema ──────────────────────────────────────────────
@@ -196,4 +224,9 @@ export default defineSchema({
 		key: v.string(),
 		value: v.string(),
 	}).index("by_key", ["key"]),
+
+	// Deliverables — files and outputs produced by agents
+	deliverables: defineTable(deliverableFields)
+		.index("by_task", ["taskId"])
+		.index("by_agent", ["agentId"]),
 });

@@ -14,6 +14,7 @@ import {
 	CHARACTER_HIT_HEIGHT,
 	LOUNGE_ROW_START,
 	LOUNGE_COL_MAX,
+	EXIT_TILES,
 } from "./constants";
 import type {
 	Character,
@@ -293,7 +294,7 @@ export class OfficeState {
 	removeAgent(id: number): void {
 		const ch = this.characters.get(id);
 		if (!ch) return;
-		if (ch.matrixEffect === "despawn") return; // already despawning
+		if (ch.matrixEffect === "despawn" || ch.isLeaving) return; // already leaving/despawning
 		// Free seat and clear selection immediately
 		if (ch.seatId) {
 			const seat = this.seats.get(ch.seatId);
@@ -301,7 +302,44 @@ export class OfficeState {
 		}
 		if (this.selectedAgentId === id) this.selectedAgentId = null;
 		if (this.cameraFollowId === id) this.cameraFollowId = null;
-		// Start despawn animation instead of immediate delete
+		// Turn off screen immediately
+		ch.isActive = false;
+		ch.isLeaving = true;
+		ch.seatTimer = 0;
+		ch.bubbleType = null;
+		this.rebuildFurnitureInstances();
+		// Try to pathfind to an exit tile
+		const exitPath = this.findExitPath(ch);
+		if (exitPath && exitPath.length > 0) {
+			ch.path = exitPath;
+			ch.moveProgress = 0;
+			ch.state = CharacterState.WALK;
+			ch.frame = 0;
+			ch.frameTimer = 0;
+		} else {
+			// No path to exit — immediate matrix despawn
+			this.startDespawn(ch);
+		}
+	}
+
+	/** Find a path from a character to the nearest reachable exit tile */
+	private findExitPath(ch: Character): Array<{ col: number; row: number }> | null {
+		let bestPath: Array<{ col: number; row: number }> | null = null;
+		let bestLen = Infinity;
+		for (const exit of EXIT_TILES) {
+			const path = this.withOwnSeatUnblocked(ch, () =>
+				findPath(ch.tileCol, ch.tileRow, exit.col, exit.row, this.tileMap, this.blockedTiles),
+			);
+			if (path.length > 0 && path.length < bestLen) {
+				bestPath = path;
+				bestLen = path.length;
+			}
+		}
+		return bestPath;
+	}
+
+	/** Start the matrix despawn effect on a character */
+	private startDespawn(ch: Character): void {
 		ch.matrixEffect = "despawn";
 		ch.matrixEffectTimer = 0;
 		ch.matrixEffectSeeds = matrixEffectSeeds();
@@ -483,6 +521,8 @@ export class OfficeState {
 				const seat = this.seats.get(ch.seatId);
 				if (seat) seat.assigned = false;
 			}
+			// Turn off screen immediately
+			ch.isActive = false;
 			// Start despawn animation — keep character in map for rendering
 			ch.matrixEffect = "despawn";
 			ch.matrixEffectTimer = 0;
@@ -494,11 +534,13 @@ export class OfficeState {
 		this.subagentMeta.delete(id);
 		if (this.selectedAgentId === id) this.selectedAgentId = null;
 		if (this.cameraFollowId === id) this.cameraFollowId = null;
+		this.rebuildFurnitureInstances();
 	}
 
 	/** Remove all sub-agents belonging to a parent agent */
 	removeAllSubagents(parentAgentId: number): void {
 		const toRemove: string[] = [];
+		let anyRemoved = false;
 		for (const [key, id] of this.subagentIdMap) {
 			const meta = this.subagentMeta.get(id);
 			if (meta && meta.parentAgentId === parentAgentId) {
@@ -514,6 +556,9 @@ export class OfficeState {
 						const seat = this.seats.get(ch.seatId);
 						if (seat) seat.assigned = false;
 					}
+					// Turn off screen immediately
+					ch.isActive = false;
+					anyRemoved = true;
 					// Start despawn animation
 					ch.matrixEffect = "despawn";
 					ch.matrixEffectTimer = 0;
@@ -529,6 +574,7 @@ export class OfficeState {
 		for (const key of toRemove) {
 			this.subagentIdMap.delete(key);
 		}
+		if (anyRemoved) this.rebuildFurnitureInstances();
 	}
 
 	/** Look up the sub-agent character ID for a given parent+toolId, or null */
@@ -689,6 +735,11 @@ export class OfficeState {
 				),
 			);
 
+			// Check if a leaving character has arrived at exit — trigger despawn
+			if (ch.isLeaving && ch.path.length === 0 && ch.state !== CharacterState.WALK) {
+				this.startDespawn(ch);
+			}
+
 			// Tick bubble timer for waiting bubbles
 			if (ch.bubbleType === "waiting") {
 				ch.bubbleTimer -= dt;
@@ -699,13 +750,35 @@ export class OfficeState {
 			}
 		}
 		// Remove characters that finished despawn
-		for (const id of toDelete) {
-			this.characters.delete(id);
+		if (toDelete.length > 0) {
+			for (const id of toDelete) {
+				this.characters.delete(id);
+			}
+			this.rebuildFurnitureInstances();
 		}
 	}
 
 	getCharacters(): Character[] {
 		return Array.from(this.characters.values());
+	}
+
+	/** Get the furniture uid at a world pixel position (tile-based hit test). Returns uid or null. */
+	getFurnitureUidAt(worldX: number, worldY: number): string | null {
+		const col = Math.floor(worldX / TILE_SIZE);
+		const row = Math.floor(worldY / TILE_SIZE);
+		for (const item of this.layout.furniture) {
+			const entry = getCatalogEntry(item.type);
+			if (!entry) continue;
+			if (
+				col >= item.col &&
+				col < item.col + entry.footprintW &&
+				row >= item.row &&
+				row < item.row + entry.footprintH
+			) {
+				return item.uid;
+			}
+		}
+		return null;
 	}
 
 	/** Get character at pixel position (for hit testing). Returns id or null. */

@@ -80,6 +80,7 @@ export function createCharacter(
 		seatTimer: 0,
 		isSubagent: false,
 		parentAgentId: null,
+		isLeaving: false,
 		matrixEffect: null,
 		matrixEffectTimer: 0,
 		matrixEffectSeeds: [],
@@ -124,6 +125,8 @@ export function updateCharacter(
 			// No idle animation — static pose
 			ch.frame = 0;
 			if (ch.seatTimer < 0) ch.seatTimer = 0; // clear turn-end sentinel
+			// Skip seat-seeking when leaving — just stay idle until path is set
+			if (ch.isLeaving) break;
 			// If became active, pathfind to seat
 			if (ch.isActive) {
 				if (!ch.seatId) {

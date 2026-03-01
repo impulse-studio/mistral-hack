@@ -21,6 +21,16 @@ interface OfficeAgentPanelTask {
 	status: string;
 }
 
+export interface OfficeAgentPanelDeliverable {
+	id: string;
+	type: "pdf" | "html" | "markdown" | "url" | "file" | "image";
+	title: string;
+	filename?: string;
+	url?: string;
+	mimeType?: string;
+	sizeBytes?: number;
+}
+
 interface OfficeAgentPanelProps {
 	open: boolean;
 	agent: {
@@ -34,10 +44,11 @@ interface OfficeAgentPanelProps {
 	tasks: OfficeAgentPanelTask[];
 	terminalLines: TerminalLine[];
 	reasoningSteps: AgentReasoningStep[];
+	deliverables?: OfficeAgentPanelDeliverable[];
 	onClose: () => void;
 }
 
-type OfficeAgentPanelTab = "tasks" | "terminal" | "reasoning";
+type OfficeAgentPanelTab = "tasks" | "terminal" | "reasoning" | "files";
 
 const AGENT_PANEL_STATUS_GLOW: Record<string, "green" | "cyan" | "muted" | "red" | "yellow"> = {
 	working: "green",
@@ -65,6 +76,7 @@ export function OfficeAgentPanel({
 	tasks,
 	terminalLines,
 	reasoningSteps,
+	deliverables,
 	onClose,
 }: OfficeAgentPanelProps) {
 	const [activeTab, setActiveTab] = useState<OfficeAgentPanelTab>("tasks");
@@ -73,6 +85,11 @@ export function OfficeAgentPanel({
 	const badgeColor = agent ? (AGENT_PANEL_STATUS_BADGE[agent.status] ?? "muted") : "muted";
 	const isPulsing =
 		agent?.status === "working" || agent?.status === "thinking" || agent?.status === "coding";
+
+	const tabs: OfficeAgentPanelTab[] = ["tasks", "terminal", "reasoning"];
+	if (deliverables && deliverables.length > 0) {
+		tabs.push("files");
+	}
 
 	return (
 		<Drawer
@@ -120,7 +137,7 @@ export function OfficeAgentPanel({
 
 						{/* Tabs */}
 						<div className="flex">
-							{(["tasks", "terminal", "reasoning"] as const).map((tab) => (
+							{tabs.map((tab) => (
 								<Button
 									variant="ghost"
 									key={tab}
@@ -152,6 +169,9 @@ export function OfficeAgentPanel({
 							)}
 							{activeTab === "reasoning" && (
 								<AgentReasoning steps={reasoningSteps} title={`${agent.name} reasoning`} />
+							)}
+							{activeTab === "files" && (
+								<OfficeAgentPanelDeliverables deliverables={deliverables ?? []} />
 							)}
 						</div>
 					</>
@@ -210,6 +230,92 @@ function OfficeAgentPanelTasks({ tasks }: { tasks: OfficeAgentPanelTask[] }) {
 						<PixelBadge color={AGENT_PANEL_TASK_BADGE_COLOR[t.status] ?? "muted"} size="sm">
 							{t.status.replace("_", " ")}
 						</PixelBadge>
+					</div>
+				</PixelBorderBox>
+			))}
+		</div>
+	);
+}
+
+// ─── Deliverables sub-component ─────────────────────────────────
+
+const DELIVERABLE_TYPE_ICON: Record<string, string> = {
+	pdf: "PDF",
+	html: "HTML",
+	markdown: "MD",
+	url: "URL",
+	file: "FILE",
+	image: "IMG",
+};
+
+const DELIVERABLE_TYPE_BADGE: Record<
+	string,
+	"red" | "orange" | "cyan" | "blue" | "green" | "muted"
+> = {
+	pdf: "red",
+	html: "orange",
+	markdown: "cyan",
+	url: "blue",
+	image: "green",
+	file: "muted",
+};
+
+function formatFileSize(bytes?: number): string {
+	if (!bytes) return "";
+	if (bytes < 1024) return `${bytes}B`;
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`;
+	return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+function OfficeAgentPanelDeliverables({
+	deliverables,
+}: {
+	deliverables: OfficeAgentPanelDeliverable[];
+}) {
+	if (deliverables.length === 0) {
+		return (
+			<PixelBorderBox variant="dashed" className="p-4">
+				<PixelText variant="id" color="muted">
+					No deliverables yet
+				</PixelText>
+			</PixelBorderBox>
+		);
+	}
+
+	return (
+		<div className="space-y-2">
+			<PixelText variant="id" color="muted">
+				{deliverables.length} file{deliverables.length !== 1 ? "s" : ""}
+			</PixelText>
+			{deliverables.map((d) => (
+				<PixelBorderBox key={d.id} className="px-3 py-2">
+					<div className="flex items-center justify-between gap-2">
+						<div className="flex items-center gap-2 overflow-hidden">
+							<PixelBadge color={DELIVERABLE_TYPE_BADGE[d.type] ?? "muted"} size="sm">
+								{DELIVERABLE_TYPE_ICON[d.type] ?? "FILE"}
+							</PixelBadge>
+							<div className="min-w-0 flex-1">
+								<PixelText variant="body" className="truncate text-[9px]">
+									{d.title}
+								</PixelText>
+								{d.sizeBytes != null && (
+									<PixelText variant="id" color="muted" className="text-[7px]">
+										{formatFileSize(d.sizeBytes)}
+									</PixelText>
+								)}
+							</div>
+						</div>
+						{d.url && (
+							<a
+								href={d.url}
+								target="_blank"
+								rel="noopener noreferrer"
+								download={d.filename}
+								className="flex-shrink-0 font-mono text-[8px] text-accent-foreground hover:underline"
+							>
+								DL
+							</a>
+						)}
 					</div>
 				</PixelBorderBox>
 			))}

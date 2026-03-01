@@ -130,8 +130,15 @@ export function OfficeCanvas({ officeState, onClickAgent, initialZoom = 3 }: Off
 				officeState.selectedAgentId = agentId;
 				onClickAgent(agentId);
 			} else {
-				officeState.selectedAgentId = null;
-				onClickAgent(-1);
+				// Check if clicked on manager's PC furniture
+				const furnitureUid = officeState.getFurnitureUidAt(worldX, worldY);
+				if (furnitureUid === "pc-mgr") {
+					officeState.selectedAgentId = 0;
+					onClickAgent(0);
+				} else {
+					officeState.selectedAgentId = null;
+					onClickAgent(-1);
+				}
 			}
 		},
 		[officeState, onClickAgent],

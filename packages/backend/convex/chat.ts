@@ -82,6 +82,19 @@ export const createNewThread = mutation({
 	returns: v.string(),
 	handler: async (ctx) => {
 		const threadId = await createThread(ctx, components.agent, {});
+		// Store as shared thread so workers can notify the manager
+		const existing = await ctx.db
+			.query("systemConfig")
+			.withIndex("by_key", (q) => q.eq("key", SHARED_THREAD_KEY))
+			.first();
+		if (existing) {
+			await ctx.db.patch(existing._id, { value: threadId });
+		} else {
+			await ctx.db.insert("systemConfig", {
+				key: SHARED_THREAD_KEY,
+				value: threadId,
+			});
+		}
 		return threadId;
 	},
 });

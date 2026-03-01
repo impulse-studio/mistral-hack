@@ -129,6 +129,8 @@ export const createInternal = internalMutation({
 		description: v.optional(v.string()),
 		createdBy: v.union(v.literal("user"), v.literal("manager")),
 		estimatedMinutes: v.optional(v.number()),
+		dependsOn: v.optional(v.array(v.id("tasks"))),
+		parentTaskId: v.optional(v.id("tasks")),
 	},
 	returns: v.id("tasks"),
 	handler: async (ctx, args) => {

@@ -3,6 +3,6 @@ import { createAuthClient } from "better-auth/react";
 import { env } from "@mistral-hack/env/web";
 
 export const authClient = createAuthClient({
-	baseURL: env.VITE_CONVEX_SITE_URL,
+	baseURL: import.meta.env.DEV ? "http://localhost:3003" : env.VITE_CONVEX_SITE_URL,
 	plugins: [convexClient()],
 });

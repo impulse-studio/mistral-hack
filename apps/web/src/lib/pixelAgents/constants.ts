@@ -109,6 +109,14 @@ export const LOUNGE_ROW_START = 10;
 export const LOUNGE_COL_MAX = 19;
 export const AUTO_ON_FACING_DEPTH = 3;
 export const AUTO_ON_SIDE_DEPTH = 2;
+/** Tiles near the bottom of the lounge area where agents walk to before despawning */
+export const EXIT_TILES: Array<{ col: number; row: number }> = [
+	{ col: 1, row: 15 },
+	{ col: 2, row: 15 },
+	{ col: 3, row: 15 },
+	{ col: 4, row: 15 },
+	{ col: 5, row: 15 },
+];
 export const CHARACTER_HIT_HALF_WIDTH = 8;
 export const CHARACTER_HIT_HEIGHT = 24;
 export const TOOL_OVERLAY_VERTICAL_OFFSET = 32;

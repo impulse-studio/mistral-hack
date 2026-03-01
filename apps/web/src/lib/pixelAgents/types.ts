@@ -197,6 +197,8 @@ export interface Character {
 	matrixEffectTimer: number;
 	/** Per-column random seeds (16 values) for staggered rain timing */
 	matrixEffectSeeds: number[];
+	/** Whether this character is walking toward exit before despawning */
+	isLeaving: boolean;
 	/** Workspace folder name (only set for multi-root workspaces) */
 	folderName?: string;
 }

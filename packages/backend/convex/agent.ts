@@ -21,21 +21,28 @@ const roleToModel: Record<string, string> = {
 
 const createTaskTool = createTool({
 	description:
-		"Create a new task in the kanban board. Returns the taskId which you can pass to spawnAgent.",
+		"Create a new task in the kanban board. Returns the taskId which you can pass to spawnAgent. Use dependsOn to set task dependencies.",
 	inputSchema: z.object({
 		title: z.string().describe("Task title"),
 		description: z.string().optional().describe("Task details and requirements"),
 		estimatedMinutes: z.number().optional().describe("Estimated time in minutes"),
+		dependsOn: z
+			.array(z.string())
+			.optional()
+			.describe("Task IDs that must complete before this task can start"),
+		parentTaskId: z.string().optional().describe("Parent task ID for sub-task grouping"),
 	}),
 	execute: async (
 		ctx: ToolCtx,
-		{ title, description, estimatedMinutes },
+		{ title, description, estimatedMinutes, dependsOn, parentTaskId },
 	): Promise<{ taskId: string; title: string; message: string }> => {
 		const taskId: Id<"tasks"> = await ctx.runMutation(internal.tasks.mutations.createInternal, {
 			title,
 			description,
 			createdBy: "manager" as const,
 			estimatedMinutes,
+			dependsOn: dependsOn as Id<"tasks">[] | undefined,
+			parentTaskId: parentTaskId as Id<"tasks"> | undefined,
 		});
 		return { taskId, title, message: `Task "${title}" created.` };
 	},
@@ -154,6 +161,38 @@ const checkAgentProgressTool = createTool({
 	},
 });
 
+const registerDeliverableTool = createTool({
+	description:
+		"Register a deliverable produced by a task. Use this after a worker completes a task that produced an output file, document, or URL. The deliverable will appear in the manager dashboard.",
+	inputSchema: z.object({
+		taskId: z.string().describe("Task ID that produced this deliverable"),
+		agentId: z.string().optional().describe("Agent ID that produced this deliverable"),
+		type: z
+			.enum(["pdf", "html", "markdown", "url", "file", "image"])
+			.describe("Type of deliverable"),
+		title: z.string().describe("Human-readable title for the deliverable"),
+		filename: z.string().optional().describe("Filename if it's a file (e.g. report.pdf)"),
+		url: z.string().optional().describe("URL if the deliverable is a link"),
+	}),
+	execute: async (
+		ctx: ToolCtx,
+		{ taskId, agentId, type, title, filename, url },
+	): Promise<{ deliverableId: string; message: string }> => {
+		const deliverableId = await ctx.runMutation(internal.deliverables.mutations.createInternal, {
+			taskId: taskId as Id<"tasks">,
+			agentId: agentId as Id<"agents"> | undefined,
+			type,
+			title,
+			filename,
+			url,
+		});
+		return {
+			deliverableId,
+			message: `Deliverable "${title}" (${type}) registered for task.`,
+		};
+	},
+});
+
 // ── Agent Definitions ────────────────────────────────────────
 
 export const managerAgent = new Agent(components.agent, {
@@ -183,6 +222,27 @@ Workflow:
 4. Results flow back automatically when tasks complete
 5. Use checkAgentProgress to monitor running agents
 
+Worker completion notifications:
+- You automatically receive [WORKER COMPLETE] messages when agents finish their tasks
+- Synthesize results, check remaining tasks, and spawn follow-up agents as needed
+- Use checkAgentProgress to get detailed logs if you need more context
+- When a worker produces output (files, reports, URLs), use registerDeliverable to record it
+- Report final results to the user when all work is done
+
+Deliverables:
+- Use registerDeliverable to record any outputs produced by completed tasks
+- Types: pdf, html, markdown, url, file, image
+- Always register deliverables when workers complete tasks that produce output
+- Include the taskId and agentId so deliverables are tracked properly
+
+Task dependencies:
+When handling complex tasks:
+1. Decompose into sub-tasks with createTask
+2. Set dependsOn to define execution order (e.g., "build" depends on "scaffold")
+3. Only spawn agents for tasks with no unmet dependencies
+4. When you receive [DEPENDENCY RESOLVED] notifications, spawn agents for newly unblocked tasks
+5. Continue until all sub-tasks are complete, then report the full result
+
 Be concise, proactive, and strategic. Think step by step before delegating.
 Always create the task FIRST, then spawn an agent with the taskId.`,
 	tools: {
@@ -190,6 +250,7 @@ Always create the task FIRST, then spawn an agent with the taskId.`,
 		spawnAgent: spawnAgentTool,
 		updateTaskStatus: updateTaskStatusTool,
 		checkAgentProgress: checkAgentProgressTool,
+		registerDeliverable: registerDeliverableTool,
 	},
 	maxSteps: 10,
 });

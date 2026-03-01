@@ -81,6 +81,7 @@ export const createTaskAction = internalAction({
 		title: v.string(),
 		description: v.optional(v.string()),
 		parentTaskId: v.optional(v.string()),
+		dependsOn: v.optional(v.array(v.string())),
 		estimatedMinutes: v.optional(v.number()),
 	},
 	handler: async (
@@ -96,6 +97,8 @@ export const createTaskAction = internalAction({
 			description: args.description,
 			createdBy: "manager",
 			estimatedMinutes: args.estimatedMinutes,
+			dependsOn: args.dependsOn as Id<"tasks">[] | undefined,
+			parentTaskId: args.parentTaskId as Id<"tasks"> | undefined,
 		});
 
 		return {
