@@ -3,7 +3,6 @@
 import { v } from "convex/values";
 import { action } from "../_generated/server";
 import { getDaytona, withRetry } from "./helpers";
-import { Image } from "@daytonaio/sdk";
 
 // Query/mutation for snapshot config live in snapshotConfig.ts (non-node)
 
@@ -81,38 +80,18 @@ export const createSnapshot = action({
 	args: {
 		name: v.string(),
 		baseImage: v.optional(v.string()),
-		installCommands: v.optional(v.array(v.string())),
 	},
 	returns: snapshotReturnValidator,
-	handler: async (_ctx, { name, baseImage, installCommands }) => {
+	handler: async (_ctx, { name, baseImage }) => {
 		const daytona = getDaytona();
 
-		// Build a custom image with pre-installed tools
-		const base = baseImage || "node:20";
-		let image = Image.base(base);
+		// Pass image as a plain registry string — Daytona pulls it directly
+		// without a custom Dockerfile build (avoids Daytona's injected npm commands
+		// failing on non-node base layers).
+		// Tools (vibe CLI, gh, etc.) are installed at sandbox startup by lifecycle.ts.
+		const image = baseImage || "node:20";
 
-		// Default provisioning commands (same as what lifecycle.ts does at runtime)
-		const defaultCommands = [
-			// Install system deps
-			"apt-get update && apt-get install -y git curl sudo && rm -rf /var/lib/apt/lists/*",
-			// Create daytona user if it doesn't exist
-			"id -u daytona &>/dev/null || useradd -m -s /bin/bash daytona",
-			// Git config
-			'git config --global user.name "AI Office Agent" && git config --global user.email "agent@ai-office.dev"',
-			// Install Mistral Vibe CLI
-			"curl -LsSf https://mistral.ai/vibe/install.sh | bash || true",
-			// Install gh CLI
-			"GH_VERSION=$(curl -sL https://api.github.com/repos/cli/cli/releases/latest | grep tag_name | cut -d'\"' -f4 | sed 's/v//') && curl -sL \"https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz\" | tar xz -C /tmp && cp /tmp/gh_${GH_VERSION}_linux_amd64/bin/gh /usr/local/bin/gh && chmod +x /usr/local/bin/gh || true",
-		];
-
-		const commands =
-			installCommands && installCommands.length > 0 ? installCommands : defaultCommands;
-
-		image = image.runCommands(...commands);
-
-		console.log(
-			`[createSnapshot] Creating snapshot "${name}" from ${base} with ${commands.length} commands...`,
-		);
+		console.log(`[createSnapshot] Creating snapshot "${name}" from registry image "${image}"...`);
 
 		const snapshot = await daytona.snapshot.create(
 			{ name, image },

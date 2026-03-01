@@ -2,7 +2,13 @@
 
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
-import { getRunning, recordAndLog, recordAndLogScreenshot, withRetry } from "./helpers";
+import {
+	getRunning,
+	getRunningByDaytonaId,
+	recordAndLog,
+	recordAndLogScreenshot,
+	withRetry,
+} from "./helpers";
 
 // --- Lifecycle ---
 
@@ -395,5 +401,142 @@ export const listRecordings = internalAction({
 		const { sandbox } = await getRunning(ctx, agentId);
 		const result = await sandbox.computerUse.recording.list();
 		return { recordings: result.recordings };
+	},
+});
+
+// ── ByDaytonaId variants (lightweight — no logging, for viewer sandbox) ──
+
+export const startComputerUseByDaytonaId = internalAction({
+	args: { daytonaId: v.string() },
+	handler: async (_ctx, { daytonaId }) => {
+		const { sandbox } = await getRunningByDaytonaId(daytonaId);
+
+		// The CU toolbox may not be ready immediately after sandbox creation.
+		// Poll with back-off until it becomes available.
+		const MAX_ATTEMPTS = 6;
+		const POLL_MS = 5000;
+		let lastError: unknown;
+		for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+			try {
+				const result = await sandbox.computerUse.start();
+				return { message: result.message, status: result.status };
+			} catch (err) {
+				lastError = err;
+				const msg = err instanceof Error ? err.message : String(err);
+				if (msg.includes("not available") && attempt < MAX_ATTEMPTS - 1) {
+					console.warn(
+						`[startCU] Attempt ${attempt + 1}/${MAX_ATTEMPTS} — CU not available yet, retrying in ${POLL_MS}ms…`,
+					);
+					await new Promise<void>((resolve) => {
+						setTimeout(resolve, POLL_MS);
+					});
+					continue;
+				}
+				throw err;
+			}
+		}
+		throw lastError;
+	},
+});
+
+export const getComputerUseStatusByDaytonaId = internalAction({
+	args: { daytonaId: v.string() },
+	handler: async (_ctx, { daytonaId }) => {
+		const { sandbox } = await getRunningByDaytonaId(daytonaId);
+		const result = await withRetry(() => sandbox.computerUse.getStatus());
+		return { status: result.status };
+	},
+});
+
+export const takeScreenshotByDaytonaId = internalAction({
+	args: {
+		daytonaId: v.string(),
+		format: v.optional(v.string()),
+		quality: v.optional(v.number()),
+		scale: v.optional(v.number()),
+		showCursor: v.optional(v.boolean()),
+	},
+	handler: async (_ctx, { daytonaId, format, quality, scale, showCursor }) => {
+		const { sandbox } = await getRunningByDaytonaId(daytonaId);
+		const result = await withRetry(() =>
+			sandbox.computerUse.screenshot.takeCompressed({
+				showCursor: showCursor ?? true,
+				format: format ?? "jpeg",
+				quality: quality ?? 60,
+				scale: scale ?? 1,
+			}),
+		);
+		const mimeType = (format ?? "jpeg") === "jpeg" ? "image/jpeg" : "image/png";
+		return { screenshot: result.screenshot ?? "", mimeType };
+	},
+});
+
+export const mouseClickByDaytonaId = internalAction({
+	args: {
+		daytonaId: v.string(),
+		x: v.number(),
+		y: v.number(),
+		button: v.optional(v.string()),
+		double: v.optional(v.boolean()),
+	},
+	handler: async (_ctx, { daytonaId, x, y, button, double: dbl }) => {
+		const { sandbox } = await getRunningByDaytonaId(daytonaId);
+		const result = await sandbox.computerUse.mouse.click(x, y, button, dbl);
+		return { x: result.x, y: result.y };
+	},
+});
+
+export const mouseMoveByDaytonaId = internalAction({
+	args: { daytonaId: v.string(), x: v.number(), y: v.number() },
+	handler: async (_ctx, { daytonaId, x, y }) => {
+		const { sandbox } = await getRunningByDaytonaId(daytonaId);
+		const result = await sandbox.computerUse.mouse.move(x, y);
+		return { x: result.x, y: result.y };
+	},
+});
+
+export const mouseScrollByDaytonaId = internalAction({
+	args: {
+		daytonaId: v.string(),
+		x: v.number(),
+		y: v.number(),
+		direction: v.union(v.literal("up"), v.literal("down")),
+		amount: v.optional(v.number()),
+	},
+	handler: async (_ctx, { daytonaId, x, y, direction, amount }) => {
+		const { sandbox } = await getRunningByDaytonaId(daytonaId);
+		const result = await sandbox.computerUse.mouse.scroll(x, y, direction, amount);
+		return { success: result };
+	},
+});
+
+export const keyboardTypeByDaytonaId = internalAction({
+	args: { daytonaId: v.string(), text: v.string(), delay: v.optional(v.number()) },
+	handler: async (_ctx, { daytonaId, text, delay }) => {
+		const { sandbox } = await getRunningByDaytonaId(daytonaId);
+		await sandbox.computerUse.keyboard.type(text, delay);
+		return { success: true };
+	},
+});
+
+export const keyboardPressByDaytonaId = internalAction({
+	args: {
+		daytonaId: v.string(),
+		key: v.string(),
+		modifiers: v.optional(v.array(v.string())),
+	},
+	handler: async (_ctx, { daytonaId, key, modifiers }) => {
+		const { sandbox } = await getRunningByDaytonaId(daytonaId);
+		await sandbox.computerUse.keyboard.press(key, modifiers);
+		return { success: true };
+	},
+});
+
+export const getDisplayInfoByDaytonaId = internalAction({
+	args: { daytonaId: v.string() },
+	handler: async (_ctx, { daytonaId }) => {
+		const { sandbox } = await getRunningByDaytonaId(daytonaId);
+		const result = await sandbox.computerUse.display.getInfo();
+		return { displays: result.displays };
 	},
 });

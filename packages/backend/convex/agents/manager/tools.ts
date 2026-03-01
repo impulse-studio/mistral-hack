@@ -102,6 +102,45 @@ export const spawnAgentTool = createTool({
 	},
 });
 
+export const dismissAgentTool = createTool({
+	description:
+		"Dismiss an idle, completed, or failed agent — frees their desk and stops their sandbox. Use this after a worker completes its task and you don't need it anymore, or to clean up failed agents. Do NOT dismiss agents that are currently working.",
+	inputSchema: z.object({
+		agentId: z.string().describe("Agent ID to dismiss"),
+	}),
+	execute: async (ctx: ToolCtx, { agentId }): Promise<{ success: boolean; message: string }> => {
+		const typedId = agentId as Id<"agents">;
+		const agent = await ctx.runQuery(internal.office.queries.getAgentInternal, {
+			agentId: typedId,
+		});
+		if (!agent) {
+			return { success: false, message: `Agent ${agentId} not found.` };
+		}
+		if (agent.status === "working" || agent.status === "thinking") {
+			return {
+				success: false,
+				message: `Agent "${agent.name}" is currently ${agent.status} — wait for it to finish before dismissing.`,
+			};
+		}
+		if (agent.status === "despawning") {
+			return { success: true, message: `Agent "${agent.name}" is already being dismissed.` };
+		}
+		await ctx.runMutation(internal.office.mutations.despawnAgentInternal, {
+			agentId: typedId,
+		});
+		await ctx.runMutation(internal.mailbox.mutations.deadLetterAll, {
+			agentId: typedId,
+		});
+		await ctx.scheduler.runAfter(0, internal.sandbox.lifecycle.stopAgentSandbox, {
+			agentId: typedId,
+		});
+		return {
+			success: true,
+			message: `Agent "${agent.name}" (${agent.role}) dismissed — desk freed, sandbox stopping.`,
+		};
+	},
+});
+
 export const sendToUserTool = createTool({
 	description:
 		"Send a plain-text response visible to the user in chat. Use this for status updates, summaries, and answers. Everything else (tool calls, internal reasoning) stays invisible. After handling a user request, always call this with a summary. For background work, only call this if noteworthy. IMPORTANT: Never include URLs or markdown links unless they came verbatim from a tool result. You do not know the app's URL structure — do not guess or invent links.",

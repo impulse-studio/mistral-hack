@@ -23,6 +23,9 @@ async function provisionSandbox(sandbox: {
 		`git config --global user.name "${SANDBOX_GIT_USER}" && git config --global user.email "${SANDBOX_GIT_EMAIL}"`,
 	);
 
+	// Force npm to use IPv4 — Daytona sandboxes block IPv6, causing hangs
+	await sandbox.process.executeCommand("npm config set prefer-family ipv4").catch(() => {});
+
 	// Install Mistral Vibe CLI if not present (best-effort)
 	await sandbox.process
 		.executeCommand(
@@ -88,22 +91,25 @@ export const createSandbox = internalAction({
 		agentId: v.optional(v.id("agents")),
 		name: v.optional(v.string()),
 		envVars: v.optional(v.any()),
+		snapshotOverride: v.optional(v.string()),
 	},
-	handler: async (ctx, { agentId, name, envVars }): Promise<SandboxResult> => {
+	handler: async (ctx, { agentId, name, envVars, snapshotOverride }): Promise<SandboxResult> => {
 		try {
 			const daytona = getDaytona();
 			const volumeId = await ensureSharedVolume();
 
-			// Check if a default snapshot is configured
-			const snapshotName = await ctx.runQuery(internal.systemConfig.get, {
-				key: "default_snapshot",
-			});
+			// Use explicit override, else fall back to system default
+			const snapshotName =
+				snapshotOverride ??
+				(await ctx.runQuery(internal.systemConfig.get, {
+					key: "default_snapshot",
+				}));
 
 			const baseParams = {
 				language: "typescript" as const,
 				volumes: [{ volumeId, mountPath: SHARED_VOLUME_MOUNT }],
 				labels: agentId ? { agentId } : undefined,
-				autoStopInterval: 0,
+				autoStopInterval: 30, // minutes — Daytona-level safety net for orphaned sandboxes
 				autoDeleteInterval: -1,
 				envVars: envVars as Record<string, string> | undefined,
 			};
@@ -345,6 +351,34 @@ export const ensureComputerUseStarted = internalAction({
 		}
 
 		await withRetry(() => sandbox.computerUse.start());
+	},
+});
+
+// Destroy a sandbox by its Daytona ID (for viewer/template sandboxes)
+export const destroySandboxByDaytonaId = internalAction({
+	args: { daytonaId: v.string() },
+	handler: async (ctx, { daytonaId }): Promise<void> => {
+		try {
+			const daytona = getDaytona();
+			const sandbox = await withRetry(() => daytona.findOne({ idOrName: daytonaId }));
+			await withRetry(() => daytona.delete(sandbox));
+			console.log(`[destroySandboxByDaytonaId] Deleted Daytona sandbox ${daytonaId}`);
+		} catch (error) {
+			console.warn(
+				`[destroySandboxByDaytonaId] Could not delete sandbox: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+
+		// Mark DB record as archived if it exists
+		const record = await ctx.runQuery(internal.sandbox.queries.getByDaytonaIdInternal, {
+			daytonaId,
+		});
+		if (record) {
+			await ctx.runMutation(internal.sandbox.mutations.updateStatus, {
+				sandboxId: record._id,
+				status: "archived",
+			});
+		}
 	},
 });
 

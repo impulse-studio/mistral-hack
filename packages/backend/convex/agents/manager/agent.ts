@@ -4,6 +4,7 @@ import { mistral, MANAGER_MODEL } from "../models";
 import {
 	createTaskTool,
 	spawnAgentTool,
+	dismissAgentTool,
 	sendToUserTool,
 	askUserTool,
 	sendMessageToAgentTool,
@@ -112,10 +113,12 @@ Worker escalation:
 - Once the user responds, send a directive to the worker via sendMessageToAgent
 - The worker's task will resume automatically when the directive arrives
 
-Agent reuse — idle agents stay alive after completing a task:
-- Use sendMessageToAgent to send follow-up work to idle agents instead of spawning new ones
-- Send type "task" with a taskId to assign a new task to an idle agent
-- Agents auto-despawn after 60s idle with no queued messages
+Agent lifecycle — cleanup is your responsibility:
+- After a worker completes a task, either reuse it with sendMessageToAgent (type "task") or dismiss it with dismissAgent
+- ALWAYS dismiss agents you no longer need — idle agents block desks for new workers
+- Failed agents should be dismissed after you've noted the failure
+- dismissAgent frees the desk, stops the sandbox, and clears the mailbox
+- Agents auto-despawn after 60s idle as a safety net, but don't rely on this — dismiss proactively
 - Prefer reusing idle agents over spawning new ones when possible
 
 Git & GitHub workflow:
@@ -149,6 +152,7 @@ Always create the task FIRST, then spawn an agent with the taskId.`,
 		sendToUser: sendToUserTool,
 		createTask: createTaskTool,
 		spawnAgent: spawnAgentTool,
+		dismissAgent: dismissAgentTool,
 		updateTaskStatus: updateTaskStatusTool,
 		checkAgentProgress: checkAgentProgressTool,
 		commentOnTask: commentOnTaskTool,

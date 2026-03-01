@@ -5,7 +5,7 @@ import { buildSkillset } from "./skills/index";
 import { buildSystemPrompt } from "./prompts";
 import type { RunnerCtx, RunnerResult } from "./shared/types";
 
-const TIME_BUDGET_MS = 420_000; // 7 minutes — leave 3min buffer before Convex 600s hard limit
+const TIME_BUDGET_MS = 550_000; // ~9 min — leave 50s buffer for setup/teardown before Convex 600s hard limit
 const MAX_STEPS = 50;
 
 /**
@@ -74,14 +74,17 @@ export async function runAgenticTask(
 
 		return { success: true, result: summary };
 	} catch (error: unknown) {
-		// AbortError means we hit the time budget — treat as graceful completion
+		// AbortError means we hit the time budget — task did NOT complete
 		if (error instanceof Error && error.name === "AbortError") {
 			await ctx.runMutation(internal.logs.mutations.append, {
 				agentId,
-				type: "status" as const,
-				content: `[${role}] Time budget reached — wrapping up`,
+				type: "stderr" as const,
+				content: `[${role}] Task timed out after ${TIME_BUDGET_MS / 1000}s — did not finish`,
 			});
-			return { success: true, result: "Task completed (time budget reached)" };
+			return {
+				success: false,
+				result: `Task timed out after ${TIME_BUDGET_MS / 1000}s. The agent ran out of time before completing the task.`,
+			};
 		}
 
 		const errorMsg = error instanceof Error ? error.message : String(error);
