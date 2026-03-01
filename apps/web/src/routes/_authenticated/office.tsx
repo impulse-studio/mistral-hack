@@ -50,6 +50,32 @@ function deskPositionToChairUid(position: { x: number; y: number }, label?: stri
 	return `chair-${index}`;
 }
 
+function mapLogToTerminalText(type: string, content: string): string {
+	switch (type) {
+		case "command": {
+			return `$ ${content}`;
+		}
+		case "stderr": {
+			return `[stderr] ${content}`;
+		}
+		case "status": {
+			return `[status] ${content}`;
+		}
+		case "tool_call": {
+			return `[tool] ${content}`;
+		}
+		case "tool_result": {
+			return `[tool-result] ${content}`;
+		}
+		case "screenshot": {
+			return `[screenshot] ${content}`;
+		}
+		default: {
+			return content;
+		}
+	}
+}
+
 export const Route = createFileRoute("/_authenticated/office")({
 	component: OfficeContent,
 });
@@ -185,6 +211,22 @@ function OfficeContent() {
 		return null;
 	}, [selectedAgentId, convexOffice]);
 
+	const selectedConvexAgentId = selectedConvexAgent?._id;
+
+	const agentLogs = useQuery(
+		api.logs.queries.streamForAgent,
+		selectedConvexAgentId ? ({ agentId: selectedConvexAgentId, limit: 300 } as any) : "skip",
+	);
+
+	const terminalLines = useMemo(() => {
+		if (!agentLogs) return EMPTY_TERMINAL;
+		return agentLogs.map((log) => ({
+			id: String(log._id),
+			text: mapLogToTerminalText(log.type, log.content),
+			timestamp: log.timestamp,
+		}));
+	}, [agentLogs]);
+
 	const agentInfo = useMemo(() => {
 		if (!selectedChar) return null;
 		const convex = selectedConvexAgent;
@@ -252,7 +294,7 @@ function OfficeContent() {
 				open={!!agentInfo}
 				agent={agentInfo}
 				tasks={EMPTY_TASKS}
-				terminalLines={EMPTY_TERMINAL}
+				terminalLines={terminalLines}
 				reasoningSteps={EMPTY_REASONING}
 				onClose={handleClosePanel}
 			/>
