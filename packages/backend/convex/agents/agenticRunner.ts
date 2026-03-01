@@ -1,6 +1,6 @@
 import { generateText } from "ai";
 import { internal } from "../_generated/api";
-import { mistral, MANAGER_MODEL } from "./models";
+import { mistral, MANAGER_MODEL, roleToModel } from "./models";
 import { buildSkillset } from "./skills/index";
 import { buildSystemPrompt } from "./prompts";
 import type { RunnerCtx, RunnerResult } from "./shared/types";
@@ -31,6 +31,7 @@ export async function runAgenticTask(
 ): Promise<RunnerResult> {
 	const tools = buildSkillset(ctx, agentId, role);
 	const systemPrompt = buildSystemPrompt(role, task, agentName);
+	const modelId = roleToModel[role] ?? MANAGER_MODEL;
 	const startTime = Date.now();
 	const stepsAlreadyDone = continuationState?.stepsCompleted ?? 0;
 	const currentContinuation = continuationState?.continuationCount ?? 0;
@@ -132,7 +133,7 @@ export async function runAgenticTask(
 		// (prompt and messages are mutually exclusive)
 		const result = continuationState
 			? await generateText({
-					model: mistral(MANAGER_MODEL),
+					model: mistral(modelId),
 					system: systemPrompt,
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					messages: [
@@ -151,7 +152,7 @@ export async function runAgenticTask(
 					onStepFinish,
 				})
 			: await generateText({
-					model: mistral(MANAGER_MODEL),
+					model: mistral(modelId),
 					system: systemPrompt,
 					prompt: taskPrompt,
 					tools,

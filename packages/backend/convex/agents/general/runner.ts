@@ -120,7 +120,7 @@ export async function runGeneralTask(
 				});
 
 				const { text: fixCommand } = await generateText({
-					model: mistralClient("magistral-medium-latest"),
+					model: mistralClient(MANAGER_MODEL),
 					messages: [
 						{
 							role: "system",

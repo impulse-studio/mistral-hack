@@ -6,6 +6,7 @@ import { cva } from "class-variance-authority";
 import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
 import { PixelBadge } from "@/lib/pixel/PixelBadge";
 import { PixelProgress } from "@/lib/pixel/PixelProgress";
+import { PixelTooltip } from "@/lib/pixel/PixelTooltip";
 import { cn } from "@/lib/utils";
 
 const kanbanItemVariants = cva(
@@ -92,6 +93,7 @@ export interface KanbanItemProps {
 	assigneeInitials?: string;
 	assigneeColor?: string;
 	blocked?: boolean;
+	blockedByNames?: string[];
 	cancelled?: boolean;
 	draggable?: boolean;
 	sourceStatus?: string;
@@ -152,6 +154,7 @@ function KanbanItem({
 	assigneeInitials,
 	assigneeColor,
 	blocked = false,
+	blockedByNames,
 	cancelled = false,
 	draggable = false,
 	sourceStatus,
@@ -203,11 +206,28 @@ function KanbanItem({
 			{/* Labels */}
 			{(blocked || (labels && labels.length > 0)) && (
 				<div className="mb-2 flex flex-wrap gap-1">
-					{blocked && (
-						<PixelBadge color="red" variant="solid">
-							Blocked
-						</PixelBadge>
-					)}
+					{blocked &&
+						(blockedByNames && blockedByNames.length > 0 ? (
+							<PixelTooltip
+								content={
+									<div className="space-y-0.5">
+										<span className="font-semibold">Blocked by:</span>
+										{blockedByNames.map((name) => (
+											<div key={name}>• {name}</div>
+										))}
+									</div>
+								}
+								side="top"
+							>
+								<PixelBadge color="red" variant="solid">
+									Blocked
+								</PixelBadge>
+							</PixelTooltip>
+						) : (
+							<PixelBadge color="red" variant="solid">
+								Blocked
+							</PixelBadge>
+						))}
 					{labels?.map((label) => (
 						<PixelBadge key={label.text} color={label.color}>
 							{label.text}

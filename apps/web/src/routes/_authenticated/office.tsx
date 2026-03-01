@@ -256,11 +256,30 @@ function OfficeContent() {
 
 	const agentTasks = useMemo(() => {
 		if (!agentTasksRaw) return EMPTY_TASKS;
-		return agentTasksRaw.map((t) => ({
-			id: String(t._id),
-			title: t.title,
-			status: t.status,
-		}));
+
+		// Build status and title lookups for dependency resolution
+		const statusById = new Map<string, string>();
+		const titleById = new Map<string, string>();
+		for (const t of agentTasksRaw) {
+			statusById.set(String(t._id), t.status);
+			titleById.set(String(t._id), t.title);
+		}
+
+		return agentTasksRaw.map((t) => {
+			const dependsOn = Array.isArray(t.dependsOn) ? (t.dependsOn as string[]) : [];
+			const unresolvedDeps = dependsOn.filter((depId) => statusById.get(depId) !== "done");
+			const blocked = unresolvedDeps.length > 0;
+
+			return {
+				id: String(t._id),
+				title: t.title,
+				status: t.status,
+				blocked,
+				blockedByNames: blocked
+					? unresolvedDeps.map((depId) => titleById.get(depId) ?? "Unknown task")
+					: undefined,
+			};
+		});
 	}, [agentTasksRaw]);
 
 	const agentDeliverablesRaw = useQuery(

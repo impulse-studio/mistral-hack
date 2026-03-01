@@ -3,6 +3,7 @@ import { mutation, internalMutation } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { agentStatusValidator } from "../schema";
 import { agentPool } from "../workpool";
+import { MANAGER_MODEL } from "../agents/models";
 
 // Initialize desks for the pixel-art office (8 worker + 1 manager)
 export const initDesks = mutation({
@@ -84,7 +85,7 @@ export const ensureManager = mutation({
 			type: "manager",
 			role: "orchestrator",
 			status: "idle",
-			model: "mistral-large-latest",
+			model: MANAGER_MODEL,
 			deskId: mgrDesk._id,
 			color: "#FF7000",
 			position: mgrDesk.position,

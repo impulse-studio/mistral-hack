@@ -34,6 +34,7 @@ interface KanbanBoardTask {
 	assigneeInitials?: string;
 	assigneeColor?: string;
 	blocked?: boolean;
+	blockedByNames?: string[];
 }
 
 interface KanbanBoardFilters {
@@ -191,6 +192,7 @@ function KanbanBoard({
 			assigneeInitials: task.assigneeInitials,
 			assigneeColor: task.assigneeColor,
 			blocked: task.blocked,
+			blockedByNames: task.blockedByNames,
 			cancelled: task.status === "cancelled",
 		});
 	}

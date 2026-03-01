@@ -12,6 +12,7 @@ import { PixelDivider } from "@/lib/pixel/PixelDivider";
 import { PixelGlow } from "@/lib/pixel/PixelGlow";
 import { PixelProgress } from "@/lib/pixel/PixelProgress";
 import { PixelText } from "@/lib/pixel/PixelText";
+import { PixelTooltip } from "@/lib/pixel/PixelTooltip";
 import { TerminalOutput } from "@/lib/terminal/TerminalOutput.component";
 import type { TerminalLine } from "@/lib/terminal/TerminalOutput.component";
 
@@ -19,6 +20,8 @@ interface OfficeAgentPanelTask {
 	id: string;
 	title: string;
 	status: string;
+	blocked?: boolean;
+	blockedByNames?: string[];
 }
 
 export interface OfficeAgentPanelDeliverable {
@@ -249,9 +252,33 @@ function OfficeAgentPanelTasks({ tasks }: { tasks: OfficeAgentPanelTask[] }) {
 						<PixelText variant="body" className="text-[9px]">
 							{t.title}
 						</PixelText>
-						<PixelBadge color={AGENT_PANEL_TASK_BADGE_COLOR[t.status] ?? "muted"} size="sm">
-							{t.status.replace("_", " ")}
-						</PixelBadge>
+						<div className="flex items-center gap-1">
+							{t.blocked &&
+								(t.blockedByNames && t.blockedByNames.length > 0 ? (
+									<PixelTooltip
+										content={
+											<div className="space-y-0.5">
+												<span className="font-semibold">Blocked by:</span>
+												{t.blockedByNames.map((name) => (
+													<div key={name}>• {name}</div>
+												))}
+											</div>
+										}
+										side="left"
+									>
+										<PixelBadge color="red" size="sm">
+											Blocked
+										</PixelBadge>
+									</PixelTooltip>
+								) : (
+									<PixelBadge color="red" size="sm">
+										Blocked
+									</PixelBadge>
+								))}
+							<PixelBadge color={AGENT_PANEL_TASK_BADGE_COLOR[t.status] ?? "muted"} size="sm">
+								{t.status.replace("_", " ")}
+							</PixelBadge>
+						</div>
 					</div>
 				</PixelBorderBox>
 			))}

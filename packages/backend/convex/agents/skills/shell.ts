@@ -14,7 +14,7 @@ export function createShellSkills(ctx: RunnerCtx, agentId: string) {
 	return {
 		execute_command: tool({
 			description:
-				"Execute a shell command in the sandbox. Each invocation runs in an independent shell — `cd` does NOT persist. Use `cd /path && command` to run in a specific directory. Prefer combining related operations into a single command with && or ;.",
+				"Execute a shell command in the sandbox. Each invocation runs in an independent shell — `cd` does NOT persist. Use `cd /path && command` to run in a specific directory. Prefer combining related operations into a single command with && or ;. IMPORTANT: The shell has NO TTY — interactive prompts will fail. Never use interactive scaffolding CLIs (create-vite, create-next-app, npm init without -y). Use `run_vibe` or `write_file` for project scaffolding instead.",
 			inputSchema: z.object({
 				command: z.string().describe("The shell command to execute"),
 			}),

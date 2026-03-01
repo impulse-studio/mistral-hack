@@ -4,12 +4,11 @@ import { createMistral } from "@ai-sdk/mistral";
 export const mistral = createMistral();
 
 // ── Model ID constants ──────────────────────────────────────
-export const MANAGER_MODEL = "mistral-large-latest";
-export const CODER_MODEL = "codestral-latest";
-export const ROUTING_MODEL = "ministral-8b-latest";
-// Magistral models have native reasoning — the AI SDK automatically
-// parses reasoningText from the response. No providerOptions needed.
-export const REASONING_MODEL = "magistral-medium-latest";
+// Devstral 2 for code: 123B frontier; Mistral Large 3 for everything else: 675B MoE
+export const MANAGER_MODEL = "mistral-large-2512";
+export const CODER_MODEL = "devstral-2512";
+export const ROUTING_MODEL = "mistral-large-2512";
+export const REASONING_MODEL = "mistral-large-2512";
 
 export const roleToModel: Record<string, string> = {
 	coder: CODER_MODEL,
