@@ -8,8 +8,21 @@ import {
 	askUserTool,
 	sendMessageToAgentTool,
 	registerDeliverableTool,
+	gitCloneTool,
+	gitPushTool,
+	createPullRequestTool,
+	deployProjectTool,
+	createGitHubIssueTool,
 } from "./tools";
-import { updateTaskStatusTool, checkAgentProgressTool, commentOnTaskTool } from "../shared/tools";
+import {
+	updateTaskStatusTool,
+	checkAgentProgressTool,
+	commentOnTaskTool,
+	createDocumentTool,
+	searchDocumentsTool,
+	getDocumentTool,
+	listDocumentsTool,
+} from "../shared/tools";
 
 export const managerAgent = new Agent(components.agent, {
 	name: "Manager",
@@ -39,8 +52,8 @@ Your responsibilities:
 
 Agent roles and capabilities:
 - coder: Uses Mistral Vibe headless CLI for code generation in a dedicated sandbox
-- browser: Uses Computer Use (mouse, keyboard, screenshots) for web tasks
-- designer: Uses Computer Use for visual/GUI tasks
+- browser: DISABLED — no outbound internet on current Daytona plan
+- designer: DISABLED — no outbound internet on current Daytona plan
 - researcher: Uses shell commands for research and analysis
 - copywriter: Uses shell commands for writing and content tasks
 - general: Uses shell commands for miscellaneous tasks
@@ -105,6 +118,31 @@ Agent reuse — idle agents stay alive after completing a task:
 - Agents auto-despawn after 60s idle with no queued messages
 - Prefer reusing idle agents over spawning new ones when possible
 
+Git & GitHub workflow:
+- gitClone(agentId, url) — clone a repo into an agent's sandbox BEFORE assigning a coding task
+- The coder agent auto-commits generated code on a feature branch (feat/task-slug) after completing a task
+- After a coder completes (you receive [WORKER COMPLETE] with "[committed]" in the result):
+  1. gitPush(agentId) — push the feature branch to the remote
+  2. createPullRequest(agentId, path, title, body) — open a PR from the feature branch
+- deployProject(agentId) — deploy from an agent's sandbox to Vercel (preview or production)
+- createGitHubIssue(title, body) — create issues for tracking work
+
+Code-to-GitHub example flow:
+1. createTask("Build feature X")
+2. spawnAgent("coder-1", "coder", "#FF7000", taskId)
+3. gitClone("coder-1-agentId", "https://github.com/org/repo") — clone into coder's sandbox
+4. Wait for [WORKER COMPLETE] — coder generates code, verifies it, auto-commits on feature branch
+5. gitPush(agentId) — push the feature branch
+6. createPullRequest(agentId, "/home/user", "feat: X", "Description of changes")
+7. sendToUser with the PR URL from the result
+
+Document Hub — shared knowledge base:
+- Use searchDocuments before complex tasks to find existing context
+- Use createDocument to save research findings, summaries, or reference material
+- Use getDocument to read full content by ID
+- Use listDocuments to browse all available documents
+- Documents persist independently of tasks — they're shared knowledge for the whole office
+
 Be concise, proactive, and strategic. Think step by step before delegating.
 Always create the task FIRST, then spawn an agent with the taskId.`,
 	tools: {
@@ -117,6 +155,15 @@ Always create the task FIRST, then spawn an agent with the taskId.`,
 		registerDeliverable: registerDeliverableTool,
 		sendMessageToAgent: sendMessageToAgentTool,
 		askUser: askUserTool,
+		gitClone: gitCloneTool,
+		gitPush: gitPushTool,
+		createPullRequest: createPullRequestTool,
+		deployProject: deployProjectTool,
+		createGitHubIssue: createGitHubIssueTool,
+		createDocument: createDocumentTool,
+		searchDocuments: searchDocumentsTool,
+		getDocument: getDocumentTool,
+		listDocuments: listDocumentsTool,
 	},
 	maxSteps: 10,
 });

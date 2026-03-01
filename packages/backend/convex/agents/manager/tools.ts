@@ -82,7 +82,7 @@ export const spawnAgentTool = createTool({
 
 export const sendToUserTool = createTool({
 	description:
-		"Send a polished response visible to the user in chat. Use this for status updates, summaries, and answers. Everything else (tool calls, internal reasoning) stays invisible. After handling a user request, always call this with a summary. For background work, only call this if noteworthy.",
+		"Send a plain-text response visible to the user in chat. Use this for status updates, summaries, and answers. Everything else (tool calls, internal reasoning) stays invisible. After handling a user request, always call this with a summary. For background work, only call this if noteworthy. IMPORTANT: Never include URLs or markdown links unless they came verbatim from a tool result. You do not know the app's URL structure — do not guess or invent links.",
 	inputSchema: z.object({
 		content: z.string().describe("The message text to show the user"),
 	}),
@@ -182,6 +182,180 @@ export const sendMessageToAgentTool = createTool({
 			messageId,
 			message: `Message (${type}) enqueued for agent ${agentId}.`,
 		};
+	},
+});
+
+// ── Git, Deploy & GitHub Tools ──────────────────────────────────
+
+export const gitCloneTool = createTool({
+	description:
+		"Clone a GitHub repository into an agent's sandbox. Use this BEFORE assigning a coding task so the agent works inside the repo. Default path: /home/user/repo.",
+	inputSchema: z.object({
+		agentId: z.string().describe("Agent whose sandbox to clone into"),
+		url: z.string().describe("Repository URL (e.g. https://github.com/org/repo)"),
+		path: z.string().optional().describe("Clone destination path (default: /home/user/repo)"),
+		branch: z.string().optional().describe("Branch to checkout after clone"),
+	}),
+	execute: async (
+		ctx: ToolCtx,
+		{ agentId, url, path, branch },
+	): Promise<{ success: boolean; path: string; message: string; error?: string }> => {
+		const clonePath = path ?? "/home/user";
+		try {
+			const result = await ctx.runAction(internal.sandbox.git.gitClone, {
+				url,
+				path: clonePath,
+				branch,
+				agentId: agentId as Id<"agents">,
+			});
+			return {
+				success: result.success,
+				path: result.path,
+				message: `Repository ${url} cloned to ${clonePath} in agent ${agentId}'s sandbox.`,
+			};
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return {
+				success: false,
+				path: clonePath,
+				message: `FAILED to clone ${url}: ${error}`,
+				error,
+			};
+		}
+	},
+});
+
+export const gitPushTool = createTool({
+	description:
+		"Push committed changes from an agent's sandbox. The coder auto-commits generated code on a feature branch — call this after a coder completes to push the branch upstream.",
+	inputSchema: z.object({
+		agentId: z.string().describe("Agent whose sandbox to push from"),
+		path: z.string().optional().describe("Repo path in sandbox (default: /home/user)"),
+	}),
+	execute: async (
+		ctx: ToolCtx,
+		{ agentId, path },
+	): Promise<{ success: boolean; message: string; error?: string }> => {
+		const repoPath = path ?? "/home/user";
+		try {
+			await ctx.runAction(internal.sandbox.git.gitPush, {
+				path: repoPath,
+				agentId: agentId as Id<"agents">,
+			});
+			return {
+				success: true,
+				message: `Changes pushed from ${repoPath} in agent ${agentId}'s sandbox.`,
+			};
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return { success: false, message: `FAILED to push from ${repoPath}: ${error}`, error };
+		}
+	},
+});
+
+export const createPullRequestTool = createTool({
+	description:
+		"Create a GitHub pull request from an agent's sandbox repo. Requires gh CLI (auto-installed). The coder auto-creates a feature branch — call this after gitPush.",
+	inputSchema: z.object({
+		agentId: z.string().describe("Agent whose sandbox contains the repo"),
+		path: z.string().describe("Repo path in sandbox (e.g. /home/user)"),
+		title: z.string().describe("PR title"),
+		body: z.string().describe("PR description"),
+		base: z.string().optional().describe("Base branch (default: repo default branch)"),
+	}),
+	execute: async (
+		ctx: ToolCtx,
+		{ agentId, path, title, body, base },
+	): Promise<{ success: boolean; prUrl: string | null; message: string; error?: string }> => {
+		try {
+			const result = await ctx.runAction(internal.sandbox.github.createPR, {
+				path,
+				title,
+				body,
+				base,
+				agentId: agentId as Id<"agents">,
+			});
+			return {
+				success: result.success,
+				prUrl: result.prUrl,
+				message: result.prUrl
+					? `PR created: ${result.prUrl}`
+					: `PR creation finished (success=${result.success}).`,
+			};
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return { success: false, prUrl: null, message: `FAILED to create PR: ${error}`, error };
+		}
+	},
+});
+
+export const deployProjectTool = createTool({
+	description: "Deploy a project from an agent's sandbox to Vercel. Requires VERCEL_TOKEN env var.",
+	inputSchema: z.object({
+		agentId: z.string().describe("Agent whose sandbox contains the project"),
+		path: z.string().optional().describe("Project path in sandbox"),
+		prod: z.boolean().optional().describe("Deploy to production (default: preview)"),
+	}),
+	execute: async (
+		ctx: ToolCtx,
+		{ agentId, path, prod },
+	): Promise<{ success: boolean; deployUrl: string | null; message: string; error?: string }> => {
+		try {
+			const result = await ctx.runAction(internal.sandbox.deploy.deployToVercel, {
+				path,
+				prod,
+				agentId: agentId as Id<"agents">,
+			});
+			return {
+				success: result.success,
+				deployUrl: result.deployUrl,
+				message: result.deployUrl
+					? `Deployed to: ${result.deployUrl}`
+					: `Deploy finished (success=${result.success}).`,
+			};
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return { success: false, deployUrl: null, message: `FAILED to deploy: ${error}`, error };
+		}
+	},
+});
+
+export const createGitHubIssueTool = createTool({
+	description:
+		"Create a GitHub issue. Can target any repo if repo arg is provided, otherwise uses the repo in the agent's sandbox.",
+	inputSchema: z.object({
+		title: z.string().describe("Issue title"),
+		body: z.string().describe("Issue body (markdown)"),
+		labels: z.array(z.string()).optional().describe("Labels to apply"),
+		repo: z
+			.string()
+			.optional()
+			.describe("Target repo (e.g. org/repo). If omitted, uses agent's sandbox repo."),
+		agentId: z.string().optional().describe("Agent whose sandbox has gh CLI configured"),
+	}),
+	execute: async (
+		ctx: ToolCtx,
+		{ title, body, labels, repo, agentId },
+	): Promise<{ success: boolean; issueUrl: string | null; message: string; error?: string }> => {
+		try {
+			const result = await ctx.runAction(internal.sandbox.github.createIssue, {
+				title,
+				body,
+				labels,
+				repo,
+				agentId: agentId as Id<"agents"> | undefined,
+			});
+			return {
+				success: result.success,
+				issueUrl: result.issueUrl,
+				message: result.issueUrl
+					? `Issue created: ${result.issueUrl}`
+					: `Issue creation finished (success=${result.success}).`,
+			};
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return { success: false, issueUrl: null, message: `FAILED to create issue: ${error}`, error };
+		}
 	},
 });
 

@@ -204,6 +204,46 @@ export const listFiles = action({
 	},
 });
 
+// === Per-agent commands (for debugging browser agent) ===
+
+export const runCommandOnAgent = action({
+	args: { agentId: v.id("agents"), command: v.string() },
+	handler: async (ctx, { agentId, command }): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.execute.runCommand, {
+			command,
+			agentId,
+			stream: false,
+		});
+	},
+});
+
+export const ensureAgentCU = action({
+	args: { agentId: v.id("agents") },
+	handler: async (ctx, { agentId }): Promise<unknown> => {
+		await ctx.runAction(internal.sandbox.lifecycle.ensureComputerUseStarted, { agentId });
+		return { ok: true };
+	},
+});
+
+export const takeAgentScreenshot = action({
+	args: { agentId: v.id("agents") },
+	handler: async (ctx, { agentId }): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.computerUse.takeCompressedScreenshot, {
+			format: "jpeg",
+			quality: 60,
+			showCursor: true,
+			agentId,
+		});
+	},
+});
+
+export const getAgentWindows = action({
+	args: { agentId: v.id("agents") },
+	handler: async (ctx, { agentId }): Promise<unknown> => {
+		return await ctx.runAction(internal.sandbox.computerUse.getWindows, { agentId });
+	},
+});
+
 // === Agent Runner ===
 
 export const runSubAgent = action({

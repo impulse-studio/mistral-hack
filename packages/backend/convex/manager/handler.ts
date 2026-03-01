@@ -19,8 +19,8 @@ You orchestrate a team of sub-agents to accomplish tasks:
 
 Agent roles and capabilities:
 - coder: Mistral Vibe headless for code gen + git + deploy + GitHub PRs
-- browser: Computer Use (mouse, keyboard, screenshots) for browser automation
-- designer: Computer Use for visual/GUI tasks — design verification, UI testing
+- browser: DISABLED — no outbound internet on current Daytona plan
+- designer: DISABLED — no outbound internet on current Daytona plan
 - researcher: Shell commands + git for research, file analysis
 - copywriter: Shell commands for writing and content tasks
 - general: Shell commands + git + deploy + GitHub for miscellaneous tasks
@@ -139,8 +139,7 @@ Be concise, proactive, and strategic. Think step by step before delegating.`,
 			handler: internal.manager.tools.gitCloneAction,
 		}),
 		gitPush: createActionTool({
-			description:
-				"Push committed changes from an agent's sandbox to the remote repository.",
+			description: "Push committed changes from an agent's sandbox to the remote repository.",
 			args: z.object({
 				agentId: z.string().describe("Agent whose sandbox to push from"),
 				path: z.string().optional().describe("Repository path (default: /home/user/repo)"),
@@ -175,7 +174,10 @@ Be concise, proactive, and strategic. Think step by step before delegating.`,
 				title: z.string().describe("Issue title"),
 				body: z.string().describe("Issue body (markdown)"),
 				labels: z.array(z.string()).optional().describe("Labels to apply"),
-				repo: z.string().optional().describe("Target repo (owner/name). Required if not in a cloned repo."),
+				repo: z
+					.string()
+					.optional()
+					.describe("Target repo (owner/name). Required if not in a cloned repo."),
 				agentId: z.string().optional().describe("Agent whose sandbox to run in (for auth)"),
 			}),
 			handler: internal.manager.tools.createGitHubIssueAction,

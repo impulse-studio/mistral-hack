@@ -4,7 +4,7 @@ import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { runCoderTask } from "./coder/runner";
-import { runComputerUseTask } from "./browser/runner";
+// import { runComputerUseTask } from "./browser/runner"; // Disabled: no outbound internet on Daytona Tier 1/2
 import { runCopywriterTask } from "./copywriter/runner";
 import { runGeneralTask } from "./general/runner";
 import { runResearcherTask } from "./researcher/runner";
@@ -107,7 +107,13 @@ export const runSubAgent = internalAction({
 			} else if (agent.role === "copywriter") {
 				outcome = await runCopywriterTask(ctx, agentId, task);
 			} else if (agent.role === "browser" || agent.role === "designer") {
-				outcome = await runComputerUseTask(ctx, agentId, task);
+				// Disabled: Daytona Tier 1/2 blocks outbound internet, making browser agent useless.
+				// Re-enable once on a plan with unrestricted network or self-hosted Daytona.
+				outcome = {
+					success: false,
+					result:
+						"Browser agent is disabled — Daytona sandbox has no outbound internet access (Tier 1/2 restriction).",
+				};
 			} else {
 				outcome = await runGeneralTask(ctx, agentId, task, agent.role);
 			}

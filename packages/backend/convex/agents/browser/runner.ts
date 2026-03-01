@@ -89,7 +89,7 @@ export async function runComputerUseTask(
 
 	// Container-safe flags for headless environments
 	const containerFlags = browserPath.includes("chrom")
-		? "--no-sandbox --disable-gpu --disable-dev-shm-usage --no-first-run --no-default-browser-check --start-maximized"
+		? "--no-sandbox --disable-gpu --disable-dev-shm-usage --no-first-run --no-default-browser-check --disable-quic --start-maximized"
 		: "";
 
 	const urlMatch = (task.description ?? task.title).match(/https?:\/\/[^\s"')]+/);
@@ -205,9 +205,11 @@ Rules:
 - Describe what you see in your reasoning before deciding an action
 - Click coordinates must be within the screen bounds (${resolution})
 - Use "done" when the task is complete or you have gathered the needed information
+- Use "done" to report failure if the same error persists after 2-3 attempts (e.g. connection errors, page not loading)
 - Use "wait" if a page is loading
 - Be precise with click coordinates — aim for the center of UI elements
-- Do NOT open the Applications menu to find the browser — it was already launched`,
+- Do NOT open the Applications menu to find the browser — it was already launched
+- IMPORTANT: Do not repeat the same failing action more than 2 times. If something isn't working, try a different approach or report "done" with what you observed`,
 				},
 				{
 					role: "user",
