@@ -195,6 +195,26 @@ export const spawnAgentInternal = internalMutation({
 	},
 });
 
+// Internal version of despawnAgent for use by mailbox idle timeout
+export const despawnAgentInternal = internalMutation({
+	args: { agentId: v.id("agents") },
+	returns: v.null(),
+	handler: async (ctx, { agentId }) => {
+		const agent = await ctx.db.get(agentId);
+		if (!agent || agent.status === "despawning") return null;
+
+		await ctx.db.patch(agentId, {
+			status: "despawning",
+			completedAt: Date.now(),
+		});
+
+		if (agent.deskId) {
+			await ctx.db.patch(agent.deskId, { occupiedBy: undefined });
+		}
+		return null;
+	},
+});
+
 // Update desk label
 export const updateDeskLabel = mutation({
 	args: {

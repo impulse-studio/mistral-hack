@@ -39,6 +39,12 @@ Workflow:
 3. The agent works in a shared Daytona sandbox (persistent cloud environment)
 4. Results flow back automatically when tasks complete
 
+Agent reuse — idle agents stay alive after completing a task:
+- Use sendMessageToAgent to send follow-up work to idle agents instead of spawning new ones
+- Send type "task" with a taskId to assign a new task to an idle agent
+- Agents auto-despawn after 60s idle with no queued messages
+- Prefer reusing idle agents over spawning new ones when possible
+
 Be concise, proactive, and strategic. Think step by step before delegating.`,
 	tools: {
 		spawnAgent: createActionTool({
@@ -81,6 +87,30 @@ Be concise, proactive, and strategic. Think step by step before delegating.`,
 				agentId: z.string().describe("Agent ID to check"),
 			}),
 			handler: internal.manager.tools.checkProgressAction,
+		}),
+		commentOnTask: createActionTool({
+			description:
+				"Add a comment to a task. Use this to leave notes, progress updates, feedback, or context.",
+			args: z.object({
+				taskId: z.string().describe("Task ID to comment on"),
+				content: z.string().describe("Comment text"),
+			}),
+			handler: internal.manager.tools.commentOnTaskAction,
+		}),
+		sendMessageToAgent: createActionTool({
+			description:
+				"Send a message to an agent's mailbox. Use this to assign follow-up tasks to idle agents instead of spawning new ones. Types: 'task' (assign a task), 'directive' (instruction), 'notification' (info), 'result' (forward result). Priority: 0=normal, 1=high, 2=critical (always next).",
+			args: z.object({
+				agentId: z.string().describe("Target agent ID"),
+				type: z.enum(["task", "directive", "notification", "result"]).describe("Message type"),
+				payload: z.string().describe("Message content (JSON or freeform text)"),
+				taskId: z.string().optional().describe("Task ID (required for type 'task')"),
+				priority: z
+					.number()
+					.optional()
+					.describe("0=normal (default), 1=high, 2=critical (always processed next)"),
+			}),
+			handler: internal.manager.tools.sendMessageToAgentAction,
 		}),
 	},
 	saveStreamDeltas: true,

@@ -185,6 +185,37 @@ const commentOnTaskTool = createTool({
 	},
 });
 
+const sendMessageToAgentTool = createTool({
+	description:
+		"Send a message to an agent's mailbox. Use this to assign follow-up tasks to idle agents instead of spawning new ones. Types: 'task' (assign a task), 'directive' (instruction), 'notification' (info), 'result' (forward result). Priority: 0=normal, 1=high, 2=critical (jumps to front of queue).",
+	inputSchema: z.object({
+		agentId: z.string().describe("Target agent ID"),
+		type: z.enum(["task", "directive", "notification", "result"]).describe("Message type"),
+		payload: z.string().describe("Message content (JSON or freeform text)"),
+		taskId: z.string().optional().describe("Task ID (required for type 'task')"),
+		priority: z
+			.number()
+			.optional()
+			.describe("0=normal (default), 1=high, 2=critical (always processed next)"),
+	}),
+	execute: async (
+		ctx: ToolCtx,
+		{ agentId, type, payload, taskId, priority },
+	): Promise<{ messageId: string; message: string }> => {
+		const messageId = await ctx.runMutation(internal.mailbox.mutations.enqueue, {
+			recipientId: agentId as Id<"agents">,
+			type,
+			payload,
+			taskId: taskId as Id<"tasks"> | undefined,
+			priority,
+		});
+		return {
+			messageId,
+			message: `Message (${type}) enqueued for agent ${agentId}.`,
+		};
+	},
+});
+
 const registerDeliverableTool = createTool({
 	description:
 		"Register a deliverable produced by a task. Use this after a worker completes a task that produced an output file, document, or URL. The deliverable will appear in the manager dashboard.",
@@ -272,6 +303,12 @@ When handling complex tasks:
 4. When you receive [DEPENDENCY RESOLVED] notifications, spawn agents for newly unblocked tasks
 5. Continue until all sub-tasks are complete, then report the full result
 
+Agent reuse — idle agents stay alive after completing a task:
+- Use sendMessageToAgent to send follow-up work to idle agents instead of spawning new ones
+- Send type "task" with a taskId to assign a new task to an idle agent
+- Agents auto-despawn after 60s idle with no queued messages
+- Prefer reusing idle agents over spawning new ones when possible
+
 Be concise, proactive, and strategic. Think step by step before delegating.
 Always create the task FIRST, then spawn an agent with the taskId.`,
 	tools: {
@@ -281,6 +318,7 @@ Always create the task FIRST, then spawn an agent with the taskId.`,
 		checkAgentProgress: checkAgentProgressTool,
 		commentOnTask: commentOnTaskTool,
 		registerDeliverable: registerDeliverableTool,
+		sendMessageToAgent: sendMessageToAgentTool,
 	},
 	maxSteps: 10,
 });

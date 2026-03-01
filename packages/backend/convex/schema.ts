@@ -115,6 +115,54 @@ export const agentLogFields = {
 	timestamp: v.number(),
 };
 
+export const taskCommentAuthorValidator = v.union(
+	v.literal("user"),
+	v.literal("manager"),
+	v.literal("agent"),
+	v.literal("system"),
+);
+
+export const taskCommentFields = {
+	taskId: v.id("tasks"),
+	author: taskCommentAuthorValidator,
+	agentId: v.optional(v.id("agents")),
+	content: v.string(),
+	createdAt: v.number(),
+};
+
+export const mailboxMessageTypeValidator = v.union(
+	v.literal("task"),
+	v.literal("directive"),
+	v.literal("notification"),
+	v.literal("result"),
+);
+
+export const mailboxMessageStatusValidator = v.union(
+	v.literal("pending"),
+	v.literal("processing"),
+	v.literal("done"),
+	v.literal("failed"),
+	v.literal("dead_letter"),
+);
+
+export const agentMailboxFields = {
+	recipientId: v.id("agents"),
+	senderId: v.optional(v.id("agents")),
+	type: mailboxMessageTypeValidator,
+	status: mailboxMessageStatusValidator,
+	payload: v.string(),
+	taskId: v.optional(v.id("tasks")),
+	priority: v.number(), // 0=normal, 1=high, 2=critical (always next)
+	createdAt: v.number(),
+	processedAt: v.optional(v.number()),
+};
+
+export const agentMailboxDoc = v.object({
+	_id: v.id("agentMailbox"),
+	_creationTime: v.number(),
+	...agentMailboxFields,
+});
+
 export const deskFields = {
 	position: v.object({ x: v.number(), y: v.number() }),
 	label: v.optional(v.string()),
@@ -181,6 +229,12 @@ export const deskDoc = v.object({
 	...deskFields,
 });
 
+export const taskCommentDoc = v.object({
+	_id: v.id("taskComments"),
+	_creationTime: v.number(),
+	...taskCommentFields,
+});
+
 export const deliverableDoc = v.object({
 	_id: v.id("deliverables"),
 	_creationTime: v.number(),
@@ -224,6 +278,16 @@ export default defineSchema({
 		key: v.string(),
 		value: v.string(),
 	}).index("by_key", ["key"]),
+
+	// Task comments — threaded discussion on tasks
+	taskComments: defineTable(taskCommentFields)
+		.index("by_task", ["taskId"])
+		.index("by_task_time", ["taskId", "createdAt"]),
+
+	// Agent mailbox — per-agent message queue (actor model)
+	agentMailbox: defineTable(agentMailboxFields)
+		.index("by_recipient_status", ["recipientId", "status"])
+		.index("by_recipient", ["recipientId"]),
 
 	// Deliverables — files and outputs produced by agents
 	deliverables: defineTable(deliverableFields)

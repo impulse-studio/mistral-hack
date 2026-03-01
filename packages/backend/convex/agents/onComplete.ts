@@ -27,20 +27,18 @@ export const onSubAgentComplete = internalMutation({
 			}
 		}
 
-		// Despawn the agent — free desk and mark as done (idempotent: check status)
+		// Transition agent to idle — keep desk and sandbox warm for mailbox reuse
 		const agent = await ctx.db.get(agentId);
-		if (agent && agent.status !== "despawning") {
-			if (agent.deskId) {
-				await ctx.db.patch(agent.deskId, { occupiedBy: undefined });
-			}
+		if (agent && agent.status !== "despawning" && agent.status !== "idle") {
 			await ctx.db.patch(agentId, {
-				status: "despawning",
+				status: "idle",
+				currentTaskId: undefined,
 				completedAt: Date.now(),
 			});
 		}
 
-		// Stop the agent's sandbox (preserves disk via shared volume)
-		await ctx.scheduler.runAfter(0, internal.sandbox.lifecycle.stopAgentSandbox, { agentId });
+		// Schedule mailbox check — agent may have queued follow-up work
+		await ctx.scheduler.runAfter(0, internal.mailbox.process.processMailbox, { agentId });
 
 		// Build notification message for the manager
 		const agentName = agent?.name ?? "Unknown";

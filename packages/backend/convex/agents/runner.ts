@@ -219,14 +219,10 @@ export const runSubAgent = internalAction({
 				result = cmdResult.result ?? "Non-code agent execution not yet fully implemented";
 			}
 
-			// 3. Complete task
+			// 3. Complete task (agent lifecycle handled by onSubAgentComplete)
 			await ctx.runMutation(internal.tasks.mutations.updateStatusInternal, {
 				taskId,
 				status: "done",
-			});
-			await ctx.runMutation(internal.office.mutations.updateAgentStatus, {
-				agentId,
-				status: "completed",
 			});
 
 			// Log completion

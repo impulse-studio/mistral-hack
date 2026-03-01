@@ -10,15 +10,20 @@
 
 import type * as agent from "../agent.js";
 import type * as agents_onComplete from "../agents/onComplete.js";
+import type * as agents_onCompleteActions from "../agents/onCompleteActions.js";
 import type * as agents_queries from "../agents/queries.js";
 import type * as agents_runner from "../agents/runner.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
 import type * as debug from "../debug.js";
+import type * as deliverables_mutations from "../deliverables/mutations.js";
 import type * as healthCheck from "../healthCheck.js";
 import type * as http from "../http.js";
 import type * as logs_mutations from "../logs/mutations.js";
 import type * as logs_queries from "../logs/queries.js";
+import type * as mailbox_mutations from "../mailbox/mutations.js";
+import type * as mailbox_process from "../mailbox/process.js";
+import type * as mailbox_queries from "../mailbox/queries.js";
 import type * as manager_api from "../manager/api.js";
 import type * as manager_handler from "../manager/handler.js";
 import type * as manager_tools from "../manager/tools.js";
@@ -36,6 +41,7 @@ import type * as sandbox_mutations from "../sandbox/mutations.js";
 import type * as sandbox_queries from "../sandbox/queries.js";
 import type * as sandbox_streamLogs from "../sandbox/streamLogs.js";
 import type * as sandbox_vibe from "../sandbox/vibe.js";
+import type * as tasks_comments from "../tasks/comments.js";
 import type * as tasks_dependencies from "../tasks/dependencies.js";
 import type * as tasks_mutations from "../tasks/mutations.js";
 import type * as tasks_queries from "../tasks/queries.js";
@@ -57,15 +63,20 @@ import type {
 declare const fullApi: ApiFromModules<{
   agent: typeof agent;
   "agents/onComplete": typeof agents_onComplete;
+  "agents/onCompleteActions": typeof agents_onCompleteActions;
   "agents/queries": typeof agents_queries;
   "agents/runner": typeof agents_runner;
   auth: typeof auth;
   chat: typeof chat;
   debug: typeof debug;
+  "deliverables/mutations": typeof deliverables_mutations;
   healthCheck: typeof healthCheck;
   http: typeof http;
   "logs/mutations": typeof logs_mutations;
   "logs/queries": typeof logs_queries;
+  "mailbox/mutations": typeof mailbox_mutations;
+  "mailbox/process": typeof mailbox_process;
+  "mailbox/queries": typeof mailbox_queries;
   "manager/api": typeof manager_api;
   "manager/handler": typeof manager_handler;
   "manager/tools": typeof manager_tools;
@@ -83,6 +94,7 @@ declare const fullApi: ApiFromModules<{
   "sandbox/queries": typeof sandbox_queries;
   "sandbox/streamLogs": typeof sandbox_streamLogs;
   "sandbox/vibe": typeof sandbox_vibe;
+  "tasks/comments": typeof tasks_comments;
   "tasks/dependencies": typeof tasks_dependencies;
   "tasks/mutations": typeof tasks_mutations;
   "tasks/queries": typeof tasks_queries;

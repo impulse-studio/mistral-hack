@@ -169,6 +169,58 @@ export const checkProgressAction = internalAction({
 	},
 });
 
+// Tool action: add a comment to a task
+export const commentOnTaskAction = internalAction({
+	args: {
+		taskId: v.string(),
+		content: v.string(),
+	},
+	handler: async (
+		ctx,
+		{ taskId, content },
+	): Promise<{
+		commentId: string;
+		message: string;
+	}> => {
+		const commentId = await ctx.runMutation(internal.tasks.comments.addInternal, {
+			taskId: taskId as Id<"tasks">,
+			content,
+			author: "manager",
+		});
+		return { commentId, message: `Comment added to task.` };
+	},
+});
+
+// Tool action: send a message to an agent's mailbox
+export const sendMessageToAgentAction = internalAction({
+	args: {
+		agentId: v.string(),
+		type: v.string(),
+		payload: v.string(),
+		taskId: v.optional(v.string()),
+		priority: v.optional(v.number()),
+	},
+	handler: async (
+		ctx,
+		{ agentId, type, payload, taskId, priority },
+	): Promise<{
+		messageId: string;
+		message: string;
+	}> => {
+		const messageId = await ctx.runMutation(internal.mailbox.mutations.enqueue, {
+			recipientId: agentId as Id<"agents">,
+			type: type as "task" | "directive" | "notification" | "result",
+			payload,
+			taskId: taskId as Id<"tasks"> | undefined,
+			priority,
+		});
+		return {
+			messageId,
+			message: `Message (${type}) enqueued for agent ${agentId}.`,
+		};
+	},
+});
+
 // Tool action: update task status
 export const updateTaskStatusAction = internalAction({
 	args: {
