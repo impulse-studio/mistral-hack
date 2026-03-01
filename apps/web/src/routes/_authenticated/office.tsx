@@ -15,7 +15,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { authClient } from "@/lib/auth-client";
-import { AgentKanbanModalSmart } from "@/lib/kanban/AgentKanbanModal.smart";
+import { KanbanAgentModalSmart } from "@/lib/kanban/AgentKanbanModal.smart";
 import { KanbanTaskDetailSmart } from "@/lib/kanban/TaskDetailModal.smart";
 import { MasterAgentPanel } from "@/lib/master-agent-panel/MasterAgentPanel.component";
 import { initTileset } from "@/lib/pixelAgents/initTileset";
@@ -384,7 +384,7 @@ function OfficeContent() {
 			</Dialog>
 
 			{/* Worker boards modal */}
-			<AgentKanbanModalSmart
+			<KanbanAgentModalSmart
 				open={showWorkerBoards}
 				onClose={() => setShowWorkerBoards(false)}
 				onTaskClick={(taskId) => {
