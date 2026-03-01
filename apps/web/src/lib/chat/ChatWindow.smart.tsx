@@ -1,20 +1,12 @@
-import { useUIMessages as useUIMessagesRaw, type UIMessage } from "@convex-dev/agent/react";
 import { api } from "@mistral-hack/backend/convex/_generated/api";
-import { useMutation, useQuery, type UsePaginatedQueryResult } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useCallback, useMemo, useState } from "react";
 
 import type { KanbanDragData } from "@/lib/kanban/KanbanItem.component";
 
-import type { ChatWindowMessage } from "./ChatWindow.component";
+import type { ChatWindowMessage, ChatWindowPendingQuestion } from "./ChatWindow.component";
 import { ChatWindow } from "./ChatWindow.component";
 import { chatUseVoiceConverse as useVoiceConverse } from "./useVoiceConverse";
-
-// Typed wrapper — @convex-dev/agent@0.6.0-alpha generic inference is broken
-const useUIMessages = useUIMessagesRaw as (
-	query: typeof api.chat.listMessages,
-	args: { threadId: string } | "skip",
-	options: { initialNumItems: number; stream?: boolean },
-) => UsePaginatedQueryResult<UIMessage>;
 
 interface ChatWindowSmartProps {
 	threadId?: string | null;
@@ -26,16 +18,6 @@ interface ChatWindowSmartProps {
 	className?: string;
 }
 
-function chatWindowMapMessage(m: UIMessage): ChatWindowMessage {
-	return {
-		key: m.key,
-		role: m.role === "user" ? "user" : "assistant",
-		text: m.text ?? "",
-		status:
-			m.status === "streaming" ? "streaming" : m.status === "pending" ? "pending" : "complete",
-	};
-}
-
 function ChatWindowSmart({
 	threadId: controlledThreadId,
 	onThreadCreated,
@@ -44,7 +26,7 @@ function ChatWindowSmart({
 	title,
 	className,
 }: ChatWindowSmartProps) {
-	const [chatIsLoading, setChatIsLoading] = useState(false);
+	const [isSending, setIsSending] = useState(false);
 
 	// Always use the shared thread so web + Telegram stay in sync
 	const sharedThreadId = useQuery(api.chat.getSharedThreadId);
@@ -53,22 +35,44 @@ function ChatWindowSmart({
 	const ensureSharedThread = useMutation(api.chat.ensureSharedThread);
 	const sendMessage = useMutation(api.chat.sendMessage);
 
-	const { results: chatRawMessages } = useUIMessages(
-		api.chat.listMessages,
+	// Read user-visible messages from the messages table (replaces useUIMessages)
+	const rawMessages = useQuery(api.chat.getUserVisibleMessages, { limit: 50 });
+
+	// Manager processing status for loading indicator
+	const managerStatus = useQuery(api.manager.queue.getStatus);
+
+	const messages = useMemo((): ChatWindowMessage[] => {
+		if (!rawMessages) return [];
+		return rawMessages.map((m) => ({
+			key: m._id,
+			role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
+			text: m.content,
+			status: "complete" as const,
+		}));
+	}, [rawMessages]);
+
+	// Loading state: sending mutation OR manager is processing a user request
+	const isLoading = isSending || managerStatus === "processing_user_request";
+
+	// ── Pending user question ────────────────────────────
+	const pendingQuestionRaw = useQuery(
+		api.userQuestions.queries.getPendingForThread,
 		chatActiveThreadId ? { threadId: chatActiveThreadId } : "skip",
-		{ initialNumItems: 50, stream: true },
 	);
 
-	const messages = useMemo(
-		() => (chatRawMessages ?? []).map(chatWindowMapMessage),
-		[chatRawMessages],
-	);
+	const pendingQuestion = useMemo((): ChatWindowPendingQuestion | null => {
+		if (!pendingQuestionRaw) return null;
+		return {
+			questionId: pendingQuestionRaw._id,
+			questions: pendingQuestionRaw.questions,
+		};
+	}, [pendingQuestionRaw]);
 
 	// ── Text send ────────────────────────────────────────
 	async function handleChatSmartSend(text: string) {
-		if (chatIsLoading) return;
+		if (isSending) return;
 
-		setChatIsLoading(true);
+		setIsSending(true);
 		try {
 			let currentThreadId = chatActiveThreadId;
 			if (!currentThreadId) {
@@ -81,7 +85,7 @@ function ChatWindowSmart({
 		} catch (error) {
 			console.error("Failed to send message:", error);
 		} finally {
-			setChatIsLoading(false);
+			setIsSending(false);
 		}
 	}
 
@@ -128,15 +132,17 @@ function ChatWindowSmart({
 			handleChatSmartSend(prompt);
 		},
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- handleChatSmartSend is stable via closure
-		[chatActiveThreadId, chatIsLoading],
+		[chatActiveThreadId, isSending],
 	);
 
 	return (
 		<ChatWindow
 			messages={messages}
 			onSend={handleChatSmartSend}
-			isLoading={chatIsLoading}
+			isLoading={isLoading}
+			managerStatus={managerStatus ?? "idle"}
 			onTaskDrop={acceptTaskDrop ? handleTaskDrop : undefined}
+			pendingQuestion={pendingQuestion}
 			variant={variant}
 			title={title}
 			className={className}

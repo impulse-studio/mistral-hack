@@ -1,4 +1,6 @@
+import { api } from "@mistral-hack/backend/convex/_generated/api";
 import { env } from "@mistral-hack/env/web";
+import { useMutation } from "convex/react";
 import { useCallback, useRef, useState } from "react";
 
 interface UseVoiceConverseOptions {
@@ -26,6 +28,7 @@ function useVoiceConverse({
 }: UseVoiceConverseOptions): UseVoiceConverseReturn {
 	const [voiceConverseIsRecording, setVoiceConverseIsRecording] = useState(false);
 	const [voiceConverseIsProcessing, setVoiceConverseIsProcessing] = useState(false);
+	const setVoiceActive = useMutation(api.chat.setVoiceSessionActive);
 
 	const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 	const audioChunksRef = useRef<Blob[]>([]);
@@ -42,7 +45,8 @@ function useVoiceConverse({
 		audioCtxRef.current = null;
 		analyserRef.current = null;
 		setVoiceConverseIsRecording(false);
-	}, []);
+		setVoiceActive({ active: false });
+	}, [setVoiceActive]);
 
 	const voiceConverseStartRecording = useCallback(async (): Promise<AnalyserNode | null> => {
 		try {
@@ -75,6 +79,7 @@ function useVoiceConverse({
 
 			recorder.start();
 			setVoiceConverseIsRecording(true);
+			setVoiceActive({ active: true });
 			return analyser;
 		} catch (err) {
 			console.error("Failed to start voice recording:", err);

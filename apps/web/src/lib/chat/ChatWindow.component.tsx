@@ -1,3 +1,5 @@
+import type { GenericId } from "convex/values";
+
 import type { KanbanDragData } from "@/lib/kanban/KanbanItem.component";
 import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
 import { PixelGlow } from "@/lib/pixel/PixelGlow";
@@ -6,6 +8,8 @@ import { cn } from "@/lib/utils";
 
 import { ChatInput } from "./ChatInput";
 import { ChatMessageList } from "./ChatMessageList";
+import type { ChatQuestionItem } from "./ChatQuestionCard.component";
+import { ChatQuestionCard } from "./ChatQuestionCard.component";
 
 interface ChatWindowMessage {
 	key: string;
@@ -14,12 +18,21 @@ interface ChatWindowMessage {
 	status: "pending" | "streaming" | "complete";
 }
 
+interface ChatWindowPendingQuestion {
+	questionId: GenericId<"userQuestions">;
+	questions: ChatQuestionItem[];
+}
+
 interface ChatWindowProps {
 	messages: ChatWindowMessage[];
 	onSend: (text: string) => void;
 	isLoading?: boolean;
+	/** Manager processing status: "idle" | "processing_user_request" | "background_work" */
+	managerStatus?: string;
 	/** Called when a kanban task is dropped onto the chat message list. */
 	onTaskDrop?: (data: KanbanDragData) => void;
+	/** Pending structured question from the manager. */
+	pendingQuestion?: ChatWindowPendingQuestion | null;
 	variant?: "standalone" | "panel";
 	title?: string;
 	className?: string;
@@ -36,7 +49,9 @@ function ChatWindow({
 	messages,
 	onSend,
 	isLoading = false,
+	managerStatus = "idle",
 	onTaskDrop,
+	pendingQuestion,
 	variant = "standalone",
 	title = "Manager Chat",
 	className,
@@ -69,14 +84,23 @@ function ChatWindow({
 			<ChatMessageList
 				messages={messages}
 				isLoading={isLoading}
+				managerStatus={managerStatus}
 				onTaskDrop={onTaskDrop}
 				className="flex-1"
 			/>
 
-			{/* Input */}
+			{/* Pending question card */}
+			{pendingQuestion && (
+				<ChatQuestionCard
+					questionId={pendingQuestion.questionId}
+					questions={pendingQuestion.questions}
+				/>
+			)}
+
+			{/* Input — disabled while a question card is pending */}
 			<ChatInput
 				onSend={onSend}
-				disabled={isLoading}
+				disabled={isLoading || !!pendingQuestion}
 				voiceRecording={voiceRecording}
 				voiceProcessing={voiceProcessing}
 				voiceAnalyser={voiceAnalyser}
@@ -89,4 +113,4 @@ function ChatWindow({
 }
 
 export { ChatWindow };
-export type { ChatWindowProps, ChatWindowMessage };
+export type { ChatWindowProps, ChatWindowMessage, ChatWindowPendingQuestion };

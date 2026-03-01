@@ -191,6 +191,18 @@ export const commentOnTaskAction = internalAction({
 	},
 });
 
+// Tool action: send a polished response to the user (visible in chat)
+export const sendToUserAction = internalAction({
+	args: { content: v.string() },
+	handler: async (ctx, { content }): Promise<{ success: boolean; message: string }> => {
+		await ctx.runMutation(internal.chat.saveAgentReply, {
+			content,
+			channel: "web",
+		});
+		return { success: true, message: "Message sent to user." };
+	},
+});
+
 // Tool action: send a message to an agent's mailbox
 export const sendMessageToAgentAction = internalAction({
 	args: {
@@ -217,6 +229,63 @@ export const sendMessageToAgentAction = internalAction({
 		return {
 			messageId,
 			message: `Message (${type}) enqueued for agent ${agentId}.`,
+		};
+	},
+});
+
+// Tool action: ask the user structured questions
+export const askUserAction = internalAction({
+	args: {
+		questions: v.array(
+			v.object({
+				question: v.string(),
+				header: v.string(),
+				options: v.array(v.object({ label: v.string(), description: v.string() })),
+				multiSelect: v.boolean(),
+			}),
+		),
+		taskId: v.optional(v.string()),
+	},
+	handler: async (
+		ctx,
+		{ questions, taskId },
+	): Promise<{
+		questionId?: string;
+		message: string;
+		error?: string;
+	}> => {
+		// Check voice session flag
+		const voiceFlag = await ctx.runQuery(internal.systemConfig.get, {
+			key: "voiceSessionActive",
+		});
+		if (voiceFlag === "true") {
+			return {
+				message:
+					"Cannot ask structured questions in speech mode. Ask your question via TTS instead.",
+				error: "voice_mode_active",
+			};
+		}
+
+		// Get shared thread ID
+		const threadId = await ctx.runQuery(internal.systemConfig.get, {
+			key: "shared-thread-id",
+		});
+		if (!threadId) {
+			return {
+				message: "No active thread found. Cannot send question.",
+				error: "no_thread",
+			};
+		}
+
+		const questionId = await ctx.runMutation(internal.userQuestions.mutations.createInternal, {
+			threadId,
+			taskId: taskId as Id<"tasks"> | undefined,
+			questions,
+		});
+
+		return {
+			questionId,
+			message: "Question sent to user. Waiting for response...",
 		};
 	},
 });

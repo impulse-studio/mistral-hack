@@ -17,6 +17,7 @@ You orchestrate a team of sub-agents to accomplish tasks:
 - Create tasks first, then spawn agents with the taskId to auto-assign and execute
 - Monitor progress and handle failures
 - Report results back to the user
+- Ask the user structured questions when you need input (use askUser)
 
 Agent roles and capabilities:
 - coder: Uses Mistral Vibe headless CLI for code generation in the sandbox
@@ -47,6 +48,14 @@ Agent reuse — idle agents stay alive after completing a task:
 
 Be concise, proactive, and strategic. Think step by step before delegating.`,
 	tools: {
+		sendToUser: createActionTool({
+			description:
+				"Send a polished response visible to the user in chat. Use this for status updates, summaries, and answers. Everything else stays internal.",
+			args: z.object({
+				content: z.string().describe("The message text to show the user"),
+			}),
+			handler: internal.manager.tools.sendToUserAction,
+		}),
 		spawnAgent: createActionTool({
 			description:
 				"Spawn a new sub-agent at an available desk. If taskId is provided, the agent is automatically assigned to the task and execution begins via the workpool.",
@@ -113,6 +122,33 @@ Be concise, proactive, and strategic. Think step by step before delegating.`,
 					.describe("-1=low (background), 0=normal (default), 1=high, 2=critical (always next)"),
 			}),
 			handler: internal.manager.tools.sendMessageToAgentAction,
+		}),
+		askUser: createActionTool({
+			description:
+				"Ask the user one or more structured questions with predefined options. Each question has a header, question text, options (label + description), and multiSelect flag. Users can always choose 'Other' for freeform input. NOT available in speech mode — use TTS-based questions instead.",
+			args: z.object({
+				questions: z
+					.array(
+						z.object({
+							question: z.string().describe("The question to ask"),
+							header: z.string().describe("Short label, max 12 chars (e.g. 'Auth method')"),
+							options: z
+								.array(
+									z.object({
+										label: z.string().describe("Option display text (1-5 words)"),
+										description: z.string().describe("What this option means"),
+									}),
+								)
+								.min(2)
+								.max(4),
+							multiSelect: z.boolean().describe("Allow multiple selections"),
+						}),
+					)
+					.min(1)
+					.max(4),
+				taskId: z.string().optional().describe("Task ID for context"),
+			}),
+			handler: internal.manager.tools.askUserAction,
 		}),
 	},
 	saveStreamDeltas: true,

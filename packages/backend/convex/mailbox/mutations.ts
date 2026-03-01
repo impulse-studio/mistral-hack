@@ -12,9 +12,13 @@ export const enqueue = internalMutation({
 		payload: v.string(),
 		taskId: v.optional(v.id("tasks")),
 		priority: v.optional(v.number()),
+		threadMessageId: v.optional(v.string()),
 	},
 	returns: v.id("agentMailbox"),
-	handler: async (ctx, { recipientId, senderId, type, payload, taskId, priority }) => {
+	handler: async (
+		ctx,
+		{ recipientId, senderId, type, payload, taskId, priority, threadMessageId },
+	) => {
 		const recipient = await ctx.db.get(recipientId);
 		if (!recipient) throw new Error(`Recipient agent ${recipientId} not found`);
 
@@ -28,6 +32,7 @@ export const enqueue = internalMutation({
 				payload,
 				taskId,
 				priority: priority ?? 0,
+				threadMessageId,
 				createdAt: Date.now(),
 			});
 		}
@@ -40,11 +45,26 @@ export const enqueue = internalMutation({
 			payload,
 			taskId,
 			priority: priority ?? 0,
+			threadMessageId,
 			createdAt: Date.now(),
 		});
 
-		// If recipient is idle, schedule mailbox processing
-		if (recipient.status === "idle") {
+		// Route to the correct processor based on agent type
+		if (recipient.type === "manager") {
+			// Manager uses dedicated processor with priority queue + sendToUser
+			// Check systemConfig for manager processing status (not agent.status)
+			const managerStatus = await ctx.db
+				.query("systemConfig")
+				.withIndex("by_key", (q) => q.eq("key", "manager-status"))
+				.first();
+			const isIdle = !managerStatus || managerStatus.value === "idle";
+			if (isIdle) {
+				await ctx.scheduler.runAfter(0, internal.manager.queue.processManagerMailbox, {
+					agentId: recipientId,
+				});
+			}
+		} else if (recipient.status === "idle") {
+			// Workers use standard mailbox processing
 			await ctx.scheduler.runAfter(0, internal.mailbox.process.processMailbox, {
 				agentId: recipientId,
 			});

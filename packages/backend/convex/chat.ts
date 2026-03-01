@@ -9,7 +9,13 @@ import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
 
 import { components, internal } from "./_generated/api";
-import { internalAction, internalMutation, mutation, query } from "./_generated/server";
+import {
+	internalAction,
+	internalMutation,
+	internalQuery,
+	mutation,
+	query,
+} from "./_generated/server";
 import { managerAgent } from "./agent";
 import { streamToSpeech } from "./voice/elevenLabsStream";
 
@@ -47,6 +53,42 @@ export const getSharedThreadId = query({
 			.withIndex("by_key", (q) => q.eq("key", SHARED_THREAD_KEY))
 			.first();
 		return existing?.value ?? null;
+	},
+});
+
+/** Get the shared thread ID (internal — for actions/mutations). */
+export const getSharedThreadIdInternal = internalQuery({
+	args: {},
+	returns: v.union(v.string(), v.null()),
+	handler: async (ctx) => {
+		const existing = await ctx.db
+			.query("systemConfig")
+			.withIndex("by_key", (q) => q.eq("key", SHARED_THREAD_KEY))
+			.first();
+		return existing?.value ?? null;
+	},
+});
+
+/** Save a prompt to the agent thread only (for mailbox notifications). */
+export const saveToThreadInternal = internalMutation({
+	args: { threadId: v.string(), prompt: v.string() },
+	returns: v.string(),
+	handler: async (ctx, { threadId, prompt }) => {
+		const { messageId } = await saveMessage(ctx, components.agent, { threadId, prompt });
+		return messageId;
+	},
+});
+
+/** Query user-visible messages from the messages table (replaces useUIMessages). */
+export const getUserVisibleMessages = query({
+	args: { limit: v.optional(v.number()) },
+	handler: async (ctx, { limit }) => {
+		const messages = await ctx.db
+			.query("messages")
+			.withIndex("by_channel_time", (q) => q.eq("channel", "web"))
+			.order("desc")
+			.take(limit ?? 50);
+		return messages.reverse(); // oldest first for display
 	},
 });
 
@@ -140,12 +182,13 @@ export const sendMessage = mutation({
 	},
 	returns: v.string(),
 	handler: async (ctx, { threadId, prompt, channel }) => {
+		// Save to agent thread (for manager's conversation context)
 		const { messageId } = await saveMessage(ctx, components.agent, {
 			threadId,
 			prompt,
 		});
 
-		// Also save to our messages table for multi-channel history
+		// Save to messages table (for user's chat history)
 		await ctx.db.insert("messages", {
 			content: prompt,
 			role: "user",
@@ -153,10 +196,44 @@ export const sendMessage = mutation({
 			createdAt: Date.now(),
 		});
 
-		await ctx.scheduler.runAfter(0, internal.chat.generateResponseAsync, {
-			threadId,
-			promptMessageId: messageId,
+		// Find the manager agent
+		const manager = await ctx.db
+			.query("agents")
+			.withIndex("by_type", (q) => q.eq("type", "manager"))
+			.first();
+
+		if (!manager) {
+			// Fallback: no manager agent in DB — use direct generation
+			await ctx.scheduler.runAfter(0, internal.chat.generateResponseAsync, {
+				threadId,
+				promptMessageId: messageId,
+			});
+			return messageId;
+		}
+
+		// Set manager display status immediately (for frontend loading state)
+		const statusConfig = await ctx.db
+			.query("systemConfig")
+			.withIndex("by_key", (q) => q.eq("key", "manager-status"))
+			.first();
+		if (statusConfig) {
+			await ctx.db.patch(statusConfig._id, { value: "processing_user_request" });
+		} else {
+			await ctx.db.insert("systemConfig", {
+				key: "manager-status",
+				value: "processing_user_request",
+			});
+		}
+
+		// Enqueue to manager's mailbox (critical priority — always processed next)
+		await ctx.scheduler.runAfter(0, internal.mailbox.mutations.enqueue, {
+			recipientId: manager._id,
+			type: "user_message" as const,
+			payload: prompt,
+			priority: 2,
+			threadMessageId: messageId,
 		});
+
 		return messageId;
 	},
 });
@@ -239,6 +316,25 @@ export const generateVoiceResponse = internalAction({
 		});
 
 		return { text, audioBase64 };
+	},
+});
+
+/** Toggle voiceSessionActive flag in systemConfig (called by frontend voice hook). */
+export const setVoiceSessionActive = mutation({
+	args: { active: v.boolean() },
+	returns: v.null(),
+	handler: async (ctx, { active }) => {
+		const key = "voiceSessionActive";
+		const existing = await ctx.db
+			.query("systemConfig")
+			.withIndex("by_key", (q) => q.eq("key", key))
+			.first();
+		const value = active ? "true" : "false";
+		if (existing) {
+			await ctx.db.patch(existing._id, { value });
+		} else {
+			await ctx.db.insert("systemConfig", { key, value });
+		}
 	},
 });
 

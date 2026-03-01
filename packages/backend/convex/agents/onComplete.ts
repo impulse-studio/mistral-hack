@@ -50,32 +50,38 @@ export const onSubAgentComplete = internalMutation({
 			: (error ?? "No error details").slice(0, 500);
 		const notification = `[WORKER COMPLETE] Agent "${agentName}" (${agentRole}) finished task "${taskTitle}". Status: ${statusLabel}. Result: ${detail}`;
 
-		// Save system message for UI visibility
-		await ctx.db.insert("messages", {
-			content: notification,
-			role: "system",
-			channel: "web",
-			agentId,
-			taskId,
-			createdAt: Date.now(),
-		});
-
-		// Get the shared thread from systemConfig (not the agent's threadId)
+		// Get the shared thread + manager agent
 		const threadConfig = await ctx.db
 			.query("systemConfig")
 			.withIndex("by_key", (q) => q.eq("key", SHARED_THREAD_KEY))
 			.first();
 		const threadId = threadConfig?.value ?? null;
-		if (threadId) {
-			await ctx.scheduler.runAfter(0, internal.agents.onComplete.notifyManagerMutation, {
+		const manager = await ctx.db
+			.query("agents")
+			.withIndex("by_type", (q) => q.eq("type", "manager"))
+			.first();
+
+		if (threadId && manager) {
+			// Save notification to thread (for manager's conversation context)
+			const { messageId } = await saveMessage(ctx, components.agent, {
 				threadId,
-				notification,
+				prompt: notification,
+			});
+
+			// Enqueue to manager's mailbox at normal priority
+			await ctx.scheduler.runAfter(0, internal.mailbox.mutations.enqueue, {
+				recipientId: manager._id,
+				senderId: agentId,
+				type: "notification" as const,
+				payload: notification,
+				taskId,
+				priority: 0,
+				threadMessageId: messageId,
 			});
 		}
 
 		// Check for tasks blocked by this completed task
-		// Scan both "backlog" and "todo" — tasks with deps may sit in either status
-		if (success && task) {
+		if (success && task && threadId && manager) {
 			const backlogTasks = await ctx.db
 				.query("tasks")
 				.withIndex("by_status", (q) => q.eq("status", "backlog"))
@@ -88,21 +94,27 @@ export const onSubAgentComplete = internalMutation({
 			for (const blockedTask of candidates) {
 				if (!blockedTask.dependsOn || blockedTask.dependsOn.length === 0) continue;
 				if (!blockedTask.dependsOn.includes(taskId)) continue;
-				// Check if all dependencies are done
 				let allDone = true;
 				for (const depId of blockedTask.dependsOn) {
-					if (depId === taskId) continue; // just completed
+					if (depId === taskId) continue;
 					const dep = await ctx.db.get(depId);
 					if (!dep || dep.status !== "done") {
 						allDone = false;
 						break;
 					}
 				}
-				if (allDone && threadId) {
+				if (allDone) {
 					const depNotification = `[DEPENDENCY RESOLVED] Task "${blockedTask.title}" (${blockedTask._id}) is now unblocked — all dependencies satisfied. You can spawn an agent for it.`;
-					await ctx.scheduler.runAfter(0, internal.agents.onComplete.notifyManagerMutation, {
+					const { messageId: depMsgId } = await saveMessage(ctx, components.agent, {
 						threadId,
-						notification: depNotification,
+						prompt: depNotification,
+					});
+					await ctx.scheduler.runAfter(0, internal.mailbox.mutations.enqueue, {
+						recipientId: manager._id,
+						type: "notification" as const,
+						payload: depNotification,
+						priority: 0,
+						threadMessageId: depMsgId,
 					});
 				}
 			}
@@ -110,7 +122,8 @@ export const onSubAgentComplete = internalMutation({
 	},
 });
 
-/** Save notification to manager's thread and schedule the action to wake the manager */
+/** Save notification to manager's thread and schedule the action to wake the manager.
+ * @deprecated — Use mailbox enqueue instead. Kept for backward compat. */
 export const notifyManagerMutation = internalMutation({
 	args: {
 		threadId: v.string(),

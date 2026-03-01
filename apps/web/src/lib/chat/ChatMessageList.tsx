@@ -15,12 +15,20 @@ import type { ChatWindowMessage } from "./ChatWindow.component";
 interface ChatMessageListProps {
 	messages: ChatWindowMessage[];
 	isLoading: boolean;
+	/** Manager processing status for contextual loading indicator. */
+	managerStatus?: string;
 	/** Called when a kanban task is dropped onto the chat. */
 	onTaskDrop?: (data: KanbanDragData) => void;
 	className?: string;
 }
 
-function ChatMessageList({ messages, isLoading, onTaskDrop, className }: ChatMessageListProps) {
+function ChatMessageList({
+	messages,
+	isLoading,
+	managerStatus = "idle",
+	onTaskDrop,
+	className,
+}: ChatMessageListProps) {
 	const chatScrollContainerRef = useRef<HTMLDivElement>(null);
 	const chatBottomSentinelRef = useRef<HTMLDivElement>(null);
 	const [chatUserScrolledUp, setChatUserScrolledUp] = useState(false);
@@ -107,6 +115,21 @@ function ChatMessageList({ messages, isLoading, onTaskDrop, className }: ChatMes
 		return <ChatEmptyState />;
 	}
 
+	// Determine loading indicator text based on manager status
+	const loadingLabel =
+		managerStatus === "processing_user_request"
+			? "Working on your request..."
+			: managerStatus === "background_work"
+				? "Working on other things..."
+				: "Thinking...";
+
+	const loadingColor =
+		managerStatus === "processing_user_request"
+			? "orange"
+			: managerStatus === "background_work"
+				? "yellow"
+				: "yellow";
+
 	return (
 		<div
 			ref={chatScrollContainerRef}
@@ -133,9 +156,9 @@ function ChatMessageList({ messages, isLoading, onTaskDrop, className }: ChatMes
 
 				{isLoading && !hasStreamingMessage && (
 					<div className="mr-12 flex items-center gap-2 px-2 py-3">
-						<PixelGlow color="yellow" pulse size="sm" />
+						<PixelGlow color={loadingColor} pulse size="sm" />
 						<PixelText variant="label" color="muted">
-							Thinking...
+							{loadingLabel}
 						</PixelText>
 					</div>
 				)}

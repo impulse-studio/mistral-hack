@@ -136,6 +136,7 @@ export const mailboxMessageTypeValidator = v.union(
 	v.literal("directive"),
 	v.literal("notification"),
 	v.literal("result"),
+	v.literal("user_message"),
 );
 
 export const mailboxMessageStatusValidator = v.union(
@@ -154,6 +155,7 @@ export const agentMailboxFields = {
 	payload: v.string(),
 	taskId: v.optional(v.id("tasks")),
 	priority: v.number(), // -1=low (background), 0=normal, 1=high, 2=critical (always next)
+	threadMessageId: v.optional(v.string()), // for manager streamText promptMessageId
 	createdAt: v.number(),
 	processedAt: v.optional(v.number()),
 };
@@ -190,6 +192,40 @@ export const deliverableFields = {
 	mimeType: v.optional(v.string()),
 	sizeBytes: v.optional(v.number()),
 	createdAt: v.number(),
+};
+
+export const userQuestionStatusValidator = v.union(
+	v.literal("pending"),
+	v.literal("answered"),
+	v.literal("expired"),
+	v.literal("dismissed"),
+);
+
+export const userQuestionOptionValidator = v.object({
+	label: v.string(),
+	description: v.string(),
+});
+
+export const userQuestionItemValidator = v.object({
+	question: v.string(),
+	header: v.string(),
+	options: v.array(userQuestionOptionValidator),
+	multiSelect: v.boolean(),
+});
+
+export const userQuestionAnswerValidator = v.object({
+	selectedLabels: v.array(v.string()),
+	customText: v.optional(v.string()),
+});
+
+export const userQuestionFields = {
+	threadId: v.string(),
+	taskId: v.optional(v.id("tasks")),
+	status: userQuestionStatusValidator,
+	questions: v.array(userQuestionItemValidator),
+	answers: v.optional(v.array(userQuestionAnswerValidator)),
+	createdAt: v.number(),
+	answeredAt: v.optional(v.number()),
 };
 
 // ── Document validators (for returns) ───────────────────
@@ -240,6 +276,12 @@ export const deliverableDoc = v.object({
 	_id: v.id("deliverables"),
 	_creationTime: v.number(),
 	...deliverableFields,
+});
+
+export const userQuestionDoc = v.object({
+	_id: v.id("userQuestions"),
+	_creationTime: v.number(),
+	...userQuestionFields,
 });
 
 // ── Schema ──────────────────────────────────────────────
@@ -294,4 +336,7 @@ export default defineSchema({
 	deliverables: defineTable(deliverableFields)
 		.index("by_task", ["taskId"])
 		.index("by_agent", ["agentId"]),
+
+	// User questions — structured questions from manager to user
+	userQuestions: defineTable(userQuestionFields).index("by_thread_status", ["threadId", "status"]),
 });

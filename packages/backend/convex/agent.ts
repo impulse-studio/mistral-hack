@@ -185,6 +185,65 @@ const commentOnTaskTool = createTool({
 	},
 });
 
+const askUserTool = createTool({
+	description:
+		"Ask the user one or more structured questions with predefined options. Each question has a header, question text, options (label + description), and multiSelect flag. Users can always choose 'Other' for freeform input. NOT available in speech mode.",
+	inputSchema: z.object({
+		questions: z
+			.array(
+				z.object({
+					question: z.string().describe("The question to ask"),
+					header: z.string().describe("Short label, max 12 chars"),
+					options: z
+						.array(
+							z.object({
+								label: z.string().describe("Option display text"),
+								description: z.string().describe("What this option means"),
+							}),
+						)
+						.min(2)
+						.max(4),
+					multiSelect: z.boolean().describe("Allow multiple selections"),
+				}),
+			)
+			.min(1)
+			.max(4),
+		taskId: z.string().optional().describe("Task ID for context"),
+	}),
+	execute: async (
+		ctx: ToolCtx,
+		{ questions, taskId },
+	): Promise<{ questionId?: string; message: string; error?: string }> => {
+		// Check voice session flag
+		const voiceRow = await ctx.runQuery(internal.systemConfig.get, {
+			key: "voiceSessionActive",
+		});
+		if (voiceRow === "true") {
+			return {
+				message:
+					"Cannot ask structured questions in speech mode. Ask your question via TTS instead.",
+				error: "voice_mode_active",
+			};
+		}
+
+		// Get shared thread ID
+		const threadId = await ctx.runQuery(internal.systemConfig.get, {
+			key: "shared-thread-id",
+		});
+		if (!threadId) {
+			return { message: "No active thread found.", error: "no_thread" };
+		}
+
+		const questionId = await ctx.runMutation(internal.userQuestions.mutations.createInternal, {
+			threadId,
+			taskId: taskId as Id<"tasks"> | undefined,
+			questions,
+		});
+
+		return { questionId, message: "Question sent to user. Waiting for response..." };
+	},
+});
+
 const sendMessageToAgentTool = createTool({
 	description:
 		"Send a message to an agent's mailbox. Use this to assign follow-up tasks to idle agents instead of spawning new ones. Types: 'task' (assign a task), 'directive' (instruction), 'notification' (info), 'result' (forward result). Priority: 0=normal, 1=high, 2=critical (jumps to front of queue).",
@@ -213,6 +272,21 @@ const sendMessageToAgentTool = createTool({
 			messageId,
 			message: `Message (${type}) enqueued for agent ${agentId}.`,
 		};
+	},
+});
+
+const sendToUserTool = createTool({
+	description:
+		"Send a polished response visible to the user in chat. Use this for status updates, summaries, and answers. Everything else (tool calls, internal reasoning) stays invisible. After handling a user request, always call this with a summary. For background work, only call this if noteworthy.",
+	inputSchema: z.object({
+		content: z.string().describe("The message text to show the user"),
+	}),
+	execute: async (ctx: ToolCtx, { content }): Promise<{ success: boolean; message: string }> => {
+		await ctx.runMutation(internal.chat.saveAgentReply, {
+			content,
+			channel: "web" as const,
+		});
+		return { success: true, message: "Message sent to user." };
 	},
 });
 
@@ -255,12 +329,19 @@ export const managerAgent = new Agent(components.agent, {
 	languageModel: mistral("mistral-large-latest"),
 	instructions: `You are the Manager of an AI development office. You orchestrate sub-agents to accomplish tasks.
 
+IMPORTANT — Internal thread & user visibility:
+- This thread is INTERNAL. The user cannot see your tool calls, reasoning, or raw responses.
+- To communicate with the user, you MUST call sendToUser with a polished message.
+- After handling a user request, ALWAYS call sendToUser with a clear summary of what you did.
+- For background work (worker completions, notifications), only call sendToUser if it's noteworthy.
+- Think freely — use this space for planning, reasoning, and coordination.
+
 Your responsibilities:
 - Receive tasks from users (via web UI or Telegram)
 - Decompose complex tasks into sub-tasks
 - Spawn the right sub-agents for each sub-task
 - Monitor progress and handle failures
-- Report results back to the user
+- Report results back to the user via sendToUser
 
 Agent roles and capabilities:
 - coder: Uses Mistral Vibe headless CLI for code generation in a dedicated sandbox
@@ -276,13 +357,14 @@ Workflow:
 3. Each agent gets its own dedicated sandbox with a shared volume at /home/company for file sharing
 4. Results flow back automatically when tasks complete
 5. Use checkAgentProgress to monitor running agents
+6. Call sendToUser to tell the user what happened
 
 Worker completion notifications:
 - You automatically receive [WORKER COMPLETE] messages when agents finish their tasks
 - Synthesize results, check remaining tasks, and spawn follow-up agents as needed
 - Use checkAgentProgress to get detailed logs if you need more context
 - When a worker produces output (files, reports, URLs), use registerDeliverable to record it
-- Report final results to the user when all work is done
+- Call sendToUser to report final results when all work is done
 
 Task comments:
 - Use commentOnTask to leave notes, progress updates, or feedback on any task
@@ -301,13 +383,27 @@ When handling complex tasks:
 2. Set dependsOn to define execution order (e.g., "build" depends on "scaffold")
 3. Only spawn agents for tasks with no unmet dependencies
 4. When you receive [DEPENDENCY RESOLVED] notifications, spawn agents for newly unblocked tasks
-5. Continue until all sub-tasks are complete, then report the full result
+5. Continue until all sub-tasks are complete, then call sendToUser with the full result
+
+Asking the user questions:
+- Use askUser to ask the user structured questions with predefined options
+- Each question has a header (short label), question text, 2-4 options, and multiSelect flag
+- The user sees an interactive card in chat and picks options or types a custom answer
+- Their answer is delivered to you as a message — then continue with the task
+- NOT available in speech/voice mode — if rejected, fall back to asking via regular text
+- Prefer askUser over updateTaskStatus("waiting") when you need specific choices from the user
 
 Waiting for user input:
-- Use updateTaskStatus with status "waiting" when a task needs user input before it can continue
+- Use updateTaskStatus with status "waiting" when a task needs open-ended user input
 - This pauses the task and shows it in the "Waiting" column on the kanban board
-- The user will see the task is waiting and can provide input via comments
+- Call sendToUser to ask the user what you need
 - Once the user responds, move the task back to "in_progress" or the appropriate status
+
+Worker escalation:
+- Workers may send [NEEDS INPUT] notifications when they're blocked
+- When you receive these, call sendToUser to ask the user for the required information
+- Once the user responds, send a directive to the worker via sendMessageToAgent
+- The worker's task will resume automatically when the directive arrives
 
 Agent reuse — idle agents stay alive after completing a task:
 - Use sendMessageToAgent to send follow-up work to idle agents instead of spawning new ones
@@ -318,6 +414,7 @@ Agent reuse — idle agents stay alive after completing a task:
 Be concise, proactive, and strategic. Think step by step before delegating.
 Always create the task FIRST, then spawn an agent with the taskId.`,
 	tools: {
+		sendToUser: sendToUserTool,
 		createTask: createTaskTool,
 		spawnAgent: spawnAgentTool,
 		updateTaskStatus: updateTaskStatusTool,
@@ -325,6 +422,7 @@ Always create the task FIRST, then spawn an agent with the taskId.`,
 		commentOnTask: commentOnTaskTool,
 		registerDeliverable: registerDeliverableTool,
 		sendMessageToAgent: sendMessageToAgentTool,
+		askUser: askUserTool,
 	},
 	maxSteps: 10,
 });

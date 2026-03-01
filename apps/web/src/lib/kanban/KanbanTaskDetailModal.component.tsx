@@ -1,3 +1,5 @@
+import { Streamdown } from "streamdown";
+
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
 import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
@@ -118,9 +120,9 @@ function KanbanTaskDetailModal({
 						<PixelText variant="label" color="muted" className="mb-1.5 block">
 							Description
 						</PixelText>
-						<PixelText as="p" variant="body">
-							{description}
-						</PixelText>
+						<div className="prose prose-sm prose-invert max-w-none text-xs leading-relaxed">
+							<Streamdown>{description}</Streamdown>
+						</div>
 					</>
 				)}
 
