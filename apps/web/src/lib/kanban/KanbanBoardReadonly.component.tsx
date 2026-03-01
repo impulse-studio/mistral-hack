@@ -16,7 +16,8 @@ type KanbanTaskStatus =
 	| "in_progress"
 	| "review"
 	| "done"
-	| "failed";
+	| "failed"
+	| "cancelled";
 type KanbanTaskPriority = NonNullable<KanbanItemProps["priority"]>;
 
 interface KanbanBoardTask {
@@ -60,6 +61,7 @@ const KANBAN_COLUMN_ORDER: Array<{
 	{ status: "review", title: "Review", accentColor: "yellow-500" },
 	{ status: "done", title: "Done", accentColor: "green-500" },
 	{ status: "failed", title: "Failed", accentColor: "red-500" },
+	{ status: "cancelled", title: "Cancelled", accentColor: "muted-foreground" },
 ];
 
 function normalizeToken(value: string) {
@@ -176,9 +178,10 @@ function KanbanBoardReadonly({
 	}
 
 	const activeStatuses = new Set(filters.statuses ?? []);
+	const hiddenByDefault = new Set(["failed", "cancelled"]);
 	const visibleColumns = KANBAN_COLUMN_ORDER.filter((column) => {
 		if (activeStatuses.size === 0) {
-			return column.status !== "failed";
+			return !hiddenByDefault.has(column.status);
 		}
 		return activeStatuses.has(column.status);
 	});

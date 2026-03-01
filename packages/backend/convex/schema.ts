@@ -30,6 +30,7 @@ export const taskStatusValidator = v.union(
 	v.literal("review"),
 	v.literal("done"),
 	v.literal("failed"),
+	v.literal("cancelled"),
 );
 
 export const messageRoleValidator = v.union(

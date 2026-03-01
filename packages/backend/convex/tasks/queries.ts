@@ -114,6 +114,7 @@ export const getKanban = query({
 		in_progress: v.array(taskDoc),
 		review: v.array(taskDoc),
 		done: v.array(taskDoc),
+		cancelled: v.array(taskDoc),
 		failed: v.array(taskDoc),
 	}),
 	handler: async (ctx) => {
@@ -125,6 +126,7 @@ export const getKanban = query({
 			in_progress: [] as typeof all,
 			review: [] as typeof all,
 			done: [] as typeof all,
+			cancelled: [] as typeof all,
 			failed: [] as typeof all,
 		};
 		for (const task of all) {
