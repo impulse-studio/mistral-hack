@@ -7,6 +7,7 @@ import {
 	DialogTitle,
 	DialogClose,
 } from "@/components/ui/dialog";
+import { PIXELATED_STYLE } from "@/components/ui/modal-close-buttons";
 import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
 import { PixelGlow } from "@/lib/pixel/PixelGlow";
 import { PixelText } from "@/lib/pixel/PixelText";
@@ -167,7 +168,7 @@ function TerminalOutput({
 													src={line.screenshotUrl}
 													alt="Screenshot"
 													className="max-h-24 max-w-[200px] border-2 border-border object-contain hover:border-primary/60 transition-colors"
-													style={{ imageRendering: "pixelated" }}
+													style={PIXELATED_STYLE}
 													loading="lazy"
 												/>
 											</button>
