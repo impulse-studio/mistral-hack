@@ -29,6 +29,9 @@ function computeFitZoom(
 	return ZOOM_MIN;
 }
 
+/** Furniture UIDs that show pointer cursor on hover and fire onClickFurniture */
+const CLICKABLE_FURNITURE = new Set(["game-table", "game-laptop"]);
+
 interface OfficeCanvasProps {
 	officeState: OfficeState;
 	onClickAgent: (agentId: number) => void;
@@ -191,11 +194,45 @@ export function OfficeCanvas({ officeState, onClickAgent, onClickFurniture }: Of
 		}
 	}, []);
 
-	const handlePointerMove = useCallback((e: React.PointerEvent) => {
-		if (!isPanning.current) return;
-		panRef.current.x = panStart.current.px + (e.clientX - panStart.current.mx);
-		panRef.current.y = panStart.current.py + (e.clientY - panStart.current.my);
-	}, []);
+	const handlePointerMove = useCallback(
+		(e: React.PointerEvent) => {
+			if (isPanning.current) {
+				panRef.current.x = panStart.current.px + (e.clientX - panStart.current.mx);
+				panRef.current.y = panStart.current.py + (e.clientY - panStart.current.my);
+				return;
+			}
+			// Cursor feedback: pointer for agents + clickable furniture
+			const canvas = canvasRef.current;
+			if (!canvas) return;
+			const rect = canvas.getBoundingClientRect();
+			const dpr = window.devicePixelRatio || 1;
+			const cx = e.clientX - rect.left;
+			const cy = e.clientY - rect.top;
+			const z = zoomRef.current;
+			const w = canvas.width / dpr;
+			const h = canvas.height / dpr;
+			const layout = officeState.getLayout();
+			const mapW = layout.cols * TILE_SIZE * z;
+			const mapH = layout.rows * TILE_SIZE * z;
+			const ox = Math.floor((w - mapW) / 2) + Math.round(panRef.current.x);
+			const oy = Math.floor((h - mapH) / 2) + Math.round(panRef.current.y);
+			const wx = (cx - ox) / z;
+			const wy = (cy - oy) / z;
+
+			const hitAgent = officeState.getCharacterAt(wx, wy);
+			if (hitAgent !== null) {
+				canvas.style.cursor = "pointer";
+				return;
+			}
+			const hitFurn = officeState.getFurnitureUidAt(wx, wy);
+			if (hitFurn && (hitFurn === "pc-mgr" || CLICKABLE_FURNITURE.has(hitFurn))) {
+				canvas.style.cursor = "pointer";
+				return;
+			}
+			canvas.style.cursor = "default";
+		},
+		[officeState],
+	);
 
 	const handlePointerUp = useCallback(() => {
 		isPanning.current = false;

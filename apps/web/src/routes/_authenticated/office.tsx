@@ -15,6 +15,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { authClient } from "@/lib/auth-client";
+import { GamesGameArcadeModal } from "@/lib/games/GameArcadeModal.component";
 import { KanbanAgentModalSmart } from "@/lib/kanban/AgentKanbanModal.smart";
 import { KanbanTaskDetailSmart } from "@/lib/kanban/TaskDetailModal.smart";
 import { MasterAgentPanel } from "@/lib/master-agent-panel/MasterAgentPanel.component";
@@ -89,6 +90,7 @@ function OfficeContent() {
 	const [showManagerModal, setShowManagerModal] = useState(false);
 	const [showWorkerBoards, setShowWorkerBoards] = useState(false);
 	const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+	const [showArcade, setShowArcade] = useState(false);
 	const [tilesetReady, setTilesetReady] = useState(false);
 	const officeRef = useRef<OfficeState | null>(null);
 	const agentMapRef = useRef(new Map<string, number>()); // convex agent _id → canvas id
@@ -198,6 +200,12 @@ function OfficeContent() {
 
 	const handleClosePanel = useCallback(() => {
 		setSelectedAgentId(null);
+	}, []);
+
+	const handleClickFurniture = useCallback((uid: string) => {
+		if (uid === "game-table" || uid === "game-laptop") {
+			setShowArcade(true);
+		}
 	}, []);
 
 	// ── Resolve selected agent info for panel ──
@@ -354,7 +362,11 @@ function OfficeContent() {
 
 			{/* Canvas — fills entire space */}
 			<div className="absolute inset-0">
-				<OfficeCanvas officeState={officeState} onClickAgent={handleClickAgent} />
+				<OfficeCanvas
+					officeState={officeState}
+					onClickAgent={handleClickAgent}
+					onClickFurniture={handleClickFurniture}
+				/>
 			</div>
 
 			{/* Agent side panel */}
@@ -395,6 +407,9 @@ function OfficeContent() {
 
 			{/* Task detail modal (opened from worker boards) */}
 			<KanbanTaskDetailSmart taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} />
+
+			{/* Game arcade modal (triggered by clicking game table) */}
+			<GamesGameArcadeModal open={showArcade} onClose={() => setShowArcade(false)} />
 		</div>
 	);
 }

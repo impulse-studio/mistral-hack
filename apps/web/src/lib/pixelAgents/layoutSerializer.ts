@@ -415,6 +415,7 @@ export function createDefaultLayout(): OfficeLayout {
 
 		// Game table in the lounge (near the entrance door)
 		{ uid: "game-table", type: FurnitureType.DESK, col: 8, row: 12 },
+		{ uid: "game-laptop", type: FurnitureType.LAPTOP, col: 9, row: 12 },
 
 		// Lounge decor
 		{ uid: "plant-lg-1", type: FurnitureType.PLANT, col: 18, row: 10 },
