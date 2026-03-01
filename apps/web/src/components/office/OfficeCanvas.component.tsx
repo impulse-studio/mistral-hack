@@ -125,7 +125,7 @@ export function OfficeCanvas({
 	// Cat overlay: two DOM imgs so the browser natively animates GIF/WebP
 	const catWalkRef = useRef<HTMLImageElement>(null);
 	const catSitRef = useRef<HTMLImageElement>(null);
-	const catPrevWalkingRef = useRef(false);
+	const catPrevWalkingRef = useRef(true); // mismatch with initial isWalking=false forces first-frame toggle
 
 	useEffect(() => {
 		docCountRef.current = documentCount;
@@ -361,6 +361,7 @@ export function OfficeCanvas({
 					imageRendering: "pixelated",
 					width: CAT_RENDER_WIDTH * ZOOM_FIXED,
 					height: CAT_RENDER_WIDTH * ZOOM_FIXED * 0.8,
+					display: "none",
 				}}
 			/>
 			<img
