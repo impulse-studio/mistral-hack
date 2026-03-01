@@ -10,7 +10,15 @@ import { cn } from "@/lib/utils";
 
 // ── Types ────────────────────────────────────────────────
 
-type TaskStatus = "backlog" | "todo" | "waiting" | "in_progress" | "review" | "done" | "failed";
+type TaskStatus =
+	| "backlog"
+	| "todo"
+	| "waiting"
+	| "in_progress"
+	| "review"
+	| "done"
+	| "failed"
+	| "cancelled";
 
 interface AgentTask {
 	id: string;
@@ -47,6 +55,7 @@ const STATUS_DISPLAY = {
 	review: { label: "Review", color: "yellow" },
 	done: { label: "Done", color: "green" },
 	failed: { label: "Failed", color: "red" },
+	cancelled: { label: "Cancelled", color: "muted" },
 } as const;
 
 const AGENT_GLOW_COLOR = {
