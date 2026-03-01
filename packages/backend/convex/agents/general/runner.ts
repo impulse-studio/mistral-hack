@@ -160,5 +160,11 @@ export async function runGeneralTask(
 		content: `[${role}] Done — ${succeeded}/${results.length} steps succeeded`,
 	});
 
+	// If zero steps succeeded, the task genuinely failed — throw so the main
+	// runner propagates failure status to the manager.
+	if (succeeded === 0 && results.length > 0) {
+		throw new Error(`All ${results.length} steps failed.\n\n${summary}`);
+	}
+
 	return summary;
 }

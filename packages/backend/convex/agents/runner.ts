@@ -111,28 +111,43 @@ export const runSubAgent = internalAction({
 				result = await runGeneralTask(ctx, agentId, task, agent.role);
 			}
 
-			// 3. Complete task (agent lifecycle handled by onSubAgentComplete)
+			// 3. Detect partial failures from the result summary.
+			// Role runners return strings like "0/5 steps succeeded" or "[FAIL]"
+			// when individual steps fail but the runner didn't throw outright.
+			const hasFailures = /\b0\/\d+ steps succeeded\b/.test(result) || /\[FAIL\]/.test(result);
+			const taskSuccess = !hasFailures;
+			const finalStatus = taskSuccess ? "done" : "failed";
+
 			await ctx.runMutation(internal.tasks.mutations.updateStatusInternal, {
 				taskId,
-				status: "done",
+				status: finalStatus,
 			});
 
 			// Log completion
 			await ctx.runMutation(internal.logs.mutations.append, {
 				agentId,
-				type: "status",
-				content: `Task completed: ${task.title}`,
+				type: taskSuccess ? "status" : "stderr",
+				content: taskSuccess
+					? `Task completed: ${task.title}`
+					: `Task finished with failures: ${task.title}`,
 			});
+
+			if (!taskSuccess) {
+				await ctx.runMutation(internal.office.mutations.updateAgentStatus, {
+					agentId,
+					status: "failed",
+				});
+			}
 
 			// Notify completion handler
 			await ctx.runMutation(internal.agents.onComplete.onSubAgentComplete, {
 				agentId,
 				taskId,
-				success: true,
-				result,
+				success: taskSuccess,
+				...(taskSuccess ? { result } : { result, error: result }),
 			});
 
-			return { success: true, result };
+			return { success: taskSuccess, result };
 		} catch (error) {
 			const errorMsg = error instanceof Error ? error.message : String(error);
 

@@ -3,6 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
 import { useCallback, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { AgentSessionModalSmart } from "@/lib/agent/AgentSessionModal.smart";
+import { KanbanAgentModalSmart } from "@/lib/kanban/AgentKanbanModal.smart";
 import {
 	KanbanBoard,
 	type KanbanBoardFilters,
@@ -82,6 +85,8 @@ function mapKanbanToTasks(
 function RouteComponent() {
 	const kanbanData = useQuery(api.tasks.queries.getKanban);
 	const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+	const [agentBoardOpen, setAgentBoardOpen] = useState(false);
+	const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
 
 	const handleTaskClick = useCallback((id: string) => {
 		setSelectedTaskId(id);
@@ -89,6 +94,20 @@ function RouteComponent() {
 
 	const handleCloseDetail = useCallback(() => {
 		setSelectedTaskId(null);
+	}, []);
+
+	const handleAgentTaskClick = useCallback((taskId: string) => {
+		setAgentBoardOpen(false);
+		setSelectedTaskId(taskId);
+	}, []);
+
+	const handleAgentClick = useCallback((agentId: string) => {
+		setAgentBoardOpen(false);
+		setSelectedAgentId(agentId);
+	}, []);
+
+	const handleCloseAgentSession = useCallback(() => {
+		setSelectedAgentId(null);
 	}, []);
 
 	if (kanbanData === undefined) {
@@ -112,8 +131,29 @@ function RouteComponent() {
 				readOnly
 				onTaskClick={handleTaskClick}
 				className="h-full"
+				headerAction={
+					<Button
+						variant="elevated"
+						size="sm"
+						onClick={() => setAgentBoardOpen(true)}
+						className="font-mono text-[11px] font-semibold uppercase tracking-widest"
+					>
+						Worker Boards
+					</Button>
+				}
 			/>
 			<KanbanTaskDetailSmart taskId={selectedTaskId} onClose={handleCloseDetail} />
+			<KanbanAgentModalSmart
+				open={agentBoardOpen}
+				onClose={() => setAgentBoardOpen(false)}
+				onTaskClick={handleAgentTaskClick}
+				onAgentClick={handleAgentClick}
+			/>
+			<AgentSessionModalSmart
+				agentId={selectedAgentId}
+				open={!!selectedAgentId}
+				onClose={handleCloseAgentSession}
+			/>
 		</div>
 	);
 }

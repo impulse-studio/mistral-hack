@@ -32,9 +32,10 @@ function computeFitZoom(
 interface OfficeCanvasProps {
 	officeState: OfficeState;
 	onClickAgent: (agentId: number) => void;
+	onClickFurniture?: (uid: string) => void;
 }
 
-export function OfficeCanvas({ officeState, onClickAgent }: OfficeCanvasProps) {
+export function OfficeCanvas({ officeState, onClickAgent, onClickFurniture }: OfficeCanvasProps) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [zoom, setZoom] = useState(ZOOM_MIN); // placeholder until container measured
@@ -156,18 +157,20 @@ export function OfficeCanvas({ officeState, onClickAgent }: OfficeCanvasProps) {
 				officeState.selectedAgentId = agentId;
 				onClickAgent(agentId);
 			} else {
-				// Check if clicked on manager's PC furniture
+				// Check if clicked on furniture
 				const furnitureUid = officeState.getFurnitureUidAt(worldX, worldY);
 				if (furnitureUid === "pc-mgr") {
 					officeState.selectedAgentId = 0;
 					onClickAgent(0);
+				} else if (furnitureUid && onClickFurniture) {
+					onClickFurniture(furnitureUid);
 				} else {
 					officeState.selectedAgentId = null;
 					onClickAgent(-1);
 				}
 			}
 		},
-		[officeState, onClickAgent],
+		[officeState, onClickAgent, onClickFurniture],
 	);
 
 	// Pan via middle-mouse drag

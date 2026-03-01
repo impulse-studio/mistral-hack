@@ -47,6 +47,7 @@ interface OfficeAgentPanelProps {
 	deliverables?: OfficeAgentPanelDeliverable[];
 	latestScreenshotUrl?: string | null;
 	onClose: () => void;
+	onOpenWorkerBoards?: () => void;
 }
 
 type OfficeAgentPanelTab = "tasks" | "terminal" | "screen" | "reasoning" | "files";
@@ -80,6 +81,7 @@ export function OfficeAgentPanel({
 	deliverables,
 	latestScreenshotUrl,
 	onClose,
+	onOpenWorkerBoards,
 }: OfficeAgentPanelProps) {
 	const [activeTab, setActiveTab] = useState<OfficeAgentPanelTab>("tasks");
 
@@ -123,6 +125,16 @@ export function OfficeAgentPanel({
 										<PixelBadge color={badgeColor} size="sm">
 											{agent.status}
 										</PixelBadge>
+										{onOpenWorkerBoards && (
+											<Button
+												variant="ghost"
+												size="xs"
+												onClick={onOpenWorkerBoards}
+												className="font-mono text-[8px] uppercase tracking-widest text-muted-foreground"
+											>
+												All Workers
+											</Button>
+										)}
 									</div>
 								</div>
 							</div>

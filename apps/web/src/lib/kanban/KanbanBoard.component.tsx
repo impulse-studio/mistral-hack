@@ -55,6 +55,8 @@ interface KanbanBoardProps {
 	onTaskClick?: (id: string) => void;
 	/** Called when a task is moved via DnD. Only fires when readOnly=false. */
 	onTaskMove?: (taskId: string, fromStatus: KanbanTaskStatus, toStatus: KanbanTaskStatus) => void;
+	/** Optional action element rendered in the header bar (e.g. a button). */
+	headerAction?: React.ReactNode;
 	className?: string;
 }
 
@@ -163,6 +165,7 @@ function KanbanBoard({
 	allowDragOut = false,
 	onTaskClick,
 	onTaskMove,
+	headerAction,
 	className,
 }: KanbanBoardProps) {
 	const filteredTasks = filterTasks(tasks, filters);
@@ -222,11 +225,14 @@ function KanbanBoard({
 						</PixelText>
 					)}
 				</div>
-				{readOnly && (
-					<PixelBadge color="cyan" size="md">
-						Readonly
-					</PixelBadge>
-				)}
+				<div className="flex items-center gap-2">
+					{headerAction}
+					{readOnly && (
+						<PixelBadge color="cyan" size="md">
+							Readonly
+						</PixelBadge>
+					)}
+				</div>
 			</PixelBorderBox>
 
 			{filteredTasks.length === 0 ? (

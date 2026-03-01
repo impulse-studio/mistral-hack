@@ -413,10 +413,13 @@ export function createDefaultLayout(): OfficeLayout {
 		{ uid: "bookshelf-lg-2", type: FurnitureType.BOOKSHELF, col: 2, row: 10 },
 		{ uid: "bookshelf-lg-3", type: FurnitureType.BOOKSHELF, col: 3, row: 10 },
 
+		// Game table in the lounge (near the entrance door)
+		{ uid: "game-table", type: FurnitureType.DESK, col: 8, row: 12 },
+
 		// Lounge decor
 		{ uid: "plant-lg-1", type: FurnitureType.PLANT, col: 18, row: 10 },
 		{ uid: "plant-lg-2", type: FurnitureType.PLANT, col: 1, row: 14 },
-		{ uid: "lamp-lg-1", type: FurnitureType.LAMP, col: 8, row: 14 },
+		{ uid: "lamp-lg-1", type: FurnitureType.LAMP, col: 11, row: 14 },
 		{ uid: "lamp-lg-2", type: FurnitureType.LAMP, col: 15, row: 10 },
 
 		// ═══ KITCHEN (bottom-right: cols 21-28, rows 10-15) ═══

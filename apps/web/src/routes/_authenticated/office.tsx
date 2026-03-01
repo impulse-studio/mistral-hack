@@ -15,6 +15,8 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { authClient } from "@/lib/auth-client";
+import { AgentKanbanModalSmart } from "@/lib/kanban/AgentKanbanModal.smart";
+import { KanbanTaskDetailSmart } from "@/lib/kanban/TaskDetailModal.smart";
 import { MasterAgentPanel } from "@/lib/master-agent-panel/MasterAgentPanel.component";
 import { initTileset } from "@/lib/pixelAgents/initTileset";
 import { OfficeState } from "@/lib/pixelAgents/officeState";
@@ -85,6 +87,8 @@ function OfficeContent() {
 
 	const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 	const [showManagerModal, setShowManagerModal] = useState(false);
+	const [showWorkerBoards, setShowWorkerBoards] = useState(false);
+	const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 	const [tilesetReady, setTilesetReady] = useState(false);
 	const officeRef = useRef<OfficeState | null>(null);
 	const agentMapRef = useRef(new Map<string, number>()); // convex agent _id → canvas id
@@ -363,6 +367,7 @@ function OfficeContent() {
 				deliverables={agentDeliverables}
 				latestScreenshotUrl={latestScreenshotUrl}
 				onClose={handleClosePanel}
+				onOpenWorkerBoards={() => setShowWorkerBoards(true)}
 			/>
 
 			{/* Manager modal */}
@@ -377,6 +382,19 @@ function OfficeContent() {
 					</div>
 				</DialogContent>
 			</Dialog>
+
+			{/* Worker boards modal */}
+			<AgentKanbanModalSmart
+				open={showWorkerBoards}
+				onClose={() => setShowWorkerBoards(false)}
+				onTaskClick={(taskId) => {
+					setShowWorkerBoards(false);
+					setSelectedTaskId(taskId);
+				}}
+			/>
+
+			{/* Task detail modal (opened from worker boards) */}
+			<KanbanTaskDetailSmart taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} />
 		</div>
 	);
 }
