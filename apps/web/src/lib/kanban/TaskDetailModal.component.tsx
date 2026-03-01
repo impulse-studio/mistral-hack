@@ -27,6 +27,13 @@ export interface KanbanTaskComment {
 	createdAt: number;
 }
 
+export interface KanbanTaskDependency {
+	id: string;
+	title: string;
+	status: string;
+	done: boolean;
+}
+
 export interface KanbanTaskAssignee {
 	name: string;
 	initials: string;
@@ -56,6 +63,7 @@ export interface KanbanTaskDetailProps {
 	priority?: Priority;
 	labels?: Array<{ text: string; color: LabelColor }>;
 	subtasks?: KanbanTaskSubtaskItem[];
+	dependencies?: { dependsOn: KanbanTaskDependency[]; blocks: KanbanTaskDependency[] };
 	assignee?: KanbanTaskAssignee;
 	reasoning?: string;
 	comments?: KanbanTaskComment[];
@@ -144,6 +152,7 @@ function KanbanTaskDetail({
 	priority,
 	labels,
 	subtasks,
+	dependencies,
 	assignee,
 	reasoning,
 	comments,
@@ -341,6 +350,95 @@ function KanbanTaskDetail({
 							</ul>
 						</>
 					)}
+
+					{/* Dependencies */}
+					{dependencies &&
+						(dependencies.dependsOn.length > 0 || dependencies.blocks.length > 0) && (
+							<>
+								<PixelDivider variant="dashed" className="my-3" />
+								<PixelText variant="label" color="muted" className="mb-1.5 block">
+									Dependencies
+								</PixelText>
+								{dependencies.dependsOn.length > 0 && (
+									<div className="mb-2">
+										<PixelText
+											variant="id"
+											color="muted"
+											className="mb-1 block text-[9px] uppercase"
+										>
+											Depends on
+										</PixelText>
+										<ul className="flex flex-col gap-1">
+											{dependencies.dependsOn.map((dep) => (
+												<li key={dep.id} className="flex items-center gap-2">
+													<div
+														className={cn(
+															"flex size-3.5 shrink-0 items-center justify-center border-2 border-border font-mono text-[8px]",
+															dep.done && "border-green-500 bg-green-500/20 text-green-500",
+														)}
+													>
+														{dep.done ? "\u2713" : ""}
+													</div>
+													<PixelText variant="id" color="muted" className="shrink-0">
+														{dep.id.slice(-4)}
+													</PixelText>
+													<PixelText
+														variant="body"
+														color={dep.done ? "muted" : "default"}
+														className={cn("truncate", dep.done && "line-through")}
+													>
+														{dep.title}
+													</PixelText>
+													<PixelBadge
+														color={
+															STATUS_DISPLAY[dep.status as keyof typeof STATUS_DISPLAY]?.color ??
+															"muted"
+														}
+														size="sm"
+													>
+														{STATUS_DISPLAY[dep.status as keyof typeof STATUS_DISPLAY]?.label ??
+															dep.status}
+													</PixelBadge>
+												</li>
+											))}
+										</ul>
+									</div>
+								)}
+								{dependencies.blocks.length > 0 && (
+									<div>
+										<PixelText
+											variant="id"
+											color="muted"
+											className="mb-1 block text-[9px] uppercase"
+										>
+											Blocks
+										</PixelText>
+										<ul className="flex flex-col gap-1">
+											{dependencies.blocks.map((dep) => (
+												<li key={dep.id} className="flex items-center gap-2">
+													<PixelText variant="id" color="muted" className="shrink-0">
+														{dep.id.slice(-4)}
+													</PixelText>
+													<PixelText variant="body" className="truncate">
+														{dep.title}
+													</PixelText>
+													<PixelBadge
+														color={
+															STATUS_DISPLAY[dep.status as keyof typeof STATUS_DISPLAY]?.color ??
+															"muted"
+														}
+														size="sm"
+													>
+														{STATUS_DISPLAY[dep.status as keyof typeof STATUS_DISPLAY]?.label ??
+															dep.status}
+													</PixelBadge>
+												</li>
+											))}
+										</ul>
+									</div>
+								)}
+							</>
+						)}
 
 					{/* Assigned to */}
 					{assignee && (

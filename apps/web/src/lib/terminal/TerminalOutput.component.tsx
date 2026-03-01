@@ -7,10 +7,21 @@ import { cn } from "@/lib/utils";
 
 import { terminalAnsiToSpans } from "./AnsiToSpans";
 
+type TerminalLineType =
+	| "stdout"
+	| "stderr"
+	| "command"
+	| "status"
+	| "tool_call"
+	| "tool_result"
+	| "screenshot";
+
 interface TerminalLine {
 	id: string;
 	text: string;
 	timestamp?: number;
+	logType?: TerminalLineType;
+	screenshotUrl?: string | null;
 }
 
 interface TerminalOutputProps {
@@ -22,6 +33,16 @@ interface TerminalOutputProps {
 	onClickLine?: (line: TerminalLine) => void;
 	className?: string;
 }
+
+const LOG_TYPE_COLOR: Record<string, string> = {
+	command: "text-cyan-400",
+	stderr: "text-red-400/90",
+	tool_call: "text-purple-400",
+	tool_result: "text-purple-400/70",
+	status: "text-yellow-400/90",
+	screenshot: "text-blue-400/80",
+	stdout: "text-green-400/90",
+};
 
 const STATUS_GLOW = {
 	connected: { color: "green", pulse: false, label: "Connected" },
@@ -94,30 +115,42 @@ function TerminalOutput({
 					</div>
 				) : (
 					<div className="flex flex-col">
-						{visibleLines.map((line) => (
-							<div
-								key={line.id}
-								role={onClickLine ? "button" : undefined}
-								tabIndex={onClickLine ? 0 : undefined}
-								onClick={onClickLine ? () => onClickLine(line) : undefined}
-								onKeyDown={
-									onClickLine
-										? (e) => {
-												if (e.key === "Enter" || e.key === " ") {
-													e.preventDefault();
-													onClickLine(line);
+						{visibleLines.map((line) => {
+							const lineColor = LOG_TYPE_COLOR[line.logType ?? "stdout"] ?? "text-green-400/90";
+							return (
+								<div
+									key={line.id}
+									role={onClickLine ? "button" : undefined}
+									tabIndex={onClickLine ? 0 : undefined}
+									onClick={onClickLine ? () => onClickLine(line) : undefined}
+									onKeyDown={
+										onClickLine
+											? (e) => {
+													if (e.key === "Enter" || e.key === " ") {
+														e.preventDefault();
+														onClickLine(line);
+													}
 												}
-											}
-										: undefined
-								}
-								className={cn(
-									"font-mono text-[11px] leading-relaxed text-green-400/90 px-1 whitespace-pre-wrap break-all",
-									onClickLine && "hover:bg-white/5 cursor-pointer",
-								)}
-							>
-								{terminalAnsiToSpans(line.text)}
-							</div>
-						))}
+											: undefined
+									}
+									className={cn(
+										`font-mono text-[11px] leading-relaxed px-1 whitespace-pre-wrap break-all ${lineColor}`,
+										onClickLine && "hover:bg-white/5 cursor-pointer",
+									)}
+								>
+									{terminalAnsiToSpans(line.text)}
+									{line.screenshotUrl && (
+										<img
+											src={line.screenshotUrl}
+											alt="Screenshot"
+											className="mt-1 max-h-24 max-w-[200px] border-2 border-border object-contain"
+											style={{ imageRendering: "pixelated" }}
+											loading="lazy"
+										/>
+									)}
+								</div>
+							);
+						})}
 					</div>
 				)}
 				<div ref={bottomSentinelRef} />
@@ -127,4 +160,4 @@ function TerminalOutput({
 }
 
 export { TerminalOutput };
-export type { TerminalOutputProps, TerminalLine };
+export type { TerminalOutputProps, TerminalLine, TerminalLineType };

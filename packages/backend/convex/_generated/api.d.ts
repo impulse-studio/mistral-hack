@@ -8,16 +8,27 @@
  * @module
  */
 
-import type * as agent from "../agent.js";
+import type * as agents_browser_runner from "../agents/browser/runner.js";
+import type * as agents_coder_agent from "../agents/coder/agent.js";
+import type * as agents_coder_runner from "../agents/coder/runner.js";
+import type * as agents_general_agent from "../agents/general/agent.js";
+import type * as agents_general_runner from "../agents/general/runner.js";
+import type * as agents_manager_agent from "../agents/manager/agent.js";
+import type * as agents_manager_tools from "../agents/manager/tools.js";
+import type * as agents_models from "../agents/models.js";
 import type * as agents_onComplete from "../agents/onComplete.js";
 import type * as agents_onCompleteActions from "../agents/onCompleteActions.js";
 import type * as agents_queries from "../agents/queries.js";
+import type * as agents_registry from "../agents/registry.js";
 import type * as agents_respondToComment from "../agents/respondToComment.js";
 import type * as agents_runner from "../agents/runner.js";
+import type * as agents_shared_tools from "../agents/shared/tools.js";
+import type * as agents_shared_types from "../agents/shared/types.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
 import type * as debug from "../debug.js";
 import type * as deliverables_mutations from "../deliverables/mutations.js";
+import type * as deliverables_queries from "../deliverables/queries.js";
 import type * as healthCheck from "../healthCheck.js";
 import type * as http from "../http.js";
 import type * as logs_mutations from "../logs/mutations.js";
@@ -42,6 +53,7 @@ import type * as sandbox_helpers from "../sandbox/helpers.js";
 import type * as sandbox_lifecycle from "../sandbox/lifecycle.js";
 import type * as sandbox_mutations from "../sandbox/mutations.js";
 import type * as sandbox_queries from "../sandbox/queries.js";
+import type * as sandbox_shellUtils from "../sandbox/shellUtils.js";
 import type * as sandbox_streamLogs from "../sandbox/streamLogs.js";
 import type * as sandbox_vibe from "../sandbox/vibe.js";
 import type * as systemConfig from "../systemConfig.js";
@@ -67,16 +79,27 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  agent: typeof agent;
+  "agents/browser/runner": typeof agents_browser_runner;
+  "agents/coder/agent": typeof agents_coder_agent;
+  "agents/coder/runner": typeof agents_coder_runner;
+  "agents/general/agent": typeof agents_general_agent;
+  "agents/general/runner": typeof agents_general_runner;
+  "agents/manager/agent": typeof agents_manager_agent;
+  "agents/manager/tools": typeof agents_manager_tools;
+  "agents/models": typeof agents_models;
   "agents/onComplete": typeof agents_onComplete;
   "agents/onCompleteActions": typeof agents_onCompleteActions;
   "agents/queries": typeof agents_queries;
+  "agents/registry": typeof agents_registry;
   "agents/respondToComment": typeof agents_respondToComment;
   "agents/runner": typeof agents_runner;
+  "agents/shared/tools": typeof agents_shared_tools;
+  "agents/shared/types": typeof agents_shared_types;
   auth: typeof auth;
   chat: typeof chat;
   debug: typeof debug;
   "deliverables/mutations": typeof deliverables_mutations;
+  "deliverables/queries": typeof deliverables_queries;
   healthCheck: typeof healthCheck;
   http: typeof http;
   "logs/mutations": typeof logs_mutations;
@@ -101,6 +124,7 @@ declare const fullApi: ApiFromModules<{
   "sandbox/lifecycle": typeof sandbox_lifecycle;
   "sandbox/mutations": typeof sandbox_mutations;
   "sandbox/queries": typeof sandbox_queries;
+  "sandbox/shellUtils": typeof sandbox_shellUtils;
   "sandbox/streamLogs": typeof sandbox_streamLogs;
   "sandbox/vibe": typeof sandbox_vibe;
   systemConfig: typeof systemConfig;

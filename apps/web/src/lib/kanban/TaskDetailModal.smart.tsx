@@ -6,6 +6,7 @@ import { useCallback } from "react";
 import type {
 	KanbanTaskAssignee,
 	KanbanTaskComment,
+	KanbanTaskDependency,
 	KanbanTaskSubtaskItem,
 } from "./TaskDetailModal.component";
 import { KanbanTaskDetail } from "./TaskDetailModal.component";
@@ -26,11 +27,16 @@ const KANBAN_AGENT_STATUS_MAP: Record<string, KanbanTaskAssignee["status"]> = {
 interface KanbanTaskDetailSmartProps {
 	taskId: string | null;
 	onClose: () => void;
+	onOpenAgentSession?: (agentId: string) => void;
 }
 
 // ── Component ───────────────────────────────────────────
 
-function KanbanTaskDetailSmart({ taskId, onClose }: KanbanTaskDetailSmartProps) {
+function KanbanTaskDetailSmart({
+	taskId,
+	onClose,
+	onOpenAgentSession,
+}: KanbanTaskDetailSmartProps) {
 	const typedTaskId = taskId as GenericId<"tasks"> | null;
 
 	const task = useQuery(api.tasks.queries.get, typedTaskId ? { taskId: typedTaskId } : "skip");
@@ -42,12 +48,22 @@ function KanbanTaskDetailSmart({ taskId, onClose }: KanbanTaskDetailSmartProps) 
 		api.tasks.comments.listByTask,
 		typedTaskId ? { taskId: typedTaskId } : "skip",
 	);
+	const depInfo = useQuery(
+		api.tasks.dependencies.getDependencyInfo,
+		typedTaskId ? { taskId: typedTaskId } : "skip",
+	);
 	const agentData = useQuery(
 		api.office.queries.getAgent,
 		task?.assignedTo ? { agentId: task.assignedTo } : "skip",
 	);
 
 	const addCommentMutation = useMutation(api.tasks.comments.add);
+
+	const handleOpenTerminal = useCallback(() => {
+		if (!task?.assignedTo || !onOpenAgentSession) return;
+		onClose();
+		onOpenAgentSession(String(task.assignedTo));
+	}, [task?.assignedTo, onOpenAgentSession, onClose]);
 
 	const handleAddComment = useCallback(
 		(content: string) => {
@@ -84,6 +100,25 @@ function KanbanTaskDetailSmart({ taskId, onClose }: KanbanTaskDetailSmartProps) 
 			}
 		: undefined;
 
+	const mappedDependencies:
+		| { dependsOn: KanbanTaskDependency[]; blocks: KanbanTaskDependency[] }
+		| undefined = depInfo
+		? {
+				dependsOn: depInfo.dependsOn.map((d) => ({
+					id: d.id,
+					title: d.title,
+					status: d.status,
+					done: d.status === "done",
+				})),
+				blocks: depInfo.blocks.map((d) => ({
+					id: d.id,
+					title: d.title,
+					status: d.status,
+					done: d.status === "done",
+				})),
+			}
+		: undefined;
+
 	const mappedLabels: Array<{ text: string; color: "orange" | "blue" | "muted" }> | undefined = task
 		? [
 				{
@@ -106,6 +141,7 @@ function KanbanTaskDetailSmart({ taskId, onClose }: KanbanTaskDetailSmartProps) 
 			description={task?.description}
 			labels={mappedLabels}
 			subtasks={mappedSubtasks}
+			dependencies={mappedDependencies}
 			assignee={mappedAssignee}
 			comments={mappedComments ?? []}
 			result={task?.result}
@@ -114,6 +150,7 @@ function KanbanTaskDetailSmart({ taskId, onClose }: KanbanTaskDetailSmartProps) 
 			startedAt={task?.startedAt}
 			completedAt={task?.completedAt}
 			onAddComment={handleAddComment}
+			onOpenTerminal={task?.assignedTo && onOpenAgentSession ? handleOpenTerminal : undefined}
 			debug={true}
 		/>
 	);

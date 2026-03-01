@@ -36,6 +36,47 @@ export const canStart = query({
 	},
 });
 
+// Both directions: what this task depends on + what it blocks
+const depInfoItem = v.object({
+	id: v.id("tasks"),
+	title: v.string(),
+	status: v.string(),
+});
+
+export const getDependencyInfo = query({
+	args: { taskId: v.id("tasks") },
+	returns: v.object({
+		dependsOn: v.array(depInfoItem),
+		blocks: v.array(depInfoItem),
+	}),
+	handler: async (ctx, { taskId }) => {
+		const task = await ctx.db.get(taskId);
+		if (!task) return { dependsOn: [], blocks: [] };
+
+		// Forward: resolve dependsOn IDs
+		const dependsOn: Array<{ id: Id<"tasks">; title: string; status: string }> = [];
+		for (const depId of task.dependsOn ?? []) {
+			const dep = await ctx.db.get(depId);
+			dependsOn.push({
+				id: depId,
+				title: dep?.title ?? "(deleted)",
+				status: dep?.status ?? "not_found",
+			});
+		}
+
+		// Reverse: find tasks that depend on this one
+		const allTasks = await ctx.db.query("tasks").collect();
+		const blocks: Array<{ id: Id<"tasks">; title: string; status: string }> = [];
+		for (const t of allTasks) {
+			if (t.dependsOn?.includes(taskId)) {
+				blocks.push({ id: t._id, title: t.title, status: t.status });
+			}
+		}
+
+		return { dependsOn, blocks };
+	},
+});
+
 // Internal version for use by actions (runner, tools)
 export const canStartInternal = internalQuery({
 	args: { taskId: v.id("tasks") },

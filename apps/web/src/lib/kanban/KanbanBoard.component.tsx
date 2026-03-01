@@ -32,6 +32,7 @@ interface KanbanBoardTask {
 	subtasksTotal?: number;
 	assigneeInitials?: string;
 	assigneeColor?: string;
+	blocked?: boolean;
 }
 
 interface KanbanBoardFilters {
@@ -184,6 +185,7 @@ function KanbanBoard({
 			subtasksTotal: task.subtasksTotal,
 			assigneeInitials: task.assigneeInitials,
 			assigneeColor: task.assigneeColor,
+			blocked: task.blocked,
 		});
 	}
 

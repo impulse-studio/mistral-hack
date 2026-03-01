@@ -91,6 +91,7 @@ export interface KanbanItemProps {
 	subtasksTotal?: number;
 	assigneeInitials?: string;
 	assigneeColor?: string;
+	blocked?: boolean;
 	draggable?: boolean;
 	sourceStatus?: string;
 	className?: string;
@@ -149,6 +150,7 @@ function KanbanItem({
 	subtasksTotal,
 	assigneeInitials,
 	assigneeColor,
+	blocked = false,
 	draggable = false,
 	sourceStatus,
 	className,
@@ -186,9 +188,14 @@ function KanbanItem({
 			</p>
 
 			{/* Labels */}
-			{labels && labels.length > 0 && (
+			{(blocked || (labels && labels.length > 0)) && (
 				<div className="mb-2 flex flex-wrap gap-1">
-					{labels.map((label) => (
+					{blocked && (
+						<PixelBadge color="red" variant="solid">
+							Blocked
+						</PixelBadge>
+					)}
+					{labels?.map((label) => (
 						<PixelBadge key={label.text} color={label.color}>
 							{label.text}
 						</PixelBadge>

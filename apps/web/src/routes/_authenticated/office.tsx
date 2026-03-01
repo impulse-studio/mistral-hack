@@ -213,6 +213,38 @@ function OfficeContent() {
 
 	const selectedConvexAgentId = selectedConvexAgent?._id;
 
+	const agentTasksRaw = useQuery(
+		api.tasks.queries.listByAgent,
+		selectedConvexAgentId ? { agentId: selectedConvexAgentId } : "skip",
+	);
+
+	const agentTasks = useMemo(() => {
+		if (!agentTasksRaw) return EMPTY_TASKS;
+		return agentTasksRaw.map((t) => ({
+			id: String(t._id),
+			title: t.title,
+			status: t.status,
+		}));
+	}, [agentTasksRaw]);
+
+	const agentDeliverablesRaw = useQuery(
+		api.deliverables.queries.listByAgent,
+		selectedConvexAgentId ? { agentId: selectedConvexAgentId } : "skip",
+	);
+
+	const agentDeliverables = useMemo(() => {
+		if (!agentDeliverablesRaw || agentDeliverablesRaw.length === 0) return undefined;
+		return agentDeliverablesRaw.map((d) => ({
+			id: String(d._id),
+			type: d.type,
+			title: d.title,
+			filename: d.filename,
+			url: d.url,
+			mimeType: d.mimeType,
+			sizeBytes: d.sizeBytes,
+		}));
+	}, [agentDeliverablesRaw]);
+
 	const agentLogs = useQuery(
 		api.logs.queries.streamForAgent,
 		selectedConvexAgentId ? ({ agentId: selectedConvexAgentId, limit: 300 } as any) : "skip",
@@ -224,7 +256,39 @@ function OfficeContent() {
 			id: String(log._id),
 			text: mapLogToTerminalText(log.type, log.content),
 			timestamp: log.timestamp,
+			logType: log.type as import("@/lib/terminal/TerminalOutput.component").TerminalLineType,
+			screenshotUrl: log.screenshotUrl,
 		}));
+	}, [agentLogs]);
+
+	const agentReasoningSteps = useMemo(() => {
+		if (!agentLogs) return EMPTY_REASONING;
+		const statusLogs = agentLogs.filter((l) => l.type === "status");
+		if (statusLogs.length === 0) return EMPTY_REASONING;
+
+		return statusLogs.map((log, index) => {
+			const isLast = index === statusLogs.length - 1;
+			const nextTimestamp = statusLogs[index + 1]?.timestamp;
+			const duration = nextTimestamp ? nextTimestamp - log.timestamp : undefined;
+
+			return {
+				id: String(log._id),
+				title: log.content,
+				status: (isLast ? "active" : "completed") as "active" | "completed",
+				duration,
+			};
+		});
+	}, [agentLogs]);
+
+	const latestScreenshotUrl = useMemo(() => {
+		if (!agentLogs) return null;
+		for (let i = agentLogs.length - 1; i >= 0; i--) {
+			const log = agentLogs[i]!;
+			if (log.type === "screenshot" && log.screenshotUrl) {
+				return log.screenshotUrl;
+			}
+		}
+		return null;
 	}, [agentLogs]);
 
 	const agentInfo = useMemo(() => {
@@ -293,9 +357,11 @@ function OfficeContent() {
 			<OfficeAgentPanel
 				open={!!agentInfo}
 				agent={agentInfo}
-				tasks={EMPTY_TASKS}
+				tasks={agentTasks}
 				terminalLines={terminalLines}
-				reasoningSteps={EMPTY_REASONING}
+				reasoningSteps={agentReasoningSteps}
+				deliverables={agentDeliverables}
+				latestScreenshotUrl={latestScreenshotUrl}
 				onClose={handleClosePanel}
 			/>
 

@@ -29,6 +29,17 @@ function mapKanbanToTasks(
 	kanbanData: Record<string, Array<Record<string, unknown>>>,
 ): KanbanBoardTask[] {
 	const orderedStatuses = ["backlog", "todo", "waiting", "in_progress", "review", "done", "failed"];
+
+	// Build a status lookup: taskId → status string
+	const statusById = new Map<string, string>();
+	for (const status of orderedStatuses) {
+		const group = kanbanData[status];
+		if (!Array.isArray(group)) continue;
+		for (const task of group) {
+			statusById.set(String(task._id ?? ""), status);
+		}
+	}
+
 	const tasks: KanbanBoardTask[] = [];
 
 	for (const status of orderedStatuses) {
@@ -43,6 +54,10 @@ function mapKanbanToTasks(
 			const createdBy = task.createdBy === "manager" ? "manager" : "user";
 			const assigneeId = task.assignedTo ? String(task.assignedTo) : undefined;
 
+			// Check if any dependency is not done
+			const dependsOn = Array.isArray(task.dependsOn) ? (task.dependsOn as string[]) : [];
+			const blocked = dependsOn.some((depId) => statusById.get(depId) !== "done");
+
 			tasks.push({
 				id,
 				title,
@@ -56,6 +71,7 @@ function mapKanbanToTasks(
 					...(estimatedMinutes ? [{ text: `${estimatedMinutes}m`, color: "muted" as const }] : []),
 				],
 				assigneeInitials: extractAssigneeInitials(assigneeId),
+				blocked,
 			});
 		}
 	}

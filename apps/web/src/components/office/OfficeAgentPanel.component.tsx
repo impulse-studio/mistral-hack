@@ -45,10 +45,11 @@ interface OfficeAgentPanelProps {
 	terminalLines: TerminalLine[];
 	reasoningSteps: AgentReasoningStep[];
 	deliverables?: OfficeAgentPanelDeliverable[];
+	latestScreenshotUrl?: string | null;
 	onClose: () => void;
 }
 
-type OfficeAgentPanelTab = "tasks" | "terminal" | "reasoning" | "files";
+type OfficeAgentPanelTab = "tasks" | "terminal" | "screen" | "reasoning" | "files";
 
 const AGENT_PANEL_STATUS_GLOW: Record<string, "green" | "cyan" | "muted" | "red" | "yellow"> = {
 	working: "green",
@@ -77,6 +78,7 @@ export function OfficeAgentPanel({
 	terminalLines,
 	reasoningSteps,
 	deliverables,
+	latestScreenshotUrl,
 	onClose,
 }: OfficeAgentPanelProps) {
 	const [activeTab, setActiveTab] = useState<OfficeAgentPanelTab>("tasks");
@@ -86,7 +88,7 @@ export function OfficeAgentPanel({
 	const isPulsing =
 		agent?.status === "working" || agent?.status === "thinking" || agent?.status === "coding";
 
-	const tabs: OfficeAgentPanelTab[] = ["tasks", "terminal", "reasoning"];
+	const tabs: OfficeAgentPanelTab[] = ["tasks", "terminal", "screen", "reasoning"];
 	if (deliverables && deliverables.length > 0) {
 		tabs.push("files");
 	}
@@ -167,6 +169,9 @@ export function OfficeAgentPanel({
 									className="h-full"
 								/>
 							)}
+							{activeTab === "screen" && (
+								<OfficeAgentPanelScreen screenshotUrl={latestScreenshotUrl ?? null} />
+							)}
 							{activeTab === "reasoning" && (
 								<AgentReasoning steps={reasoningSteps} title={`${agent.name} reasoning`} />
 							)}
@@ -234,6 +239,41 @@ function OfficeAgentPanelTasks({ tasks }: { tasks: OfficeAgentPanelTask[] }) {
 				</PixelBorderBox>
 			))}
 		</div>
+	);
+}
+
+// ─── Screen sub-component ───────────────────────────────────────
+
+function OfficeAgentPanelScreen({ screenshotUrl }: { screenshotUrl: string | null }) {
+	if (!screenshotUrl) {
+		return (
+			<PixelBorderBox variant="dashed" className="flex items-center justify-center p-8">
+				<div className="space-y-2 text-center">
+					<PixelText variant="id" color="muted">
+						No screenshots yet
+					</PixelText>
+					<PixelText variant="body" color="muted" className="text-[9px]">
+						Screenshots appear here when the agent uses computer vision
+					</PixelText>
+				</div>
+			</PixelBorderBox>
+		);
+	}
+
+	return (
+		<PixelBorderBox elevation="floating" className="overflow-hidden bg-black p-1">
+			<img
+				src={screenshotUrl}
+				alt="Agent screen"
+				className="h-auto w-full border-2 border-border object-contain"
+			/>
+			<div className="mt-1 flex items-center justify-between px-1">
+				<PixelGlow color="green" pulse size="sm" />
+				<PixelText variant="id" color="muted">
+					LIVE VIEW
+				</PixelText>
+			</div>
+		</PixelBorderBox>
 	);
 }
 
