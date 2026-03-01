@@ -88,6 +88,23 @@ export const resolveTaskRefs = internalQuery({
 	},
 });
 
+// Internal: list tasks with optional status filter (used by Manager agent)
+export const listInternal = internalQuery({
+	args: {
+		status: v.optional(taskStatusValidator),
+	},
+	returns: v.array(taskDoc),
+	handler: async (ctx, { status }) => {
+		if (status) {
+			return await ctx.db
+				.query("tasks")
+				.withIndex("by_status", (q) => q.eq("status", status))
+				.collect();
+		}
+		return await ctx.db.query("tasks").collect();
+	},
+});
+
 export const getKanban = query({
 	args: {},
 	returns: v.object({

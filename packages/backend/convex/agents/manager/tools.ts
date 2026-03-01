@@ -9,6 +9,67 @@ import { SANDBOX_WORK_DIR } from "../../sandbox/constants";
 
 // ── Manager-Only Tools (createTool versions for @convex-dev/agent) ──
 
+export const listTasksTool = createTool({
+	description:
+		"List existing tasks, optionally filtered by status. Use this to see what tasks exist before creating new ones, and to check if there are backlog/todo tasks that need agents assigned. Returns task id, title, status, assignedTo, and parentTaskId for each task.",
+	inputSchema: z.object({
+		status: z
+			.enum(["backlog", "todo", "waiting", "in_progress", "review", "done", "failed"])
+			.optional()
+			.describe("Filter by status. Omit to list all tasks."),
+	}),
+	execute: async (
+		ctx: ToolCtx,
+		{ status },
+	): Promise<{
+		tasks: Array<{
+			taskId: string;
+			title: string;
+			status: string;
+			assignedTo: string | null;
+			parentTaskId: string | null;
+			description?: string;
+		}>;
+		count: number;
+		message: string;
+	}> => {
+		const results = await ctx.runQuery(internal.tasks.queries.listInternal, {
+			status: status as
+				| "backlog"
+				| "todo"
+				| "waiting"
+				| "in_progress"
+				| "review"
+				| "done"
+				| "failed"
+				| undefined,
+		});
+		const tasks = results.map(
+			(t: {
+				_id: string;
+				title: string;
+				status: string;
+				assignedTo?: string | null;
+				parentTaskId?: string | null;
+				description?: string;
+			}) => ({
+				taskId: t._id,
+				title: t.title,
+				status: t.status,
+				assignedTo: t.assignedTo ?? null,
+				parentTaskId: t.parentTaskId ?? null,
+				description: t.description,
+			}),
+		);
+		const label = status ?? "all";
+		return {
+			tasks,
+			count: tasks.length,
+			message: `Found ${tasks.length} ${label} task(s).`,
+		};
+	},
+});
+
 export const createTaskTool = createTool({
 	description:
 		"Create a new task in the kanban board. Returns the taskId which you can pass to spawnAgent. Use dependsOn to set task dependencies.",

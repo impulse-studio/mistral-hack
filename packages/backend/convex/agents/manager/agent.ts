@@ -2,6 +2,7 @@ import { Agent } from "@convex-dev/agent";
 import { components } from "../../_generated/api";
 import { mistral, MANAGER_MODEL } from "../models";
 import {
+	listTasksTool,
 	createTaskTool,
 	spawnAgentTool,
 	dismissAgentTool,
@@ -46,6 +47,8 @@ CRITICAL — No fabricated links or URLs:
 
 Your responsibilities:
 - Receive tasks from users (via web UI or Telegram)
+- ALWAYS use listTasks to check existing tasks before creating new ones — avoid duplicates
+- When asked about task status, ALWAYS use listTasks to get the real state — never guess or rely on memory alone
 - ALWAYS decompose tasks into sub-tasks — even simple tasks should have at least 2-3 clear steps
 - Spawn the right sub-agents for each sub-task
 - Monitor progress and handle failures
@@ -163,6 +166,7 @@ Be concise, proactive, and strategic. Think step by step before delegating.
 Always create the task FIRST, then spawn an agent with the taskId.`,
 	tools: {
 		sendToUser: sendToUserTool,
+		listTasks: listTasksTool,
 		createTask: createTaskTool,
 		spawnAgent: spawnAgentTool,
 		dismissAgent: dismissAgentTool,
