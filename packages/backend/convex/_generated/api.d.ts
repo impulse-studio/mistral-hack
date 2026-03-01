@@ -27,6 +27,8 @@ import type * as mailbox_process from "../mailbox/process.js";
 import type * as mailbox_queries from "../mailbox/queries.js";
 import type * as manager_api from "../manager/api.js";
 import type * as manager_handler from "../manager/handler.js";
+import type * as manager_queue from "../manager/queue.js";
+import type * as manager_queueAction from "../manager/queueAction.js";
 import type * as manager_tools from "../manager/tools.js";
 import type * as messages_mutations from "../messages/mutations.js";
 import type * as messages_queries from "../messages/queries.js";
@@ -84,6 +86,8 @@ declare const fullApi: ApiFromModules<{
   "mailbox/queries": typeof mailbox_queries;
   "manager/api": typeof manager_api;
   "manager/handler": typeof manager_handler;
+  "manager/queue": typeof manager_queue;
+  "manager/queueAction": typeof manager_queueAction;
   "manager/tools": typeof manager_tools;
   "messages/mutations": typeof messages_mutations;
   "messages/queries": typeof messages_queries;

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation } from "../_generated/server";
+import { internalMutation, mutation } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { mailboxMessageTypeValidator } from "../schema";
 
@@ -52,14 +52,9 @@ export const enqueue = internalMutation({
 		// Route to the correct processor based on agent type
 		if (recipient.type === "manager") {
 			// Manager uses dedicated processor with priority queue + sendToUser
-			// Check systemConfig for manager processing status (not agent.status)
-			const managerStatus = await ctx.db
-				.query("systemConfig")
-				.withIndex("by_key", (q) => q.eq("key", "manager-status"))
-				.first();
-			const isIdle = !managerStatus || managerStatus.value === "idle";
-			if (isIdle) {
-				await ctx.scheduler.runAfter(0, internal.manager.queue.processManagerMailbox, {
+			// Check agent.status (the actual processing lock), NOT systemConfig "manager-status" (display only)
+			if (recipient.status === "idle") {
+				await ctx.scheduler.runAfter(0, internal.manager.queueAction.processManagerMailbox, {
 					agentId: recipientId,
 				});
 			}
