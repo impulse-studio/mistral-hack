@@ -68,6 +68,7 @@ import type * as sandbox_shellUtils from "../sandbox/shellUtils.js";
 import type * as sandbox_streamLogs from "../sandbox/streamLogs.js";
 import type * as sandbox_vibe from "../sandbox/vibe.js";
 import type * as sandbox_webFetch from "../sandbox/webFetch.js";
+import type * as sandbox_webScreenshot from "../sandbox/webScreenshot.js";
 import type * as systemConfig from "../systemConfig.js";
 import type * as tasks_comments from "../tasks/comments.js";
 import type * as tasks_dependencies from "../tasks/dependencies.js";
@@ -151,6 +152,7 @@ declare const fullApi: ApiFromModules<{
   "sandbox/streamLogs": typeof sandbox_streamLogs;
   "sandbox/vibe": typeof sandbox_vibe;
   "sandbox/webFetch": typeof sandbox_webFetch;
+  "sandbox/webScreenshot": typeof sandbox_webScreenshot;
   systemConfig: typeof systemConfig;
   "tasks/comments": typeof tasks_comments;
   "tasks/dependencies": typeof tasks_dependencies;

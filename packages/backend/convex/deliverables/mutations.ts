@@ -10,6 +10,9 @@ export const createInternal = internalMutation({
 		title: v.string(),
 		filename: v.optional(v.string()),
 		url: v.optional(v.string()),
+		storageId: v.optional(v.id("_storage")),
+		mimeType: v.optional(v.string()),
+		sizeBytes: v.optional(v.number()),
 	},
 	returns: v.id("deliverables"),
 	handler: async (ctx, args) => {

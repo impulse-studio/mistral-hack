@@ -28,6 +28,14 @@ Auth:      `packages/backend/convex/auth.config.ts`
 Routes:    `apps/web/src/routes/`
 </key-entry-points>
 
+<todo>
+## TODO Tracking
+- The project TODO list lives at `TODO.md` (root)
+- When completing work on any TODO item, update `TODO.md` to reflect the new status
+- Mark items `[x]` when fully done, add `~Partial~` prefix for partial implementations
+- Add a short italic note describing what was done
+</todo>
+
 <critical-constraints>
 ## ALWAYS
 - Mistral models for all agent intelligence

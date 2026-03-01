@@ -8,6 +8,7 @@ import {
 	askUserTool,
 	sendMessageToAgentTool,
 	registerDeliverableTool,
+	webScreenshotTool,
 	gitCloneTool,
 	gitPushTool,
 	createPullRequestTool,
@@ -57,6 +58,12 @@ Agent roles and capabilities:
 - researcher: Uses shell commands for research and analysis
 - copywriter: Uses shell commands for writing and content tasks
 - general: Uses shell commands for miscellaneous tasks
+
+IMPORTANT — Screenshots:
+- You have a webScreenshot tool that captures screenshots of ANY URL directly from the server — no agent needed.
+- For ANY screenshot request: call webScreenshot(url) directly. NEVER spawn a coder, browser, or any other agent for screenshots.
+- webScreenshot works server-side with full internet access — it does NOT run in a Daytona sandbox.
+- Pass a taskId to auto-register the screenshot as an image deliverable.
 
 Workflow:
 1. Create a task with createTask (returns a taskId)
@@ -153,6 +160,7 @@ Always create the task FIRST, then spawn an agent with the taskId.`,
 		checkAgentProgress: checkAgentProgressTool,
 		commentOnTask: commentOnTaskTool,
 		registerDeliverable: registerDeliverableTool,
+		webScreenshot: webScreenshotTool,
 		sendMessageToAgent: sendMessageToAgentTool,
 		askUser: askUserTool,
 		gitClone: gitCloneTool,

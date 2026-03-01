@@ -359,6 +359,66 @@ export const createGitHubIssueTool = createTool({
 	},
 });
 
+export const webScreenshotTool = createTool({
+	description:
+		"Take a screenshot of a web page. Returns an imageUrl you MUST share with the user via sendToUser. The screenshot is stored in Convex storage and optionally registered as an image deliverable. Use this for any screenshot task — do NOT spawn a browser or coder agent for screenshots.",
+	inputSchema: z.object({
+		url: z.string().describe("Full URL to screenshot (e.g. https://example.com)"),
+		taskId: z
+			.string()
+			.optional()
+			.describe("Task ID — if provided, auto-registers as image deliverable"),
+		agentId: z.string().optional().describe("Agent ID to associate with the deliverable"),
+		width: z.number().optional().describe("Viewport width in px (default: 1280)"),
+		height: z.number().optional().describe("Viewport height in px (default: 800)"),
+	}),
+	execute: async (
+		ctx: ToolCtx,
+		{ url, taskId, agentId, width, height },
+	): Promise<{
+		success: boolean;
+		storageId?: string;
+		imageUrl?: string;
+		message: string;
+		error?: string;
+	}> => {
+		try {
+			const result = await ctx.runAction(internal.sandbox.webScreenshot.captureScreenshot, {
+				url,
+				width,
+				height,
+			});
+
+			// Auto-register as deliverable if taskId provided
+			if (taskId) {
+				await ctx.runMutation(internal.deliverables.mutations.createInternal, {
+					taskId: taskId as Id<"tasks">,
+					agentId: agentId as Id<"agents"> | undefined,
+					type: "image" as const,
+					title: `Screenshot of ${url}`,
+					storageId: result.storageId as Id<"_storage">,
+					mimeType: "image/png",
+					sizeBytes: result.sizeBytes,
+				});
+			}
+
+			return {
+				success: true,
+				storageId: result.storageId,
+				imageUrl: result.storageUrl ?? undefined,
+				message: `Screenshot captured (${result.sizeBytes} bytes). Image URL: ${result.storageUrl ?? "unavailable"}.${taskId ? " Registered as deliverable." : ""}`,
+			};
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			return {
+				success: false,
+				message: `FAILED to capture screenshot of ${url}: ${error}`,
+				error,
+			};
+		}
+	},
+});
+
 export const registerDeliverableTool = createTool({
 	description:
 		"Register a deliverable produced by a task. Use this after a worker completes a task that produced an output file, document, or URL. The deliverable will appear in the manager dashboard.",
