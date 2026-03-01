@@ -5,6 +5,8 @@ import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
+const isSpa = !process.env.VERCEL;
+
 export default defineConfig({
 	envDir: "../../",
 	// nitro resolves a separate vite copy in bun monorepos — cast to unify Plugin types
@@ -13,10 +15,10 @@ export default defineConfig({
 		tailwindcss(),
 		tanstackStart({
 			spa: {
-				enabled: true,
+				enabled: isSpa,
 			},
 		}),
-		nitro({ preset: "node-server" }),
+		nitro(),
 		viteReact(),
 	],
 	server: {
