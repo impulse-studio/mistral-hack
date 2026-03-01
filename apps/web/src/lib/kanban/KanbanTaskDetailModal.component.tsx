@@ -1,8 +1,7 @@
-import { useEffect } from "react";
-
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
 import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
 import { PixelBadge } from "@/lib/pixel/PixelBadge";
-import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
 import { PixelDivider } from "@/lib/pixel/PixelDivider";
 import { PixelGlow } from "@/lib/pixel/PixelGlow";
 import { PixelProgress } from "@/lib/pixel/PixelProgress";
@@ -68,46 +67,27 @@ function KanbanTaskDetailModal({
 	onOpenTerminal,
 	onOpenFiles,
 }: KanbanTaskDetailModalProps) {
-	useEffect(() => {
-		if (!open) return;
-
-		function handleKeyDown(e: KeyboardEvent) {
-			if (e.key === "Escape") {
-				onClose();
-			}
-		}
-
-		document.addEventListener("keydown", handleKeyDown);
-		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, [open, onClose]);
-
-	if (!open) return null;
-
 	const doneCount = subtasks?.filter((s) => s.done).length ?? 0;
 	const totalCount = subtasks?.length ?? 0;
 
 	return (
-		<div
-			data-slot="kanban-task-detail-modal-backdrop"
-			className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-			onClick={(e) => {
-				if (e.target === e.currentTarget) onClose();
+		<Dialog
+			open={open}
+			onOpenChange={(isOpen) => {
+				if (!isOpen) onClose();
 			}}
 		>
-			<PixelBorderBox
-				elevation="floating"
-				className="max-h-[80vh] w-full max-w-lg overflow-y-auto p-4"
-			>
+			<DialogContent className="max-h-[80vh] w-full max-w-lg p-4">
 				{/* Header: ID + close button */}
 				<div className="mb-2 flex items-center justify-between">
 					<PixelText variant="id">{id}</PixelText>
-					<button
-						type="button"
-						onClick={onClose}
-						className="flex size-6 items-center justify-center border-2 border-border bg-card font-mono text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+					<DialogClose
+						render={
+							<Button variant="ghost" size="icon-xs" className="border-2 border-border bg-card" />
+						}
 					>
 						&times;
-					</button>
+					</DialogClose>
 				</div>
 
 				{/* Title */}
@@ -225,28 +205,30 @@ function KanbanTaskDetailModal({
 						<PixelDivider variant="dashed" className="my-3" />
 						<div className="flex items-center gap-2">
 							{onOpenTerminal && (
-								<button
-									type="button"
+								<Button
+									variant="elevated"
+									size="sm"
 									onClick={onOpenTerminal}
-									className="border-2 border-border bg-card px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-widest text-foreground shadow-pixel inset-shadow-pixel hover:border-muted-foreground/40 hover:shadow-pixel-hover hover:inset-shadow-pixel-hover hover:-translate-x-px hover:-translate-y-px active:translate-x-px active:translate-y-px active:shadow-none active:inset-shadow-pressed"
+									className="font-mono text-[11px] font-semibold uppercase tracking-widest"
 								>
 									View Terminal
-								</button>
+								</Button>
 							)}
 							{onOpenFiles && (
-								<button
-									type="button"
+								<Button
+									variant="elevated"
+									size="sm"
 									onClick={onOpenFiles}
-									className="border-2 border-border bg-card px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-widest text-foreground shadow-pixel inset-shadow-pixel hover:border-muted-foreground/40 hover:shadow-pixel-hover hover:inset-shadow-pixel-hover hover:-translate-x-px hover:-translate-y-px active:translate-x-px active:translate-y-px active:shadow-none active:inset-shadow-pressed"
+									className="font-mono text-[11px] font-semibold uppercase tracking-widest"
 								>
 									View Files
-								</button>
+								</Button>
 							)}
 						</div>
 					</>
 				)}
-			</PixelBorderBox>
-		</div>
+			</DialogContent>
+		</Dialog>
 	);
 }
 

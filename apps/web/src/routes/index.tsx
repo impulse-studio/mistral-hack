@@ -38,9 +38,9 @@ function HomeComponent() {
 						{/* CTA */}
 						<Link to="/sign-in">
 							<Button
-								variant="default"
+								variant="accent"
 								size="lg"
-								className="border-2 border-brand-accent bg-brand-accent px-5 font-mono text-xs font-semibold uppercase tracking-widest text-black shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:shadow-pixel-hover active:translate-x-px active:translate-y-px active:shadow-none"
+								className="px-5 font-mono text-xs font-semibold uppercase tracking-widest"
 							>
 								Enter the office
 								<span className="ml-1">&rarr;</span>

@@ -176,8 +176,10 @@ export function SignInForm() {
 							{(state) => (
 								<Button
 									type="submit"
+									variant="default"
+									size="lg"
 									disabled={!state.canSubmit || state.isSubmitting}
-									className="h-12 w-full border-2 border-foreground bg-foreground font-mono text-sm font-semibold uppercase tracking-widest text-background shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:shadow-pixel-hover active:translate-x-px active:translate-y-px active:shadow-none"
+									className="h-12 w-full border-foreground bg-foreground font-mono text-sm font-semibold uppercase tracking-widest text-background"
 								>
 									{state.isSubmitting ? "Signing in..." : "Log in"}
 								</Button>
@@ -193,8 +195,9 @@ export function SignInForm() {
 						<Button
 							type="button"
 							variant="outline"
+							size="lg"
 							onClick={() => signInSocialHandler("google")}
-							className="h-12 w-full border-2 border-border bg-card font-mono text-sm tracking-wide text-foreground shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:bg-accent hover:shadow-pixel-hover active:translate-x-px active:translate-y-px active:shadow-none"
+							className="h-12 w-full font-mono text-sm tracking-wide"
 						>
 							<SignInGoogleIcon />
 							<span className="ml-3">Log in with Google</span>
@@ -203,8 +206,9 @@ export function SignInForm() {
 						<Button
 							type="button"
 							variant="outline"
+							size="lg"
 							onClick={() => signInSocialHandler("github")}
-							className="h-12 w-full border-2 border-border bg-card font-mono text-sm tracking-wide text-foreground shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:bg-accent hover:shadow-pixel-hover active:translate-x-px active:translate-y-px active:shadow-none"
+							className="h-12 w-full font-mono text-sm tracking-wide"
 						>
 							<SignInGithubIcon />
 							<span className="ml-3">Log in with GitHub</span>

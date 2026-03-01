@@ -1,6 +1,9 @@
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Drawer, DrawerClose, DrawerContent } from "@/components/ui/drawer";
 import { AgentReasoning } from "@/lib/agent/AgentReasoning.component";
+import { cn } from "@/lib/utils";
 import type { AgentReasoningStep } from "@/lib/agent/AgentReasoning.component";
 import { PixelAvatar } from "@/lib/pixel/PixelAvatar";
 import { PixelBadge } from "@/lib/pixel/PixelBadge";
@@ -19,6 +22,7 @@ interface OfficeAgentPanelTask {
 }
 
 interface OfficeAgentPanelProps {
+	open: boolean;
 	agent: {
 		id: string;
 		name: string;
@@ -26,7 +30,7 @@ interface OfficeAgentPanelProps {
 		color: string;
 		status: string;
 		type: "manager" | "worker";
-	};
+	} | null;
 	tasks: OfficeAgentPanelTask[];
 	terminalLines: TerminalLine[];
 	reasoningSteps: AgentReasoningStep[];
@@ -56,6 +60,7 @@ const AGENT_PANEL_STATUS_BADGE: Record<string, "green" | "cyan" | "muted" | "red
 };
 
 export function OfficeAgentPanel({
+	open,
 	agent,
 	tasks,
 	terminalLines,
@@ -64,82 +69,95 @@ export function OfficeAgentPanel({
 }: OfficeAgentPanelProps) {
 	const [activeTab, setActiveTab] = useState<OfficeAgentPanelTab>("tasks");
 
-	const glowColor = AGENT_PANEL_STATUS_GLOW[agent.status] ?? "muted";
-	const badgeColor = AGENT_PANEL_STATUS_BADGE[agent.status] ?? "muted";
+	const glowColor = agent ? (AGENT_PANEL_STATUS_GLOW[agent.status] ?? "muted") : "muted";
+	const badgeColor = agent ? (AGENT_PANEL_STATUS_BADGE[agent.status] ?? "muted") : "muted";
 	const isPulsing =
-		agent.status === "working" || agent.status === "thinking" || agent.status === "coding";
+		agent?.status === "working" || agent?.status === "thinking" || agent?.status === "coding";
 
 	return (
-		<aside className="absolute bottom-0 right-0 top-0 z-40 flex w-[360px] flex-col border-l-2 border-border bg-background/98 backdrop-blur-sm">
-			{/* Header */}
-			<div className="flex items-center justify-between p-4">
-				<div className="flex items-center gap-3">
-					<PixelAvatar
-						initials={agent.name[0]}
-						color={agent.color}
-						size="lg"
-						status={isPulsing ? "active" : agent.status === "error" ? "error" : "idle"}
-					/>
-					<div>
-						<div className="flex items-center gap-2">
-							<PixelText variant="heading">{agent.name}</PixelText>
-							<PixelGlow color={glowColor} size="sm" pulse={isPulsing} />
+		<Drawer
+			open={open}
+			onOpenChange={(isOpen) => {
+				if (!isOpen) onClose();
+			}}
+			modal={false}
+		>
+			<DrawerContent side="right" backdrop={false} className="flex flex-col">
+				{agent && (
+					<>
+						{/* Header */}
+						<div className="flex items-center justify-between p-4">
+							<div className="flex items-center gap-3">
+								<PixelAvatar
+									initials={agent.name[0]}
+									color={agent.color}
+									size="lg"
+									status={isPulsing ? "active" : agent.status === "error" ? "error" : "idle"}
+								/>
+								<div>
+									<div className="flex items-center gap-2">
+										<PixelText variant="heading">{agent.name}</PixelText>
+										<PixelGlow color={glowColor} size="sm" pulse={isPulsing} />
+									</div>
+									<div className="flex items-center gap-1.5">
+										<PixelText variant="id">{agent.role}</PixelText>
+										<PixelBadge color={badgeColor} size="sm">
+											{agent.status}
+										</PixelBadge>
+									</div>
+								</div>
+							</div>
+							<DrawerClose
+								render={
+									<Button variant="default" size="icon-xs" className="text-muted-foreground" />
+								}
+							>
+								&times;
+							</DrawerClose>
 						</div>
-						<div className="flex items-center gap-1.5">
-							<PixelText variant="id">{agent.role}</PixelText>
-							<PixelBadge color={badgeColor} size="sm">
-								{agent.status}
-							</PixelBadge>
+
+						<PixelDivider />
+
+						{/* Tabs */}
+						<div className="flex">
+							{(["tasks", "terminal", "reasoning"] as const).map((tab) => (
+								<Button
+									variant="ghost"
+									key={tab}
+									onClick={() => setActiveTab(tab)}
+									className={cn(
+										"flex-1 rounded-none px-3 py-2 font-mono text-[8px] uppercase tracking-widest",
+										activeTab === tab
+											? "border-b-2 border-accent-foreground text-accent-foreground"
+											: "border-b-2 border-transparent text-muted-foreground hover:text-foreground",
+									)}
+								>
+									{tab}
+								</Button>
+							))}
 						</div>
-					</div>
-				</div>
-				<button
-					type="button"
-					onClick={onClose}
-					className="flex h-6 w-6 items-center justify-center border-2 border-border text-muted-foreground shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:text-foreground hover:shadow-pixel-hover active:translate-x-px active:translate-y-px"
-				>
-					&times;
-				</button>
-			</div>
 
-			<PixelDivider />
+						<PixelDivider />
 
-			{/* Tabs */}
-			<div className="flex">
-				{(["tasks", "terminal", "reasoning"] as const).map((tab) => (
-					<button
-						type="button"
-						key={tab}
-						onClick={() => setActiveTab(tab)}
-						className={`flex-1 px-3 py-2 font-mono text-[8px] uppercase tracking-widest transition-colors ${
-							activeTab === tab
-								? "border-b-2 border-accent-foreground text-accent-foreground"
-								: "border-b-2 border-transparent text-muted-foreground hover:text-foreground"
-						}`}
-					>
-						{tab}
-					</button>
-				))}
-			</div>
-
-			<PixelDivider />
-
-			{/* Content */}
-			<div className="flex-1 overflow-auto p-4">
-				{activeTab === "tasks" && <OfficeAgentPanelTasks tasks={tasks} />}
-				{activeTab === "terminal" && (
-					<TerminalOutput
-						lines={terminalLines}
-						title={`${agent.name} output`}
-						status={isPulsing ? "streaming" : "connected"}
-						className="h-full"
-					/>
+						{/* Content */}
+						<div className="flex-1 overflow-auto p-4">
+							{activeTab === "tasks" && <OfficeAgentPanelTasks tasks={tasks} />}
+							{activeTab === "terminal" && (
+								<TerminalOutput
+									lines={terminalLines}
+									title={`${agent.name} output`}
+									status={isPulsing ? "streaming" : "connected"}
+									className="h-full"
+								/>
+							)}
+							{activeTab === "reasoning" && (
+								<AgentReasoning steps={reasoningSteps} title={`${agent.name} reasoning`} />
+							)}
+						</div>
+					</>
 				)}
-				{activeTab === "reasoning" && (
-					<AgentReasoning steps={reasoningSteps} title={`${agent.name} reasoning`} />
-				)}
-			</div>
-		</aside>
+			</DrawerContent>
+		</Drawer>
 	);
 }
 

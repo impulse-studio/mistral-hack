@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import { Button } from "@/components/ui/button";
 import { PixelText } from "@/lib/pixel/PixelText";
 import { cn } from "@/lib/utils";
 
@@ -59,10 +60,10 @@ function FileTreeNode({
 
 	return (
 		<>
-			<button
-				type="button"
+			<Button
+				variant="ghost"
 				className={cn(
-					"flex w-full items-center gap-1.5 px-2 py-0.5 hover:bg-white/5 cursor-pointer",
+					"h-auto w-full justify-start gap-1.5 px-2 py-0.5",
 					isActive && "bg-accent/20",
 				)}
 				style={indentStyle}
@@ -84,7 +85,7 @@ function FileTreeNode({
 				<PixelText variant="code" className={cn(isDir && "font-semibold", !isDir && "font-normal")}>
 					{node.name}
 				</PixelText>
-			</button>
+			</Button>
 
 			{/* Recursively render children when expanded */}
 			{isDir &&

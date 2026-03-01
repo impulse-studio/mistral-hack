@@ -6,6 +6,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PixelAvatar } from "@/components/PixelAvatar";
 import { OfficeAgentPanel } from "@/components/office/OfficeAgentPanel.component";
 import { OfficeCanvas } from "@/components/office/OfficeCanvas.component";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { authClient } from "@/lib/auth-client";
 import { MasterAgentPanel } from "@/lib/master-agent-panel/MasterAgentPanel.component";
 import { initTileset } from "@/lib/pixelAgents/initTileset";
@@ -215,8 +223,9 @@ function OfficeContent() {
 					</div>
 				)}
 				<div className="flex items-center gap-2">
-					<button
-						type="button"
+					<Button
+						variant="default"
+						size="sm"
 						onClick={() => {
 							authClient.signOut({
 								fetchOptions: {
@@ -226,10 +235,10 @@ function OfficeContent() {
 								},
 							});
 						}}
-						className="flex h-7 items-center gap-1.5 border-2 border-border bg-card px-2 font-mono text-[9px] uppercase tracking-widest text-muted-foreground shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:text-accent-foreground hover:shadow-pixel-hover active:translate-x-px active:translate-y-px"
+						className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground"
 					>
 						Sign Out
-					</button>
+					</Button>
 				</div>
 			</div>
 
@@ -239,48 +248,27 @@ function OfficeContent() {
 			</div>
 
 			{/* Agent side panel */}
-			{agentInfo && (
-				<OfficeAgentPanel
-					agent={agentInfo}
-					tasks={EMPTY_TASKS}
-					terminalLines={EMPTY_TERMINAL}
-					reasoningSteps={EMPTY_REASONING}
-					onClose={handleClosePanel}
-				/>
-			)}
+			<OfficeAgentPanel
+				open={!!agentInfo}
+				agent={agentInfo}
+				tasks={EMPTY_TASKS}
+				terminalLines={EMPTY_TERMINAL}
+				reasoningSteps={EMPTY_REASONING}
+				onClose={handleClosePanel}
+			/>
 
 			{/* Manager modal */}
-			{showManagerModal && (
-				<div
-					className="absolute inset-0 z-50 flex items-center justify-center bg-background/80"
-					onClick={(e) => {
-						if (e.target === e.currentTarget) setShowManagerModal(false);
-					}}
-					onKeyDown={(e) => {
-						if (e.key === "Escape") setShowManagerModal(false);
-					}}
-				>
-					<div className="relative flex h-[85%] w-[90%] max-w-[1200px] flex-col border-2 border-border bg-card shadow-pixel inset-shadow-pixel">
-						{/* Header */}
-						<div className="flex items-center justify-between border-b-2 border-border px-4 py-2">
-							<span className="font-mono text-xs uppercase tracking-widest text-accent-foreground/70">
-								Manager Office
-							</span>
-							<button
-								type="button"
-								onClick={() => setShowManagerModal(false)}
-								className="flex h-7 w-7 items-center justify-center border-2 border-border bg-card font-mono text-xs text-muted-foreground shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:text-accent-foreground hover:shadow-pixel-hover active:translate-x-px active:translate-y-px"
-							>
-								×
-							</button>
-						</div>
-						{/* Content */}
-						<div className="min-h-0 flex-1 overflow-hidden p-4">
-							<MasterAgentPanel />
-						</div>
+			<Dialog open={showManagerModal} onOpenChange={setShowManagerModal}>
+				<DialogContent className="flex h-[85vh] w-[90vw] max-w-[1200px] flex-col">
+					<DialogHeader>
+						<DialogTitle>Manager Office</DialogTitle>
+						<DialogClose render={<Button variant="default" size="icon-sm" />}>×</DialogClose>
+					</DialogHeader>
+					<div className="min-h-0 flex-1 overflow-hidden p-4">
+						<MasterAgentPanel />
 					</div>
-				</div>
-			)}
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

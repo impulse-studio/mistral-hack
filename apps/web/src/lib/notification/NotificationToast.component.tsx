@@ -1,6 +1,7 @@
 import type React from "react";
 import { toast, Toaster } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import { PixelBadge } from "@/lib/pixel/PixelBadge";
 import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
 import { PixelText } from "@/lib/pixel/PixelText";
@@ -54,13 +55,13 @@ function NotificationToastContent({
 					</PixelText>
 				)}
 				{action && (
-					<button
-						type="button"
+					<Button
+						variant="link"
 						onClick={action.onClick}
-						className="mt-1 self-start font-mono text-[10px] uppercase tracking-widest text-brand-accent hover:text-orange-400 cursor-pointer"
+						className="mt-1 self-start font-mono text-[10px] uppercase tracking-widest"
 					>
 						{action.label}
-					</button>
+					</Button>
 				)}
 			</div>
 		</PixelBorderBox>

@@ -5,6 +5,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { ZOOM_MAX, ZOOM_MIN } from "@/lib/pixelAgents/constants";
 import { startGameLoop } from "@/lib/pixelAgents/gameLoop";
 import type { OfficeState } from "@/lib/pixelAgents/officeState";
@@ -179,21 +180,23 @@ export function OfficeCanvas({ officeState, onClickAgent, initialZoom = 3 }: Off
 
 			{/* Zoom controls */}
 			<div className="absolute bottom-4 right-4 flex flex-col items-center gap-1 font-mono text-[10px]">
-				<button
-					type="button"
+				<Button
+					variant="default"
+					size="icon-sm"
+					className="text-muted-foreground"
 					onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + 1))}
-					className="flex h-7 w-7 items-center justify-center border-2 border-border bg-card text-muted-foreground shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:text-accent-foreground hover:shadow-pixel-hover active:translate-x-px active:translate-y-px"
 				>
 					+
-				</button>
+				</Button>
 				<span className="text-muted-foreground">{zoom}×</span>
-				<button
-					type="button"
+				<Button
+					variant="default"
+					size="icon-sm"
+					className="text-muted-foreground"
 					onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - 1))}
-					className="flex h-7 w-7 items-center justify-center border-2 border-border bg-card text-muted-foreground shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:text-accent-foreground hover:shadow-pixel-hover active:translate-x-px active:translate-y-px"
 				>
 					−
-				</button>
+				</Button>
 			</div>
 		</div>
 	);

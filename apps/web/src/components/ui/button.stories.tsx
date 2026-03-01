@@ -7,7 +7,16 @@ const meta = {
 	argTypes: {
 		variant: {
 			control: "select",
-			options: ["default", "destructive", "outline", "secondary", "ghost", "link"],
+			options: [
+				"default",
+				"elevated",
+				"accent",
+				"outline",
+				"dashed",
+				"ghost",
+				"link",
+				"destructive",
+			],
 		},
 		size: {
 			control: "select",
@@ -23,24 +32,32 @@ export const Default: Story = {
 	args: { children: "Button" },
 };
 
+export const Elevated: Story = {
+	args: { children: "Elevated", variant: "elevated" },
+};
+
+export const Accent: Story = {
+	args: { children: "Enter Office", variant: "accent" },
+};
+
 export const Outline: Story = {
 	args: { children: "Outline", variant: "outline" },
 };
 
-export const Secondary: Story = {
-	args: { children: "Secondary", variant: "secondary" },
+export const Dashed: Story = {
+	args: { children: "Add Column", variant: "dashed" },
 };
 
 export const Ghost: Story = {
 	args: { children: "Ghost", variant: "ghost" },
 };
 
-export const Destructive: Story = {
-	args: { children: "Delete", variant: "destructive" },
+export const LinkVariant: Story = {
+	args: { children: "View Details", variant: "link" },
 };
 
-export const Link: Story = {
-	args: { children: "Link", variant: "link" },
+export const Destructive: Story = {
+	args: { children: "Delete", variant: "destructive" },
 };
 
 export const Small: Story = {
@@ -49,4 +66,8 @@ export const Small: Story = {
 
 export const Large: Story = {
 	args: { children: "Large", size: "lg" },
+};
+
+export const IconButton: Story = {
+	args: { children: "×", size: "icon" },
 };

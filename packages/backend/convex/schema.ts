@@ -190,4 +190,10 @@ export default defineSchema({
 
 	// Desk assignments — physical locations in the pixel-art office
 	desks: defineTable(deskFields).index("by_occupiedBy", ["occupiedBy"]),
+
+	// System config — simple key-value store (shared thread ID, etc.)
+	systemConfig: defineTable({
+		key: v.string(),
+		value: v.string(),
+	}).index("by_key", ["key"]),
 });

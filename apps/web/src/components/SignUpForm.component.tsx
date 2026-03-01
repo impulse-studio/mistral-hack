@@ -207,8 +207,10 @@ export function SignUpForm() {
 							{(state) => (
 								<Button
 									type="submit"
+									variant="default"
+									size="lg"
 									disabled={!state.canSubmit || state.isSubmitting}
-									className="h-12 w-full border-2 border-foreground bg-foreground font-mono text-sm font-semibold uppercase tracking-widest text-background shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:shadow-pixel-hover active:translate-x-px active:translate-y-px active:shadow-none"
+									className="h-12 w-full border-foreground bg-foreground font-mono text-sm font-semibold uppercase tracking-widest text-background"
 								>
 									{state.isSubmitting ? "Creating account..." : "Sign up"}
 								</Button>
@@ -224,8 +226,9 @@ export function SignUpForm() {
 						<Button
 							type="button"
 							variant="outline"
+							size="lg"
 							onClick={() => signUpSocialHandler("google")}
-							className="h-12 w-full border-2 border-border bg-card font-mono text-sm tracking-wide text-foreground shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:bg-accent hover:shadow-pixel-hover active:translate-x-px active:translate-y-px active:shadow-none"
+							className="h-12 w-full font-mono text-sm tracking-wide"
 						>
 							<SignUpGoogleIcon />
 							<span className="ml-3">Sign up with Google</span>
@@ -234,8 +237,9 @@ export function SignUpForm() {
 						<Button
 							type="button"
 							variant="outline"
+							size="lg"
 							onClick={() => signUpSocialHandler("github")}
-							className="h-12 w-full border-2 border-border bg-card font-mono text-sm tracking-wide text-foreground shadow-pixel hover:-translate-x-px hover:-translate-y-px hover:bg-accent hover:shadow-pixel-hover active:translate-x-px active:translate-y-px active:shadow-none"
+							className="h-12 w-full font-mono text-sm tracking-wide"
 						>
 							<SignUpGithubIcon />
 							<span className="ml-3">Sign up with GitHub</span>

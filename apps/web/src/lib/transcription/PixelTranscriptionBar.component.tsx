@@ -1,5 +1,6 @@
 import { Cancel } from "pixelarticons/react";
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { TranscriptionMicToggle } from "./PixelMicToggle";
@@ -33,20 +34,15 @@ function TranscriptionBar({
 			)}
 			data-slot="pixel-transcription-bar"
 		>
-			<button
+			<Button
+				variant="default"
+				size="icon-sm"
 				aria-label="Stop transcription"
-				className={cn(
-					"inline-flex size-7 items-center justify-center border-2 border-border",
-					"bg-muted/50 text-muted-foreground",
-					"hover:-translate-x-px hover:-translate-y-px hover:shadow-pixel-hover hover:text-foreground",
-					"active:translate-x-px active:translate-y-px active:inset-shadow-pressed",
-					"transition-all duration-150",
-				)}
+				className="bg-muted/50 text-muted-foreground"
 				onClick={onStop}
-				type="button"
 			>
 				<Cancel className="size-3.5" />
-			</button>
+			</Button>
 
 			<TranscriptionRecordingTimer active={active} elapsed={elapsed} />
 

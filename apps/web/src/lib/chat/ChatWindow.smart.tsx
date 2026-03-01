@@ -1,7 +1,7 @@
 import { useUIMessages as useUIMessagesRaw, type UIMessage } from "@convex-dev/agent/react";
 import { api } from "@mistral-hack/backend/convex/_generated/api";
-import { useMutation, type UsePaginatedQueryResult } from "convex/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, type UsePaginatedQueryResult } from "convex/react";
+import { useCallback, useMemo, useState } from "react";
 
 import type { KanbanDragData } from "@/lib/kanban/KanbanItem.component";
 
@@ -15,8 +15,6 @@ const useUIMessages = useUIMessagesRaw as (
 	args: { threadId: string } | "skip",
 	options: { initialNumItems: number; stream?: boolean },
 ) => UsePaginatedQueryResult<UIMessage>;
-
-const THREAD_STORAGE_KEY = "chat-thread-id";
 
 interface ChatWindowSmartProps {
 	threadId?: string | null;
@@ -46,22 +44,13 @@ function ChatWindowSmart({
 	title,
 	className,
 }: ChatWindowSmartProps) {
-	const [chatInternalThreadId, setChatInternalThreadId] = useState<string | null>(null);
 	const [chatIsLoading, setChatIsLoading] = useState(false);
 
-	useEffect(() => {
-		const stored = sessionStorage.getItem(THREAD_STORAGE_KEY);
-		if (stored) setChatInternalThreadId(stored);
-	}, []);
+	// Always use the shared thread so web + Telegram stay in sync
+	const sharedThreadId = useQuery(api.chat.getSharedThreadId);
+	const chatActiveThreadId = controlledThreadId ?? sharedThreadId ?? null;
 
-	const chatActiveThreadId = controlledThreadId ?? chatInternalThreadId;
-
-	const setAndPersistThreadId = useCallback((id: string) => {
-		setChatInternalThreadId(id);
-		sessionStorage.setItem(THREAD_STORAGE_KEY, id);
-	}, []);
-
-	const createThread = useMutation(api.chat.createNewThread);
+	const ensureSharedThread = useMutation(api.chat.ensureSharedThread);
 	const sendMessage = useMutation(api.chat.sendMessage);
 
 	const { results: chatRawMessages } = useUIMessages(
@@ -83,9 +72,8 @@ function ChatWindowSmart({
 		try {
 			let currentThreadId = chatActiveThreadId;
 			if (!currentThreadId) {
-				const newId = await createThread();
+				const newId = await ensureSharedThread();
 				currentThreadId = newId;
-				setAndPersistThreadId(newId);
 				onThreadCreated?.(newId);
 			}
 
@@ -100,11 +88,10 @@ function ChatWindowSmart({
 	// ── Voice converse ───────────────────────────────────
 	const ensureThreadId = useCallback(async () => {
 		if (chatActiveThreadId) return chatActiveThreadId;
-		const id = await createThread();
-		setAndPersistThreadId(id);
+		const id = await ensureSharedThread();
 		onThreadCreated?.(id);
 		return id;
-	}, [chatActiveThreadId, createThread, setAndPersistThreadId, onThreadCreated]);
+	}, [chatActiveThreadId, ensureSharedThread, onThreadCreated]);
 
 	const {
 		voiceConverseStartRecording,

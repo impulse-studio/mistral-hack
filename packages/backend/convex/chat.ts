@@ -13,11 +13,95 @@ import { internalAction, internalMutation, mutation, query } from "./_generated/
 import { managerAgent } from "./agent";
 import { streamToSpeech } from "./voice/elevenLabsStream";
 
+// ── Shared thread (single Manager thread for all channels) ───
+
+const SHARED_THREAD_KEY = "shared-thread-id";
+
+/** Get or create the shared Manager thread (internal — for Telegram bot). */
+export const getOrCreateSharedThread = internalMutation({
+	args: {},
+	returns: v.string(),
+	handler: async (ctx) => {
+		const existing = await ctx.db
+			.query("systemConfig")
+			.withIndex("by_key", (q) => q.eq("key", SHARED_THREAD_KEY))
+			.first();
+		if (existing) return existing.value;
+
+		const threadId = await createThread(ctx, components.agent, {});
+		await ctx.db.insert("systemConfig", {
+			key: SHARED_THREAD_KEY,
+			value: threadId,
+		});
+		return threadId;
+	},
+});
+
+/** Get the shared thread ID (public — for web UI). */
+export const getSharedThreadId = query({
+	args: {},
+	returns: v.union(v.string(), v.null()),
+	handler: async (ctx) => {
+		const existing = await ctx.db
+			.query("systemConfig")
+			.withIndex("by_key", (q) => q.eq("key", SHARED_THREAD_KEY))
+			.first();
+		return existing?.value ?? null;
+	},
+});
+
+/** Save a user message to thread + messages table (internal — no generation). */
+export const saveUserMessageInternal = internalMutation({
+	args: {
+		threadId: v.string(),
+		prompt: v.string(),
+		channel: v.optional(v.union(v.literal("web"), v.literal("telegram"))),
+		metadata: v.optional(v.record(v.string(), v.string())),
+	},
+	returns: v.string(),
+	handler: async (ctx, { threadId, prompt, channel, metadata }) => {
+		const { messageId } = await saveMessage(ctx, components.agent, {
+			threadId,
+			prompt,
+		});
+
+		await ctx.db.insert("messages", {
+			content: prompt,
+			role: "user",
+			channel: channel ?? "web",
+			metadata,
+			createdAt: Date.now(),
+		});
+
+		return messageId;
+	},
+});
+
 export const createNewThread = mutation({
 	args: {},
 	returns: v.string(),
 	handler: async (ctx) => {
 		const threadId = await createThread(ctx, components.agent, {});
+		return threadId;
+	},
+});
+
+/** Public version of getOrCreateSharedThread — for the web UI. */
+export const ensureSharedThread = mutation({
+	args: {},
+	returns: v.string(),
+	handler: async (ctx) => {
+		const existing = await ctx.db
+			.query("systemConfig")
+			.withIndex("by_key", (q) => q.eq("key", SHARED_THREAD_KEY))
+			.first();
+		if (existing) return existing.value;
+
+		const threadId = await createThread(ctx, components.agent, {});
+		await ctx.db.insert("systemConfig", {
+			key: SHARED_THREAD_KEY,
+			value: threadId,
+		});
 		return threadId;
 	},
 });

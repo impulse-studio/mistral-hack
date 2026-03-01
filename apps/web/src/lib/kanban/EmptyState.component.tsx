@@ -3,6 +3,7 @@ import type { VariantProps } from "class-variance-authority";
 
 import { cva } from "class-variance-authority";
 
+import { Button } from "@/components/ui/button";
 import { PixelText } from "@/lib/pixel/PixelText";
 import { cn } from "@/lib/utils";
 
@@ -98,30 +99,36 @@ function KanbanEmptyState({
 				)}
 
 				{/* Primary action */}
-				{actionLabel && (
-					<button
-						type="button"
-						className={cn(
-							"mt-1 inline-flex items-center gap-2 font-mono font-semibold uppercase tracking-widest",
-							variant === "board"
-								? "border-2 border-orange-700 bg-brand-accent px-5 py-2.5 text-xs text-white shadow-pixel-hover inset-shadow-bevel hover:inset-shadow-bevel-hover hover:shadow-pixel-lg hover:-translate-x-px hover:-translate-y-px active:translate-x-px active:translate-y-px active:shadow-none active:inset-shadow-pressed"
-								: "border-2 border-dashed border-border px-3 py-1.5 text-[10px] text-muted-foreground hover:border-brand-accent hover:text-brand-accent",
-						)}
+				{actionLabel && variant === "board" && (
+					<Button
+						variant="accent"
+						size="lg"
 						onClick={onAction}
+						className="mt-1 font-mono font-semibold uppercase tracking-widest"
 					>
 						{actionLabel}
-					</button>
+					</Button>
+				)}
+				{actionLabel && variant === "column" && (
+					<Button
+						variant="dashed"
+						size="sm"
+						onClick={onAction}
+						className="mt-1 font-mono text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"
+					>
+						{actionLabel}
+					</Button>
 				)}
 
 				{/* Secondary action (board only) */}
 				{variant === "board" && secondaryLabel && (
-					<button
-						type="button"
-						className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+					<Button
+						variant="link"
 						onClick={onSecondaryAction}
+						className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 hover:text-muted-foreground"
 					>
 						{secondaryLabel}
-					</button>
+					</Button>
 				)}
 			</div>
 		</div>

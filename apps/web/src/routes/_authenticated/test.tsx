@@ -130,12 +130,7 @@ function ManagerChat() {
 						autoComplete="off"
 						disabled={isLoading}
 					/>
-					<Button
-						type="submit"
-						size="icon"
-						disabled={isLoading || !input.trim()}
-						className="h-8 w-8"
-					>
+					<Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
 						{isLoading ? <Loader className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
 					</Button>
 				</form>

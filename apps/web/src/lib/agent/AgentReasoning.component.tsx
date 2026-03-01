@@ -4,6 +4,7 @@ import type { VariantProps } from "class-variance-authority";
 
 import { cva } from "class-variance-authority";
 
+import { Button } from "@/components/ui/button";
 import { PixelBadge } from "@/lib/pixel/PixelBadge";
 import { PixelBorderBox } from "@/lib/pixel/PixelBorderBox";
 import { PixelDivider } from "@/lib/pixel/PixelDivider";
@@ -87,16 +88,12 @@ function AgentReasoning({
 	return (
 		<PixelBorderBox variant="solid" elevation="raised" className={cn("p-3", className)}>
 			{/* Header */}
-			<button
-				type="button"
-				onClick={handleToggleCollapse}
-				className="flex w-full cursor-pointer items-center justify-between"
-			>
+			<Button variant="ghost" onClick={handleToggleCollapse} className="w-full justify-between">
 				<PixelText variant="label">{title}</PixelText>
 				<PixelText variant="label" color="muted">
 					{isCollapsed ? "▶" : "▼"}
 				</PixelText>
-			</button>
+			</Button>
 
 			{/* Steps */}
 			{!isCollapsed && (
@@ -104,11 +101,11 @@ function AgentReasoning({
 					{steps.map((step, index) => (
 						<div key={step.id}>
 							{index > 0 && <PixelDivider variant="dashed" className="my-0.5" />}
-							<button
-								type="button"
+							<Button
+								variant="ghost"
 								onClick={() => handleToggleStep(step.id)}
 								className={cn(
-									"w-full cursor-pointer text-left",
+									"h-auto w-full text-left",
 									agentReasoningStepVariants({ status: step.status }),
 								)}
 							>
@@ -151,7 +148,7 @@ function AgentReasoning({
 										</PixelBadge>
 									)}
 								</div>
-							</button>
+							</Button>
 						</div>
 					))}
 				</div>

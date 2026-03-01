@@ -1,6 +1,7 @@
 import { Mic, MicOff, Send } from "pixelarticons/react";
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { PixelGlow } from "@/lib/pixel/PixelGlow";
 import { TranscriptionWaveform } from "@/lib/transcription/PixelWaveform";
 import { cn } from "@/lib/utils";
@@ -63,33 +64,25 @@ function ChatInput({
 	if (voiceRecording) {
 		return (
 			<div className={cn("flex h-16 items-center gap-2 border-t-2 border-border px-3", className)}>
-				<button
-					type="button"
+				<Button
+					variant="ghost"
+					size="icon"
 					aria-label="Cancel recording"
 					onClick={onVoiceCancel}
-					className={cn(
-						"inline-flex shrink-0 items-center justify-center border-2 p-2",
-						"border-muted-foreground bg-muted/50 text-muted-foreground hover:bg-muted/75",
-						"active:translate-x-px active:translate-y-px active:inset-shadow-pressed",
-						"transition-all duration-150",
-					)}
+					className="border-2 border-muted-foreground bg-muted/50 text-muted-foreground hover:bg-muted/75"
 				>
 					<MicOff className="size-4" />
-				</button>
+				</Button>
 				<TranscriptionWaveform analyser={voiceAnalyser} bars={48} className="flex-1" />
-				<button
-					type="button"
+				<Button
+					variant="ghost"
+					size="icon"
 					aria-label="Send voice message"
 					onClick={onVoiceStop}
-					className={cn(
-						"inline-flex shrink-0 items-center justify-center border-2 p-2",
-						"border-brand-accent bg-brand-accent/15 text-brand-accent hover:bg-brand-accent/25",
-						"active:translate-x-px active:translate-y-px active:inset-shadow-pressed",
-						"transition-all duration-150",
-					)}
+					className="border-2 border-brand-accent bg-brand-accent/15 text-brand-accent hover:bg-brand-accent/25"
 				>
 					<Send className="size-4" />
-				</button>
+				</Button>
 			</div>
 		);
 	}
@@ -97,20 +90,15 @@ function ChatInput({
 	// Default state — text input + mic button
 	return (
 		<div className={cn("flex h-16 items-center gap-2 border-t-2 border-border px-3", className)}>
-			<button
-				type="button"
+			<Button
+				variant="default"
+				size="icon"
 				aria-label="Start voice input"
 				onClick={onVoiceStart}
 				disabled={disabled || !onVoiceStart}
-				className={cn(
-					"inline-flex shrink-0 items-center justify-center border-2 border-border bg-card p-2 text-foreground",
-					"hover:-translate-x-px hover:-translate-y-px hover:shadow-pixel-hover",
-					"active:translate-x-px active:translate-y-px active:inset-shadow-pressed",
-					"disabled:pointer-events-none disabled:opacity-50",
-				)}
 			>
 				<Mic className="size-4" />
-			</button>
+			</Button>
 			<input
 				type="text"
 				value={chatInputValue}
@@ -120,19 +108,14 @@ function ChatInput({
 				disabled={disabled}
 				className="flex-1 border-2 border-border bg-transparent px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:border-brand-accent focus:outline-none disabled:opacity-50"
 			/>
-			<button
-				type="button"
+			<Button
+				variant="default"
+				size="icon"
 				onClick={handleChatInputSend}
 				disabled={disabled || chatInputValue.trim() === ""}
-				className={cn(
-					"inline-flex shrink-0 items-center justify-center border-2 border-border bg-card p-2 text-foreground",
-					"hover:-translate-x-px hover:-translate-y-px hover:shadow-pixel-hover",
-					"active:translate-x-px active:translate-y-px active:inset-shadow-pressed",
-					"disabled:pointer-events-none disabled:opacity-50",
-				)}
 			>
 				<Send className="size-4" />
-			</button>
+			</Button>
 		</div>
 	);
 }
