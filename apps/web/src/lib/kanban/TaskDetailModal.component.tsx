@@ -67,6 +67,7 @@ export interface KanbanTaskDetailProps {
 	onAddComment?: (content: string) => void;
 	onOpenTerminal?: () => void;
 	onOpenFiles?: () => void;
+	debug?: boolean;
 }
 
 // ── Constants ────────────────────────────────────────────
@@ -154,6 +155,7 @@ function KanbanTaskDetail({
 	onAddComment,
 	onOpenTerminal,
 	onOpenFiles,
+	debug,
 }: KanbanTaskDetailProps) {
 	const [commentDraft, setCommentDraft] = useState("");
 
@@ -426,6 +428,15 @@ function KanbanTaskDetail({
 										<PixelText variant="id" color="muted" className="text-[9px]">
 											{formatTimestamp(comment.createdAt)}
 										</PixelText>
+										{debug && (
+											<PixelText
+												variant="id"
+												color="muted"
+												className="ml-auto font-mono text-[9px] opacity-70"
+											>
+												{comment.id}
+											</PixelText>
+										)}
 									</div>
 									<PixelText as="p" variant="body">
 										{comment.content}

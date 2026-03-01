@@ -114,6 +114,7 @@ function KanbanTaskDetailSmart({ taskId, onClose }: KanbanTaskDetailSmartProps) 
 			startedAt={task?.startedAt}
 			completedAt={task?.completedAt}
 			onAddComment={handleAddComment}
+			debug={true}
 		/>
 	);
 }
