@@ -230,7 +230,7 @@ function OfficeContent() {
 							authClient.signOut({
 								fetchOptions: {
 									onSuccess: () => {
-										location.reload();
+										window.location.href = "/";
 									},
 								},
 							});

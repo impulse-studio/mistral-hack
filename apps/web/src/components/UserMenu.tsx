@@ -31,7 +31,7 @@ export function UserMenu() {
 							authClient.signOut({
 								fetchOptions: {
 									onSuccess: () => {
-										location.reload();
+										window.location.href = "/";
 									},
 								},
 							});

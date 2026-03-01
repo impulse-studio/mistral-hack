@@ -11,6 +11,7 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import { Toaster } from "@/components/ui/sonner";
 import { authClient } from "@/lib/auth-client";
+import { getAuth } from "@/lib/auth.functions";
 
 import { Header } from "../components/Header";
 import appCss from "../index.css?url";
@@ -41,7 +42,12 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 	component: RootDocument,
 	beforeLoad: async () => {
 		if (typeof window === "undefined") {
-			return { isAuthenticated: true, token: null };
+			try {
+				const token = await getAuth();
+				return { isAuthenticated: !!token, token };
+			} catch {
+				return { isAuthenticated: false, token: null };
+			}
 		}
 		const { data: session } = await authClient.getSession();
 		return {
