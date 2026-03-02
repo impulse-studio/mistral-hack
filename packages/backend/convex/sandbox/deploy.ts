@@ -64,6 +64,13 @@ export const linkVercelProject = internalAction({
 		ctx,
 		{ path, project, scope, agentId },
 	): Promise<{ success: boolean; output: string }> => {
+		// Fast-fail if VERCEL_TOKEN is not configured
+		if (!process.env.VERCEL_TOKEN) {
+			const errorMsg =
+				"VERCEL_TOKEN environment variable is not set. Configure it in the Convex dashboard before deploying.";
+			return { success: false, output: errorMsg };
+		}
+
 		// Ensure sandbox is running
 		if (agentId) {
 			await ctx.runAction(internal.sandbox.lifecycle.ensureRunning, { agentId });
@@ -108,6 +115,20 @@ export const deployToVercel = internalAction({
 		ctx,
 		{ path, prod, agentId },
 	): Promise<{ success: boolean; output: string; deployUrl: string | null }> => {
+		// Fast-fail if VERCEL_TOKEN is not configured
+		if (!process.env.VERCEL_TOKEN) {
+			const errorMsg =
+				"VERCEL_TOKEN environment variable is not set. Configure it in the Convex dashboard before deploying.";
+			if (agentId) {
+				await ctx.runMutation(internal.logs.mutations.append, {
+					agentId,
+					type: "stderr" as const,
+					content: `[DEPLOY] ${errorMsg}`,
+				});
+			}
+			return { success: false, output: errorMsg, deployUrl: null };
+		}
+
 		// Ensure sandbox is running (may have been stopped after task completion)
 		if (agentId) {
 			await ctx.runAction(internal.sandbox.lifecycle.ensureRunning, { agentId });

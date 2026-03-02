@@ -3,12 +3,13 @@ import { z } from "zod";
 import { internal } from "../../_generated/api";
 import { SANDBOX_WORK_DIR } from "../../sandbox/constants";
 import type { RunnerCtx } from "../shared/types";
+import type { Id } from "../../_generated/dataModel";
 
 export function createDeploySkills(ctx: RunnerCtx, agentId: string) {
 	return {
 		deploy_to_vercel: tool({
 			description:
-				"Deploy the project to Vercel. Automatically installs and configures the Vercel CLI if needed. Returns the deployment URL on success.",
+				"Deploy the project to Vercel. Automatically installs and configures the Vercel CLI if needed. Returns the deployment URL on success. The URL is automatically saved as a task deliverable.",
 			inputSchema: z.object({
 				path: z
 					.string()
@@ -29,6 +30,25 @@ export function createDeploySkills(ctx: RunnerCtx, agentId: string) {
 					prod,
 					agentId,
 				});
+
+				// Persist the deploy URL as a deliverable so it's not lost to LLM hallucination.
+				// The agent's task result is the LLM's text summary, which may restate the URL
+				// incorrectly. This saves the real URL directly from the Vercel CLI output.
+				if (result.deployUrl) {
+					const agent = await ctx.runQuery(internal.office.queries.getAgentInternal, {
+						agentId: agentId as Id<"agents">,
+					});
+					if (agent?.currentTaskId) {
+						await ctx.runMutation(internal.deliverables.mutations.createInternal, {
+							taskId: agent.currentTaskId,
+							agentId: agentId as Id<"agents">,
+							type: "url",
+							title: prod ? "Vercel Production Deploy" : "Vercel Preview Deploy",
+							url: result.deployUrl,
+						});
+					}
+				}
+
 				return {
 					success: result.success,
 					deployUrl: result.deployUrl,

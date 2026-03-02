@@ -8,6 +8,7 @@ import { withRetry } from "./helpers";
 
 const FLUSH_INTERVAL_MS = 500;
 const FLUSH_SIZE_BYTES = 2048;
+const COMMAND_TIMEOUT_MS = 300_000; // 5 min — matches non-streaming & PTY timeouts
 
 interface StreamingOpts {
 	sandbox: Sandbox;
@@ -15,6 +16,7 @@ interface StreamingOpts {
 	agentId?: Id<"agents">;
 	ctx: ActionCtx;
 	sessionId?: string; // reuse existing session, or auto-create
+	timeoutMs?: number; // override default command timeout
 }
 
 /**
@@ -28,7 +30,8 @@ interface StreamingOpts {
 export async function runCommandStreaming(
 	opts: StreamingOpts,
 ): Promise<{ output: string; exitCode: number }> {
-	const { sandbox, command, agentId, ctx, sessionId: reuseSessionId } = opts;
+	const { sandbox, command, agentId, ctx, sessionId: reuseSessionId, timeoutMs } = opts;
+	const timeout = timeoutMs ?? COMMAND_TIMEOUT_MS;
 	const ownSession = !reuseSessionId;
 	const sessionId =
 		reuseSessionId ?? `stream-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -37,6 +40,55 @@ export async function runCommandStreaming(
 		await withRetry(() => sandbox.process.createSession(sessionId));
 	}
 
+	// Hoist state so the catch block can access partial output on timeout
+	let stdoutBuf = "";
+	let stderrBuf = "";
+	let fullOutput = "";
+	let flushTimer: ReturnType<typeof setTimeout> | null = null;
+	let flushQueue = Promise.resolve();
+
+	const enqueueFlush = () => {
+		if (flushTimer) {
+			clearTimeout(flushTimer);
+			flushTimer = null;
+		}
+
+		const stdoutChunk = stdoutBuf;
+		const stderrChunk = stderrBuf;
+		stdoutBuf = "";
+		stderrBuf = "";
+
+		if (!agentId || (!stdoutChunk && !stderrChunk)) return;
+
+		flushQueue = flushQueue
+			.then(async () => {
+				if (stdoutChunk) {
+					await ctx.runMutation(internal.logs.mutations.append, {
+						agentId,
+						type: "stdout" as const,
+						content: stdoutChunk,
+					});
+				}
+				if (stderrChunk) {
+					await ctx.runMutation(internal.logs.mutations.append, {
+						agentId,
+						type: "stderr" as const,
+						content: stderrChunk,
+					});
+				}
+				return undefined;
+			})
+			.catch((err) => {
+				console.warn("[streamLogs] flush failed:", err);
+			});
+	};
+
+	const scheduleFlush = () => {
+		if (!flushTimer) {
+			flushTimer = setTimeout(enqueueFlush, FLUSH_INTERVAL_MS);
+		}
+	};
+
 	try {
 		// Fire the command asynchronously — returns immediately with cmdId
 		const { cmdId } = await sandbox.process.executeSessionCommand(sessionId, {
@@ -44,56 +96,9 @@ export async function runCommandStreaming(
 			runAsync: true,
 		});
 
-		let stdoutBuf = "";
-		let stderrBuf = "";
-		let fullOutput = "";
-		let flushTimer: ReturnType<typeof setTimeout> | null = null;
-		let flushQueue = Promise.resolve();
-
-		const enqueueFlush = () => {
-			if (flushTimer) {
-				clearTimeout(flushTimer);
-				flushTimer = null;
-			}
-
-			const stdoutChunk = stdoutBuf;
-			const stderrChunk = stderrBuf;
-			stdoutBuf = "";
-			stderrBuf = "";
-
-			if (!agentId || (!stdoutChunk && !stderrChunk)) return;
-
-			flushQueue = flushQueue
-				.then(async () => {
-					if (stdoutChunk) {
-						await ctx.runMutation(internal.logs.mutations.append, {
-							agentId,
-							type: "stdout" as const,
-							content: stdoutChunk,
-						});
-					}
-					if (stderrChunk) {
-						await ctx.runMutation(internal.logs.mutations.append, {
-							agentId,
-							type: "stderr" as const,
-							content: stderrChunk,
-						});
-					}
-					return undefined;
-				})
-				.catch((err) => {
-					console.warn("[streamLogs] flush failed:", err);
-				});
-		};
-
-		const scheduleFlush = () => {
-			if (!flushTimer) {
-				flushTimer = setTimeout(enqueueFlush, FLUSH_INTERVAL_MS);
-			}
-		};
-
 		// Stream real-time output — resolves when WebSocket closes (command exits)
-		await sandbox.process.getSessionCommandLogs(
+		// Race against a timeout to prevent hanging commands from blocking the agent
+		const streamPromise = sandbox.process.getSessionCommandLogs(
 			sessionId,
 			cmdId,
 			(chunk: string) => {
@@ -116,6 +121,15 @@ export async function runCommandStreaming(
 			},
 		);
 
+		await Promise.race([
+			streamPromise,
+			new Promise<never>((_, reject) => {
+				setTimeout(() => {
+					reject(new Error(`Command timed out after ${timeout / 1000}s: ${command.slice(0, 100)}`));
+				}, timeout);
+			}),
+		]);
+
 		// Final flush of any remaining buffered data
 		enqueueFlush();
 		await flushQueue;
@@ -124,6 +138,24 @@ export async function runCommandStreaming(
 		const cmdResult = await sandbox.process.getSessionCommand(sessionId, cmdId);
 
 		return { output: fullOutput, exitCode: cmdResult.exitCode ?? 1 };
+	} catch (err) {
+		// On timeout, flush partial output and return with error exit code
+		if (err instanceof Error && err.message.startsWith("Command timed out")) {
+			enqueueFlush();
+			await flushQueue;
+
+			if (agentId) {
+				await ctx.runMutation(internal.logs.mutations.append, {
+					agentId,
+					type: "stderr" as const,
+					content: `\n[TIMEOUT] ${err.message}`,
+				});
+			}
+
+			// 124 = timeout exit code (matches GNU timeout convention)
+			return { output: fullOutput + `\n[TIMEOUT] ${err.message}`, exitCode: 124 };
+		}
+		throw err;
 	} finally {
 		if (ownSession) {
 			try {

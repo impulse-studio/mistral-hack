@@ -394,11 +394,29 @@ export const deployProjectAction = internalAction({
 		{ agentId, path, prod },
 	): Promise<{ success: boolean; deployUrl: string | null; message: string; error?: string }> => {
 		try {
+			const typedAgentId = agentId as Id<"agents">;
 			const result = await ctx.runAction(internal.sandbox.deploy.deployToVercel, {
 				path,
 				prod,
-				agentId: agentId as Id<"agents">,
+				agentId: typedAgentId,
 			});
+
+			// Save deploy URL as a deliverable so it's never lost to LLM hallucination
+			if (result.deployUrl) {
+				const agent = await ctx.runQuery(internal.office.queries.getAgentInternal, {
+					agentId: typedAgentId,
+				});
+				if (agent?.currentTaskId) {
+					await ctx.runMutation(internal.deliverables.mutations.createInternal, {
+						taskId: agent.currentTaskId,
+						agentId: typedAgentId,
+						type: "url",
+						title: prod ? "Vercel Production Deploy" : "Vercel Preview Deploy",
+						url: result.deployUrl,
+					});
+				}
+			}
+
 			return {
 				success: result.success,
 				deployUrl: result.deployUrl,

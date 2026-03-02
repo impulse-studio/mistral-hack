@@ -113,6 +113,37 @@ export const getStaleAgents = internalQuery({
 	},
 });
 
+// Get worker agents stuck in "working" status past an activity cutoff.
+// Unlike idle/failed agents (which have completedAt), working agents are detected
+// by checking sandbox lastActivity — if no sandbox activity for N minutes, the
+// workpool job likely crashed silently.
+export const getStuckWorkingAgents = internalQuery({
+	args: { activityCutoff: v.number() },
+	returns: v.array(agentDoc),
+	handler: async (ctx, { activityCutoff }) => {
+		const working = await ctx.db
+			.query("agents")
+			.withIndex("by_status", (q) => q.eq("status", "working"))
+			.collect();
+
+		const stuck = [];
+		for (const agent of working) {
+			if (agent.type !== "worker") continue;
+			// Check sandbox last activity — if stale or missing, agent is stuck
+			const sandbox = await ctx.db
+				.query("sandbox")
+				.withIndex("by_agent", (q) => q.eq("agentId", agent._id))
+				.first();
+
+			const lastActivity = sandbox?.lastActivity ?? agent.spawnedAt;
+			if (lastActivity < activityCutoff) {
+				stuck.push(agent);
+			}
+		}
+		return stuck;
+	},
+});
+
 // Get available desk count (public)
 export const getAvailableDeskCount = query({
 	args: {},

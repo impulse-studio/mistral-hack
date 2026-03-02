@@ -1,9 +1,8 @@
-import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import { internal } from "../../_generated/api";
 import type { RunnerCtx, RunnerResult } from "../shared/types";
-import { MANAGER_MODEL } from "../models";
+import { mistral, MANAGER_MODEL } from "../models";
 import { SANDBOX_WORK_DIR, SHARED_WORKSPACE, SHARED_OUTPUTS } from "../../sandbox/constants";
 
 const MAX_RETRIES_PER_STEP = 2;
@@ -28,7 +27,7 @@ export async function runGeneralTask(
 	role: string,
 ): Promise<RunnerResult> {
 	const startTime = Date.now();
-	const mistralClient = createAmazonBedrock({ region: "us-west-2" });
+	const mistralClient = mistral;
 
 	// ── Phase 1: Planning ──────────────────────────────────────
 	await ctx.runMutation(internal.logs.mutations.append, {
@@ -37,7 +36,7 @@ export async function runGeneralTask(
 		content: `[${role}] Planning steps for: ${task.title}`,
 	});
 
-	// Use mistral-large for structured output (magistral doesn't support generateObject)
+	// Use manager model for structured output
 	const { object: plan } = await generateObject({
 		model: mistralClient(MANAGER_MODEL),
 		schema: planSchema,

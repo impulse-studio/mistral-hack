@@ -1,66 +1,106 @@
 import { generateObject } from "ai";
-import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { z } from "zod";
 import { internal } from "../../_generated/api";
 import type { RunnerCtx, RunnerResult } from "../shared/types";
-import { MANAGER_MODEL } from "../models";
+import { mistral, MANAGER_MODEL } from "../models";
 
 type TaskRecord = { title: string; description?: string };
 
 const MAX_ITERATIONS = 200;
 const ACTION_DELAY_MS = 1000;
 
-// Structured action schema — the model picks one action per step
-const ActionSchema = z.discriminatedUnion("action", [
-	z.object({
-		action: z.literal("click"),
-		x: z.number().describe("X coordinate to click"),
-		y: z.number().describe("Y coordinate to click"),
-		button: z.enum(["left", "right"]).default("left").describe("Mouse button"),
-		reasoning: z.string().describe("Why you are clicking here"),
-	}),
-	z.object({
-		action: z.literal("double_click"),
-		x: z.number().describe("X coordinate to double-click"),
-		y: z.number().describe("Y coordinate to double-click"),
-		reasoning: z.string().describe("Why you are double-clicking here"),
-	}),
-	z.object({
-		action: z.literal("type"),
-		text: z.string().describe("Text to type"),
-		reasoning: z.string().describe("Why you are typing this"),
-	}),
-	z.object({
-		action: z.literal("key"),
-		key: z.string().describe("Key to press (e.g. Enter, Tab, Escape)"),
-		modifiers: z.array(z.string()).optional().describe("Modifier keys (e.g. ctrl, alt, shift)"),
-		reasoning: z.string().describe("Why you are pressing this key"),
-	}),
-	z.object({
-		action: z.literal("hotkey"),
-		keys: z.string().describe("Key combo (e.g. ctrl+c, ctrl+l, alt+tab)"),
-		reasoning: z.string().describe("Why you are pressing this hotkey"),
-	}),
-	z.object({
-		action: z.literal("scroll"),
-		x: z.number().describe("X coordinate for scroll position"),
-		y: z.number().describe("Y coordinate for scroll position"),
-		direction: z.enum(["up", "down"]).describe("Scroll direction"),
-		amount: z.number().optional().describe("Scroll amount (default 3)"),
-		reasoning: z.string().describe("Why you are scrolling"),
-	}),
-	z.object({
-		action: z.literal("wait"),
-		seconds: z.number().min(1).max(5).describe("Seconds to wait for page to load"),
-		reasoning: z.string().describe("Why you are waiting"),
-	}),
-	z.object({
-		action: z.literal("done"),
-		result: z.string().describe("Summary of what was accomplished"),
-	}),
-]);
+// Flat action schema — all fields on one object; "action" acts as discriminator.
+const ActionSchema = z.object({
+	action: z
+		.enum(["click", "double_click", "type", "key", "hotkey", "scroll", "wait", "done"])
+		.describe("The action to perform"),
+	reasoning: z.string().optional().describe("Why you are taking this action"),
+	x: z.number().optional().describe("X coordinate (click, double_click, scroll)"),
+	y: z.number().optional().describe("Y coordinate (click, double_click, scroll)"),
+	button: z.enum(["left", "right"]).optional().describe("Mouse button for click (default: left)"),
+	text: z.string().optional().describe("Text to type (for type action)"),
+	key: z.string().optional().describe("Key to press, e.g. Enter, Tab, Escape (for key action)"),
+	modifiers: z
+		.array(z.string())
+		.optional()
+		.describe("Modifier keys e.g. ctrl, alt, shift (for key action)"),
+	keys: z.string().optional().describe("Key combo e.g. ctrl+c, alt+tab (for hotkey action)"),
+	direction: z.enum(["up", "down"]).optional().describe("Scroll direction (for scroll action)"),
+	amount: z.number().optional().describe("Scroll amount, default 3 (for scroll action)"),
+	seconds: z.number().optional().describe("Seconds to wait 1-5 (for wait action)"),
+	result: z.string().optional().describe("Summary of what was accomplished (for done action)"),
+});
 
-type Action = z.infer<typeof ActionSchema>;
+type FlatAction = z.infer<typeof ActionSchema>;
+
+// Typed action variants for executeAction/formatAction (narrow from flat schema)
+type Action =
+	| { action: "click"; x: number; y: number; button: string; reasoning?: string }
+	| { action: "double_click"; x: number; y: number; reasoning?: string }
+	| { action: "type"; text: string; reasoning?: string }
+	| { action: "key"; key: string; modifiers?: string[]; reasoning?: string }
+	| { action: "hotkey"; keys: string; reasoning?: string }
+	| {
+			action: "scroll";
+			x: number;
+			y: number;
+			direction: "up" | "down";
+			amount?: number;
+			reasoning?: string;
+	  }
+	| { action: "wait"; seconds: number; reasoning?: string }
+	| { action: "done"; result: string; reasoning?: string };
+
+function toAction(raw: FlatAction): Action {
+	switch (raw.action) {
+		case "click": {
+			return {
+				action: "click",
+				x: raw.x ?? 0,
+				y: raw.y ?? 0,
+				button: raw.button ?? "left",
+				reasoning: raw.reasoning,
+			};
+		}
+		case "double_click": {
+			return { action: "double_click", x: raw.x ?? 0, y: raw.y ?? 0, reasoning: raw.reasoning };
+		}
+		case "type": {
+			return { action: "type", text: raw.text ?? "", reasoning: raw.reasoning };
+		}
+		case "key": {
+			return {
+				action: "key",
+				key: raw.key ?? "Enter",
+				modifiers: raw.modifiers,
+				reasoning: raw.reasoning,
+			};
+		}
+		case "hotkey": {
+			return { action: "hotkey", keys: raw.keys ?? "", reasoning: raw.reasoning };
+		}
+		case "scroll": {
+			return {
+				action: "scroll",
+				x: raw.x ?? 0,
+				y: raw.y ?? 0,
+				direction: raw.direction ?? "down",
+				amount: raw.amount,
+				reasoning: raw.reasoning,
+			};
+		}
+		case "wait": {
+			return {
+				action: "wait",
+				seconds: Math.min(5, Math.max(1, raw.seconds ?? 2)),
+				reasoning: raw.reasoning,
+			};
+		}
+		case "done": {
+			return { action: "done", result: raw.result ?? "Task completed.", reasoning: raw.reasoning };
+		}
+	}
+}
 
 // Run a Computer Use task: start desktop → vision loop → return result
 export async function runComputerUseTask(
@@ -68,8 +108,7 @@ export async function runComputerUseTask(
 	agentId: string,
 	task: TaskRecord,
 ): Promise<RunnerResult> {
-	const bedrock = createAmazonBedrock({ region: "us-west-2" });
-	const model = bedrock(MANAGER_MODEL);
+	const model = mistral(MANAGER_MODEL);
 
 	// 1. Ensure Computer Use environment is started (Xvfb + xfce4 + VNC)
 	await ctx.runAction(internal.sandbox.lifecycle.ensureComputerUseStarted, { agentId });
@@ -183,7 +222,7 @@ export async function runComputerUseTask(
 		);
 
 		// Ask Mistral Large to decide next action
-		const { object: nextAction, usage: stepUsage } = await generateObject({
+		const { object, usage: stepUsage } = await generateObject({
 			model,
 			schema: ActionSchema,
 			messages: [
@@ -227,6 +266,8 @@ Rules:
 				},
 			],
 		});
+
+		const nextAction = toAction(object);
 
 		// Log the action + usage
 		const actionDesc = formatAction(nextAction);

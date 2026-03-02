@@ -1,7 +1,7 @@
 import { generateText } from "ai";
 import { internal } from "../_generated/api";
 import { mistral, MANAGER_MODEL, roleToModel } from "./models";
-import { buildSkillset } from "./skills/index";
+import { buildSkillset, type DoneSignal } from "./skills/index";
 import { buildSystemPrompt } from "./prompts";
 import type { RunnerCtx, RunnerResult } from "./shared/types";
 
@@ -29,7 +29,10 @@ export async function runAgenticTask(
 	agentName: string,
 	continuationState?: ContinuationState,
 ): Promise<RunnerResult> {
-	const tools = buildSkillset(ctx, agentId, role);
+	// Shared signal: flipped by updateTaskStatus when agent marks task as terminal.
+	// Checked by stopWhen to end the ReAct loop immediately after completion.
+	const doneSignal: DoneSignal = { value: false };
+	const tools = buildSkillset(ctx, agentId, role, doneSignal);
 	const systemPrompt = buildSystemPrompt(role, task, agentName);
 	const modelId = roleToModel[role] ?? MANAGER_MODEL;
 	const startTime = Date.now();
@@ -58,6 +61,8 @@ export async function runAgenticTask(
 
 	// Shared generateText options (everything except prompt/messages)
 	const stopWhen = ({ steps }: { steps: unknown[] }) => {
+		// Agent marked its own task as done/review/failed/cancelled — stop immediately
+		if (doneSignal.value) return true;
 		if (steps.length + stepsAlreadyDone >= MAX_STEPS) return true;
 		return Date.now() - startTime > SOFT_BUDGET_MS;
 	};
@@ -75,7 +80,7 @@ export async function runAgenticTask(
 			content: string;
 		}> = [];
 
-		// 1. Reasoning (extended thinking from Magistral models)
+		// 1. Reasoning (extended thinking)
 		if (event.reasoningText) {
 			entries.push({ type: "reasoning", content: event.reasoningText });
 		}
@@ -132,25 +137,35 @@ export async function runAgenticTask(
 		// Use separate generateText calls to satisfy TypeScript's discriminated union
 		// (prompt and messages are mutually exclusive)
 		const result = continuationState
-			? await generateText({
-					model: mistral(modelId),
-					system: systemPrompt,
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					messages: [
-						{ role: "user" as const, content: taskPrompt },
-						// ResponseMessages from prior run — already correctly shaped from AI SDK
-						...(JSON.parse(continuationState.messages) as any[]),
-						{
-							role: "user" as const,
-							content:
-								"Continue working. You were interrupted by a time limit. Resume from where you stopped. Do NOT repeat work already done — review the tool results above and continue from the last step.",
-						},
-					],
-					tools,
-					stopWhen,
-					abortSignal: controller.signal,
-					onStepFinish,
-				})
+			? await (async () => {
+					const priorMessages = JSON.parse(continuationState.messages) as Array<{
+						role: string;
+						content?: unknown;
+					}>;
+					const lastRole = priorMessages[priorMessages.length - 1]?.role;
+					const continueUserMsg = {
+						role: "user" as const,
+						content:
+							"Continue working. You were interrupted by a time limit. Resume from where you stopped. Do NOT repeat work already done — review the tool results above and continue from the last step.",
+					};
+					if (lastRole === "tool") {
+						priorMessages.push({
+							role: "assistant" as const,
+							content: "[Resuming after time limit — continuing from last tool results.]",
+						});
+					}
+					priorMessages.push(continueUserMsg);
+					return await generateText({
+						model: mistral(modelId),
+						system: systemPrompt,
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						messages: [{ role: "user" as const, content: taskPrompt }, ...(priorMessages as any[])],
+						tools,
+						stopWhen,
+						abortSignal: controller.signal,
+						onStepFinish,
+					});
+				})()
 			: await generateText({
 					model: mistral(modelId),
 					system: systemPrompt,
@@ -160,6 +175,18 @@ export async function runAgenticTask(
 					abortSignal: controller.signal,
 					onStepFinish,
 				});
+
+		// If agent self-reported completion via updateTaskStatus, treat as success
+		// regardless of step/time budget — the agent decided it's done.
+		if (doneSignal.value) {
+			const summary = result.text || "(task completed — agent set terminal status)";
+			await ctx.runMutation(internal.logs.mutations.append, {
+				agentId,
+				type: "status" as const,
+				content: `[${role}] Task completed (agent self-reported)`,
+			});
+			return { success: true, result: summary };
+		}
 
 		// Check if stopped by time budget (not natural completion)
 		const hitBudget = Date.now() - startTime > SOFT_BUDGET_MS;

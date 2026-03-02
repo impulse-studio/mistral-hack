@@ -1,15 +1,15 @@
-import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
+import { createGateway } from "ai";
 
-// Bedrock provider — uses AWS_BEARER_TOKEN_BEDROCK env var for auth
-export const mistral = createAmazonBedrock({
-	region: "us-west-2",
+const gateway = createGateway({
+	apiKey: process.env.AI_GATEWAY_API_KEY ?? "",
 });
 
-// ── Model ID constants (Bedrock Mistral model IDs) ──────────
-export const MANAGER_MODEL = "mistral.mistral-large-3-675b-instruct";
-export const CODER_MODEL = "mistral.devstral-2-123b";
-export const ROUTING_MODEL = "mistral.ministral-3-8b-instruct";
-export const REASONING_MODEL = "mistral.magistral-small-2509";
+export const mistral = gateway;
+
+export const MANAGER_MODEL = "anthropic/claude-sonnet-4.6";
+export const CODER_MODEL = "anthropic/claude-sonnet-4.6";
+export const ROUTING_MODEL = "anthropic/claude-haiku-4.5";
+export const REASONING_MODEL = "anthropic/claude-sonnet-4.5";
 
 export const roleToModel: Record<string, string> = {
 	coder: CODER_MODEL,
