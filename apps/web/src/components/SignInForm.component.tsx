@@ -216,15 +216,9 @@ export function SignInForm() {
 					</div>
 				</div>
 
-				{/* Bottom link */}
+				{/* Registration disabled */}
 				<p className="mt-6 text-center text-sm text-muted-foreground">
-					Don&apos;t have an account?&nbsp;
-					<Link
-						to="/sign-up"
-						className="font-semibold text-foreground underline underline-offset-4 transition-colors hover:text-brand-accent"
-					>
-						Register
-					</Link>
+					Sign-ups are currently closed. Existing users only.
 				</p>
 			</div>
 		</div>
