@@ -1,7 +1,7 @@
 import { generateText } from "ai";
 import { internal } from "../../_generated/api";
 import { escapeShellArg } from "../../sandbox/shellUtils";
-import { mistral, REASONING_MODEL } from "../models";
+import { mistral, MANAGER_MODEL } from "../models";
 import type { RunnerCtx, RunnerResult } from "../shared/types";
 
 // Sanitize a title into a safe filename: lowercase, hyphens, .md
@@ -66,7 +66,7 @@ export async function runCopywriterTask(
 		content: "Writing first draft...",
 	});
 	const { text: draft } = await generateText({
-		model: mistral(REASONING_MODEL),
+		model: mistral(MANAGER_MODEL),
 		messages: [
 			{
 				role: "system",
@@ -87,7 +87,7 @@ export async function runCopywriterTask(
 		content: "Reviewing and refining...",
 	});
 	const { text: refined } = await generateText({
-		model: mistral(REASONING_MODEL),
+		model: mistral(MANAGER_MODEL),
 		messages: [
 			{
 				role: "system",

@@ -10,7 +10,7 @@ import {
 
 export const browserAgent = new Agent(components.agent, {
 	name: "Browser",
-	languageModel: mistral(MANAGER_MODEL), // Claude Sonnet 4.6 — has vision
+	languageModel: mistral(MANAGER_MODEL),
 	instructions: `You are a browser agent that navigates websites using Computer Use.
 You see screenshots of the desktop and decide what to click, type, or scroll.
 You complete web tasks: research, form filling, data extraction, testing.

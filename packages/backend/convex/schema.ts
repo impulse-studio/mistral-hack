@@ -75,7 +75,7 @@ export const agentFields = {
 	type: agentTypeValidator,
 	role: v.string(), // "coder", "researcher", "copywriter", etc.
 	status: agentStatusValidator,
-	model: v.string(), // AI SDK model id (e.g. "anthropic/claude-sonnet-4.6")
+	model: v.string(), // AI SDK model id (e.g. "mistral/mistral-medium")
 	deskId: v.optional(v.id("desks")),
 	currentTaskId: v.optional(v.id("tasks")),
 	threadId: v.optional(v.string()), // @convex-dev/agent thread id
